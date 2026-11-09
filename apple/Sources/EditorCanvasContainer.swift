@@ -158,7 +158,7 @@ extension NotebookEditorView {
                 }
                 if isCollaborating {
                     CollabVoiceFloatingCapsule()
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 110)
                 }
             }
             // 編修面板避開正在編修的物件：物件框由物件層以錨點回報（`EditingObjectBoundsKey`）。

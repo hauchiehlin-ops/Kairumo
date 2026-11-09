@@ -848,7 +848,7 @@ private fun InkScreen(
                 com.kairumo.padnote.collab.CollabVoiceFloatingCapsule(
                     voice = collabVoice,
                     languageTag = deviceLanguageTag(),
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp)
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp)
                 )
             }
         }

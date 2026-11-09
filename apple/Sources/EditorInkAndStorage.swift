@@ -366,7 +366,7 @@ extension NotebookEditorView {
         collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         commitNotebook()
         collabSync.isApplyingRemote = false
-        PageThumbnailRenderer.invalidateAll()
+        refreshAllThumbnails()
         // 對方刪掉的物件，本機的選取與編輯狀態要清掉。
         let alive = CanvasObjectState(notebook).allObjectIds
         if let id = inlineEditingTextId, !alive.contains(id) { inlineEditingTextId = nil }
@@ -497,7 +497,8 @@ extension NotebookEditorView {
             ProInkCollab.applyRemoteOnDisk(directory: store.drawingsDirectory, notebookId: notebook.id, page: index,
                                            added: ink.added, removedIds: ink.removed)
         }
-        PageThumbnailRenderer.invalidateAll()
+        ProInkCollab.reloadLayers(notebookId: notebook.id)
+        refreshAllThumbnails()
     }
 
     /// 一次頁面結構調整做完（或放棄）。全部做完時，調整期間擱著的本機修改送出去。
@@ -542,7 +543,7 @@ extension NotebookEditorView {
         collabSync.refreshShadow(from: notebook)
         commitNotebook()
         collabSync.isApplyingRemote = false
-        PageThumbnailRenderer.invalidateAll()
+        refreshAllThumbnails()
     }
 
     /// 把某個方塊的內容換成別人的（格式區段跟著平移、方塊長高），不送出。
@@ -681,13 +682,21 @@ extension NotebookEditorView {
             bytes += length
         }
         for (index, part) in parts.enumerated() {
+            let delay = Double(index) * 0.03
             let extra = envelope(index, parts.count)
             var payload: [String: Any] = [
                 "proto": Self.collabProto, "req": req, "to": to, "part": index, "parts": parts.count,
                 "objects": part.objects, "ink": part.ink
             ]
             if let snap = extra["snap"] { payload["snap"] = snap }
-            collaborationManager.broadcastOplog(kind: kind, payload: payload, envelope: extra)
+            let collabMgr = collaborationManager
+            if delay == 0 {
+                collabMgr.broadcastOplog(kind: kind, payload: payload, envelope: extra)
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    collabMgr.broadcastOplog(kind: kind, payload: payload, envelope: extra)
+                }
+            }
         }
     }
 
@@ -767,7 +776,7 @@ extension NotebookEditorView {
             }
             if !removed.isEmpty { applyRemoteInkRemove(pageId: page, wires: removed) }
         }
-        PageThumbnailRenderer.invalidateAll()
+        refreshAllThumbnails()
         if stored {
             guard collabStateSync.storedParts.count >= parts else { return }
         } else {
@@ -830,6 +839,8 @@ extension NotebookEditorView {
             }
             ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
                                      added: strokes, removedIds: [])
+            ThumbnailPipeline.shared.markDirty(notebookId: notebook.id, pageIndex: pageIdx)
+            thumbnailRevision += 1
 
         case "ink_remove":
             guard let rawPageId = event.payload["page"] as? String,
@@ -838,6 +849,8 @@ extension NotebookEditorView {
             if let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(pageId) == .orderedSame }) {
                 ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
                                          added: [], removedIds: Set(ids.map { $0.lowercased() }))
+                ThumbnailPipeline.shared.markDirty(notebookId: notebook.id, pageIndex: pageIdx)
+                thumbnailRevision += 1
             }
             // 舊版留在 PencilKit 圖層裡的筆畫照舊處理。
             applyRemoteInkRemove(pageId: pageId, wires: ids)
@@ -1101,7 +1114,7 @@ extension NotebookEditorView {
         notebook = doc
         store.updateNotebook(notebook)
         publishCollabChanges()
-        PageThumbnailRenderer.invalidateAll()
+        refreshAllThumbnails()
         thumbnailRevision += 1
         // 指向已經不存在的物件的選取與編輯狀態要清掉，否則工具列對著一個空殼。
         let alive = state.allObjectIds
@@ -1307,9 +1320,19 @@ extension NotebookEditorView {
         return (canvas?.delegate as? CanvasRepresentable.Coordinator)?.lastSyncedDrawing
     }
 
+    func refreshAllThumbnails() {
+        PageThumbnailRenderer.invalidateAll()
+        for idx in 0..<notebook.pageCount {
+            ThumbnailPipeline.shared.markDirty(notebookId: notebook.id, pageIndex: idx)
+        }
+        thumbnailRevision += 1
+    }
+
     func inkRevisionForPage(_ page: Int) -> Int {
         let pid = (notebook.pageIds != nil && page < (notebook.pageIds?.count ?? 0)) ? notebook.pageIds?[page] : nil
-        return activeInkStore.revision(for: page, pageId: pid)
+        let pkRev = activeInkStore.revision(for: page, pageId: pid)
+        let proRev = ProInkStore.revision(in: store.drawingsDirectory, notebookId: notebook.id, page: page)
+        return pkRev &* 31 &+ proRev
     }
 
     func recordDrawingEdit(page: Int, drawing: PKDrawing) {
@@ -1584,7 +1607,7 @@ extension NotebookEditorView {
             if isContinuous {
                 continuousObjectGeneration += 1
             }
-            PageThumbnailRenderer.invalidateAll()
+            refreshAllThumbnails()
             thumbnailRevision += 1
         }
         lasso.onDeleteObjects = { ids in
@@ -1593,7 +1616,7 @@ extension NotebookEditorView {
             if isContinuous {
                 continuousObjectGeneration += 1
             }
-            PageThumbnailRenderer.invalidateAll()
+            refreshAllThumbnails()
             thumbnailRevision += 1
         }
         lasso.onCopyObjects = { ids in
@@ -1609,7 +1632,7 @@ extension NotebookEditorView {
             if isContinuous {
                 continuousObjectGeneration += 1
             }
-            PageThumbnailRenderer.invalidateAll()
+            refreshAllThumbnails()
             thumbnailRevision += 1
         }
         lasso.onDuplicateObjects = { ids in
@@ -1653,7 +1676,7 @@ extension NotebookEditorView {
             self.focusContinuousPage(fIdx)
             self.lasso.clear()
             self.commitNotebook()
-            PageThumbnailRenderer.invalidateAll()
+            refreshAllThumbnails()
         }
     }
 
@@ -1670,7 +1693,7 @@ extension NotebookEditorView {
             self.broadcastDrawingChange(page: pIdx, drawing: d)
             self.lasso.clear()
             self.commitNotebook()
-            PageThumbnailRenderer.invalidateAll()
+            refreshAllThumbnails()
         }
     }
 
@@ -1946,7 +1969,7 @@ extension NotebookEditorView {
                 inlineEditingTextId = draft.id
                 editingTextId = nil
                 commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
+                refreshAllThumbnails()
                 showCanvasNotice(localizationManager.localized("lasso_recognize_done"))
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()

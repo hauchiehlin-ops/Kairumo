@@ -224,13 +224,19 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             "ink_add" -> {
                 val page = payload.optString("page").ifEmpty { return null }
                 val list = payload.optJSONArray("strokes") ?: return null
-                if (addStrokes(page, list, session, engineFor)) Applied(false, false, true) else null
+                if (addStrokes(page, list, session, engineFor)) {
+                    com.kairumo.padnote.canvas.ThumbnailFreshness.markDirty(page)
+                    Applied(false, false, true)
+                } else null
             }
             "ink_remove" -> {
                 val page = payload.optString("page").ifEmpty { return null }
                 val array = payload.optJSONArray("ids") ?: return null
                 val wires = (0 until array.length()).map { array.optString(it) }.toSet()
-                if (removeStrokes(page, wires, session, engineFor)) Applied(false, false, true) else null
+                if (removeStrokes(page, wires, session, engineFor)) {
+                    com.kairumo.padnote.canvas.ThumbnailFreshness.markDirty(page)
+                    Applied(false, false, true)
+                } else null
             }
             "state_request" -> {
                 val req = payload.optString("req").ifEmpty { return null }
@@ -592,10 +598,17 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         }
         parts += objects to inkList
         for ((index, part) in parts.withIndex()) {
-            manager.broadcastOplog("state_snapshot", JSONObject()
+            val payload = JSONObject()
                 .put("proto", PROTO).put("req", req).put("to", to)
                 .put("part", index).put("parts", parts.size)
-                .put("objects", part.first).put("ink", part.second))
+                .put("objects", part.first).put("ink", part.second)
+            if (index == 0) {
+                manager.broadcastOplog("state_snapshot", payload)
+            } else {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    manager.broadcastOplog("state_snapshot", payload)
+                }, index * 30L)
+            }
         }
     }
 
@@ -662,13 +675,17 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         val snap = UUID.randomUUID().toString().lowercase()
         val seq = manager.relaySeq
         for ((index, part) in parts.withIndex()) {
-            manager.broadcastOplog(
-                "state_store",
-                JSONObject().put("proto", PROTO).put("req", "store").put("to", "*").put("snap", snap)
-                    .put("part", index).put("parts", parts.size)
-                    .put("objects", part.first).put("ink", part.second),
-                envelope = mapOf("snap" to snap, "part" to index, "parts" to parts.size, "seq" to seq)
-            )
+            val payload = JSONObject().put("proto", PROTO).put("req", "store").put("to", "*").put("snap", snap)
+                .put("part", index).put("parts", parts.size)
+                .put("objects", part.first).put("ink", part.second)
+            val envelope = mapOf("snap" to snap, "part" to index, "parts" to parts.size, "seq" to seq)
+            if (index == 0) {
+                manager.broadcastOplog("state_store", payload, envelope = envelope)
+            } else {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    manager.broadcastOplog("state_store", payload, envelope = envelope)
+                }, index * 30L)
+            }
         }
     }
 
@@ -716,10 +733,18 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 val pageInk = inkList.optJSONObject(i) ?: continue
                 val page = pageInk.optString("page")
                 if (page.isEmpty()) continue
-                pageInk.optJSONArray("strokes")?.let { if (addStrokes(page, it, session, engineFor)) inkChanged = true }
+                pageInk.optJSONArray("strokes")?.let {
+                    if (addStrokes(page, it, session, engineFor)) {
+                        com.kairumo.padnote.canvas.ThumbnailFreshness.markDirty(page)
+                        inkChanged = true
+                    }
+                }
                 val removed = pageInk.optJSONArray("removed")
                 val wires = (0 until (removed?.length() ?: 0)).map { removed!!.optString(it) }.toSet()
-                if (wires.isNotEmpty() && removeStrokes(page, wires, session, engineFor)) inkChanged = true
+                if (wires.isNotEmpty() && removeStrokes(page, wires, session, engineFor)) {
+                    com.kairumo.padnote.canvas.ThumbnailFreshness.markDirty(page)
+                    inkChanged = true
+                }
             }
             if (drainPendingInk(session, engineFor)) inkChanged = true
             sync.refreshShadow(view)
