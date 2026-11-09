@@ -540,7 +540,7 @@
       if (s.steps && s.steps.length) {
         const lab = el("p", "steps-label"); lab.textContent = ui.stepsLabel; sec.appendChild(lab);
         // 有明確先後順序的用編號，純說明用破折號
-        const ordered = s.id !== "home" && s.id !== "start" && s.id !== "editor";
+        const ordered = s.id !== "intro" && s.id !== "home" && s.id !== "start" && s.id !== "editor";
         const list = el(ordered ? "ol" : "ul", ordered ? "steps" : "plain");
         s.steps.forEach(t => { const li = el("li"); const sp = el("span"); richText(sp, t); li.appendChild(sp); list.appendChild(li); });
         sec.appendChild(list);

@@ -2824,6 +2824,28 @@ internal fun rememberEditorCanvasContext(
             collaboration.voice = it
         }
     }
+    // 常駐連線：App 進背景（回首頁、螢幕關閉）不離開會議室，回前景立刻接回來；在會議室裡時螢幕不自動關閉。
+    // 只有使用者自己按「離開／結束協同」或關掉這本筆記才真的離開。與 Apple `CollaborationManager` 的生命週期處理相同。
+    val collabLifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(collaboration, collabLifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> collaboration.onAppBackground()
+                androidx.lifecycle.Lifecycle.Event.ON_START -> collaboration.onAppForeground()
+                else -> Unit
+            }
+        }
+        collabLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { collabLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // 讀可觀察的狀態（房號、連線狀態），離開房間時才會跟著重組、恢復自動關螢幕。
+    val keepScreenOnForCollab = collaboration.roomId.isNotEmpty() &&
+        collaboration.status !is CollaborationManager.Status.Disconnected
+    androidx.compose.runtime.DisposableEffect(keepScreenOnForCollab) {
+        val flag = android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        if (keepScreenOnForCollab) activity.window.addFlags(flag)
+        onDispose { if (keepScreenOnForCollab) activity.window.clearFlags(flag) }
+    }
     androidx.compose.runtime.DisposableEffect(collaboration) {
         onDispose {
             collaboration.stateDepositor = null

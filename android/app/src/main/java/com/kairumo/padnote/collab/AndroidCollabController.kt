@@ -266,6 +266,9 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             }
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
             "state_store" -> {
+                // 房間裡有人在線：以他們回覆的整份狀態為準，不套用寄存的那一份（可能是舊版或過去的協作者
+                // 只同步到一半時寄存的半份，帶較新的時戳，套了之後房主的完整內容反而蓋不過）。與 Apple 相同。
+                if (manager.peers.isNotEmpty()) return null
                 val snap = payload.optString("snap").ifEmpty { return null }
                 applySnapshotPart(payload, session, meta, canvas, engineFor, storedSnap = snap)
             }
@@ -624,6 +627,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
      */
     suspend fun depositState(session: PadnoteSession, engineFor: (String) -> InkEngine?) {
         if (!manager.isOnCloudRelay) return
+        // 協作者沒完整同步過就不寄存：半份狀態寄存上去，之後每個加入者都只拿到半份。與 Apple 相同。
+        if (!manager.isHost && !syncedOnce) return
         manager.noteStateDeposited()
         val objects = mutableListOf<JSONObject>()
         for (entry in sync.snapshot()) {

@@ -216,6 +216,43 @@ class CollaborationManager(private val context: Context) {
     private var relay: RelayServer? = null
     private var reconnectAttempt = 0
     private var userInitiatedDisconnect = false
+    /**
+     * 這間房至少成功加入過一次。加入過之後的斷線（App 進背景、螢幕關閉、網路切換）**不會放棄重連** ——
+     * 只有使用者自己按「離開／結束協同」才真的離開會議室。與 Apple `joinedThisRoom` 相同。
+     */
+    private var joinedThisRoom = false
+    /** 進背景的時間：回前景時據此判斷連線是不是已經被系統掐掉。 */
+    private var backgroundedAtMs = 0L
+
+    /** 在會議室裡（加入或開了房間、而且不是使用者自己離開的）。 */
+    val isInRoom: Boolean
+        get() = roomId.isNotEmpty() && !userInitiatedDisconnect
+
+    /** App 進背景（編輯器所在的 Activity onStop）。 */
+    fun onAppBackground() {
+        if (isInRoom) backgroundedAtMs = System.currentTimeMillis()
+    }
+
+    /**
+     * App 回前景（onStart）：連線沒在、或在背景待過一陣子（底層連線多半已被系統關掉、卻還沒回報），
+     * 立刻以同一間房重連、從看過的序號接著補。與 Apple `handleBecomeActive` 相同。
+     */
+    fun onAppForeground() {
+        val away = if (backgroundedAtMs == 0L) 0L else System.currentTimeMillis() - backgroundedAtMs
+        backgroundedAtMs = 0L
+        if (!isInRoom) return
+        if (status !is Status.Connected || away > BACKGROUND_RECONNECT_AFTER_MS) reconnectNow()
+    }
+
+    /** 丟掉目前的連線，立刻以同一間房重連。 */
+    private fun reconnectNow() {
+        if (!isInRoom) return
+        reconnectAttempt = 0
+        val old = socket
+        socket = null
+        runCatching { old?.cancel() }
+        connect(roomId, isHost, isReconnecting = true)
+    }
     private val candidateServers = mutableListOf<String>()
     private val offlineQueue = mutableListOf<JSONObject>()
     private var lastPresenceSentAtMs = 0L
@@ -358,6 +395,7 @@ class CollaborationManager(private val context: Context) {
         if (!isReconnecting) {
             disconnect(userInitiated = false)
             reconnectAttempt = 0
+            joinedThisRoom = false
             roomId = room
             isHost = asHost
             peers.clear()
@@ -497,6 +535,7 @@ class CollaborationManager(private val context: Context) {
         resetPageEditLeaseState()
         voice?.reset()
         if (userInitiated) {
+            joinedThisRoom = false
             runCatching { relay?.stop() }
             isHostingLocalRelay = false
             lanRelayAddress = null
@@ -624,6 +663,10 @@ class CollaborationManager(private val context: Context) {
         get() {
             if (!isOnCloudRelay || status !is Status.Connected || !stateDirty) return false
             if (lastDepositAtMs != 0L && System.currentTimeMillis() - lastDepositAtMs < DEPOSIT_MIN_INTERVAL_MS) return false
+            // 房主在線就只由房主寄存：剛加入、只同步到一半的協作者寄存的半份狀態會蓋掉房主的完整版本，
+            // 之後每個雲端加入者都只拿到半份（只剩第一頁）。與 Apple 相同。
+            if (isHost) return true
+            if (peers.any { it.role == "owner" }) return false
             return peers.none { it.userId < currentUserId }
         }
 
@@ -999,6 +1042,8 @@ class CollaborationManager(private val context: Context) {
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            // 舊連線（已經換成新的一條）的回報不要再處理：會多排一次重連。與 Apple 相同。
+            if (socket != null && webSocket !== socket) return
             android.util.Log.w("Collab", "WebSocket failure on $serverAddress: ${t.message}")
             if (candidateServers.isNotEmpty()) {
                 val nextServer = candidateServers.removeAt(0)
@@ -1016,6 +1061,7 @@ class CollaborationManager(private val context: Context) {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            if (socket != null && webSocket !== socket) return
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 if (!userInitiatedDisconnect) scheduleReconnect() else status = Status.Disconnected
             }
@@ -1023,14 +1069,16 @@ class CollaborationManager(private val context: Context) {
     }
 
     private fun scheduleReconnect() {
-        if (reconnectAttempt >= tuning.maxReconnectAttempts.toInt()) {
+        val max = tuning.maxReconnectAttempts.toInt()
+        // 加入過的房間不放棄（只有使用者自己離開才離開）；從沒連上過的照次數上限報錯。
+        if (reconnectAttempt >= max && !joinedThisRoom) {
             status = Status.Disconnected
             return
         }
         reconnectAttempt++
-        status = Status.Reconnecting(reconnectAttempt, tuning.maxReconnectAttempts.toInt())
-        // 指數退避：連不上時每 0.5 秒重試一次只會讓事情更糟。
-        val delayMs = (1L shl (reconnectAttempt - 1)) * 1000L
+        status = Status.Reconnecting(minOf(reconnectAttempt, max), max)
+        // 指數退避（最長 16 秒）：連不上時每 0.5 秒重試一次只會讓事情更糟。
+        val delayMs = (1L shl (minOf(reconnectAttempt, 5) - 1)) * 1000L
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             if (!userInitiatedDisconnect) connect(roomId, isHost, isReconnecting = true)
         }, delayMs)
@@ -1045,12 +1093,16 @@ class CollaborationManager(private val context: Context) {
                 val peersArray = json.optJSONArray("peers")
                 startHeartbeatTimer()
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    val rejoined = joinedThisRoom
+                    joinedThisRoom = true
                     status = Status.Connected(rId)
                     lastError = null
                     reconnectAttempt = 0
                     drainOfflineQueue()
                     peersArray?.let { addPeers(it) }
                     if (lastSeq == 0L && peers.isNotEmpty()) onStateSyncNeeded?.invoke()
+                    // 斷線重連回來：中繼可能重開過，補發不一定補得齊。加入者向房間要一次整份狀態。與 Apple 相同。
+                    else if (rejoined && !isHost && peers.isNotEmpty()) onStateSyncNeeded?.invoke()
                 }
                 // 新版中繼以序號補發（不會漏掉時鐘較小但較晚到的操作）；舊版中繼忽略 last_seq，
                 // 照 last_lamport = 0 從頭補 —— 合併規則冪等，重複收到沒有副作用（設計 §7）。
@@ -1302,6 +1354,8 @@ class CollaborationManager(private val context: Context) {
         const val DEPOSIT_CHECK_INTERVAL_MS = 30_000L
         /** 兩次寄存的最短間隔。與 Apple `depositMinInterval` 相同。 */
         const val DEPOSIT_MIN_INTERVAL_MS = 120_000L
+        /** 在背景超過這個毫秒數，回前景時一律重建連線（與 Apple `backgroundReconnectAfter` 相同）。 */
+        const val BACKGROUND_RECONNECT_AFTER_MS = 5_000L
 
         /**
          * Kairumo 的公開中繼（Cloudflare Workers，見 `deploy/relay-cloudflare`）。與 Apple

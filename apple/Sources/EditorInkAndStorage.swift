@@ -644,6 +644,8 @@ extension NotebookEditorView {
     /// 內容與回覆 `state_request` 同一個格式、同樣端對端加密；信封上帶明文的 `snap`／`part`／`parts`／`seq`。
     func depositCollabState() async {
         guard isCollaborating, collaborationManager.isOnCloudRelay else { return }
+        // 協作者沒完整同步過就不寄存：半份狀態（缺頁、頁面被標成刪除）寄存上去，會讓之後每個加入者都只拿到半份。
+        guard collaborationManager.isHost || collabStateSync.syncedOnce else { return }
         collaborationManager.noteStateDeposited()
         saveCurrentPageDrawing()
         ensureCollabPageIds()
@@ -746,6 +748,10 @@ extension NotebookEditorView {
     /// 以它自己的 `snap` 計段；套用規則相同（房間的內容優先於自己可能過期的起點）。
     func applyCollabStateSnapshot(_ payload: [String: Any], stored: Bool = false) {
         guard let part = (payload["part"] as? NSNumber)?.intValue else { return }
+        // 房間裡有人在線：以他們回覆的整份狀態為準，不套用寄存的那一份。寄存的可能是舊版或半份
+        // （過去的協作者只同步到一半時寄存的），而且帶較新的時戳 —— 套了之後，房主回覆的完整內容
+        // 反而蓋不過它（雲端加入者只剩第一頁的原因之一）。寄存的只給「房主不在線」時用。
+        if stored, !collaborationManager.peers.isEmpty { return }
         if stored {
             guard let snap = payload["snap"] as? String,
                   collabStateSync.acceptStored(snap: snap, part: part) else { return }
