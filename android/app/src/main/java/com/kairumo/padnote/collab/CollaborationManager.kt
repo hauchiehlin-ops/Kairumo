@@ -500,6 +500,7 @@ class CollaborationManager(private val context: Context) {
         }
         socket?.close(1000, null)
         socket = null
+        stopHeartbeatTimer()
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             peers.clear()
         }
@@ -537,6 +538,40 @@ class CollaborationManager(private val context: Context) {
             )
         selectedId?.let { msg.put("selected_id", it) }
         send(msg)
+    }
+
+    private var heartbeatTimer: java.util.Timer? = null
+
+    private fun startHeartbeatTimer() {
+        heartbeatTimer?.cancel()
+        heartbeatTimer = java.util.Timer(true).apply {
+            scheduleAtFixedRate(object : java.util.TimerTask() {
+                override fun run() {
+                    val connected = status as? Status.Connected ?: return
+                    val msg = JSONObject()
+                        .put("type", "presence")
+                        .put("room_id", connected.roomId)
+                        .put("user_id", currentUserId)
+                        .put(
+                            "cursor",
+                            JSONObject()
+                                .put("x", lastCursor.first).put("y", lastCursor.second)
+                                .put("is_drawing", false).put("tool", "heartbeat")
+                        )
+                    mySelectedId?.let { msg.put("selected_id", it) }
+                    send(msg)
+                    val now = System.currentTimeMillis()
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        peers.removeAll { now - it.lastActiveMs > 35_000L }
+                    }
+                }
+            }, 5000L, 5000L)
+        }
+    }
+
+    private fun stopHeartbeatTimer() {
+        heartbeatTimer?.cancel()
+        heartbeatTimer = null
     }
 
     /**
@@ -1020,6 +1055,7 @@ class CollaborationManager(private val context: Context) {
                 candidateServers.clear()
                 val rId = json.optString("room_id", roomId)
                 val peersArray = json.optJSONArray("peers")
+                startHeartbeatTimer()
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                     status = Status.Connected(rId)
                     lastError = null
@@ -1060,21 +1096,43 @@ class CollaborationManager(private val context: Context) {
                 val uid = json.optString("user_id")
                 val cursor = json.optJSONObject("cursor") ?: return
                 val selected = json.optString("selected_id").takeIf { it.isNotEmpty() }?.let(::canonicalSelection)
+                val curX = cursor.optDouble("x", 0.0).toFloat()
+                val curY = cursor.optDouble("y", 0.0).toFloat()
+                val drawing = cursor.optBoolean("is_drawing", false)
+                val now = System.currentTimeMillis()
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    peers.indexOfFirst { it.userId == uid }.takeIf { it >= 0 }?.let { idx ->
-                        val p = peers[idx]
-                        peers[idx] = p.copy(
-                            cursorX = cursor.optDouble("x", 0.0).toFloat(),
-                            cursorY = cursor.optDouble("y", 0.0).toFloat(),
-                            isDrawing = cursor.optBoolean("is_drawing", false),
-                            selectedId = selected,
-                            lastActiveMs = System.currentTimeMillis()
-                        )
-                        // 兩人同時選了同一個物件：使用者 id 較小者勝（每一台算出同一個答案）。打字不搶。
-                        val mine = mySelectedId
-                        if (selected != null && mine != null && selected == canonicalSelection(mine) &&
-                            !selected.startsWith(TYPING_PREFIX) && uid < currentUserId) {
-                            onLeaseLost?.invoke(mine, p.userName)
+                    if (uid.isNotEmpty() && uid != currentUserId) {
+                        val idx = peers.indexOfFirst { it.userId == uid }
+                        if (idx >= 0) {
+                            val p = peers[idx]
+                            peers[idx] = p.copy(
+                                cursorX = curX,
+                                cursorY = curY,
+                                isDrawing = drawing,
+                                selectedId = selected,
+                                lastActiveMs = now
+                            )
+                            // 兩人同時選了同一個物件：使用者 id 較小者勝（每一台算出同一個答案）。打字不搶。
+                            val mine = mySelectedId
+                            if (selected != null && mine != null && selected == canonicalSelection(mine) &&
+                                !selected.startsWith(TYPING_PREFIX) && uid < currentUserId) {
+                                onLeaseLost?.invoke(mine, p.userName)
+                            }
+                        } else {
+                            // 自癒：若清單缺失立即加回在線成員
+                            peers.add(
+                                Peer(
+                                    userId = uid,
+                                    userName = uid.take(6),
+                                    userColor = "#4A90E2",
+                                    role = "editor",
+                                    cursorX = curX,
+                                    cursorY = curY,
+                                    isDrawing = drawing,
+                                    selectedId = selected,
+                                    lastActiveMs = now
+                                )
+                            )
                         }
                     }
                 }
@@ -1126,6 +1184,23 @@ class CollaborationManager(private val context: Context) {
         val uid = item.optString("user_id").ifEmpty { return }
         // 補發會包含自己送過的：自己的修改本機早就套用了。
         if (uid == currentUserId) return
+        val oplogNow = System.currentTimeMillis()
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            val idx = peers.indexOfFirst { it.userId == uid }
+            if (idx >= 0) {
+                peers[idx] = peers[idx].copy(lastActiveMs = oplogNow)
+            } else {
+                peers.add(
+                    Peer(
+                        userId = uid,
+                        userName = uid.take(6),
+                        userColor = "#4A90E2",
+                        role = "editor",
+                        lastActiveMs = oplogNow
+                    )
+                )
+            }
+        }
         val kind = item.optString("kind").ifEmpty { return }
         val raw = item.optJSONObject("payload") ?: return
         if (kind.startsWith("live_")) {

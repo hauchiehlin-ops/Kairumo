@@ -1809,9 +1809,18 @@ struct CollabVoiceFloatingCapsule: View {
     @ObservedObject var voice = CollabVoiceManager.shared
     @ObservedObject var collab = CollaborationManager.shared
     private let localizationManager = LocalizationManager.shared
+    @State private var dragOffset: CGSize = .zero
+    @State private var accumulatedOffset: CGSize = .zero
 
     var body: some View {
         HStack(spacing: 8) {
+            // 拖曳把手圖示
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.secondary.opacity(0.7))
+                .frame(width: 14, height: 28)
+                .contentShape(Rectangle())
+
             // 發話者狀態呼吸燈標籤
             if let speaker = voice.activeSpeakerName {
                 HStack(spacing: 5) {
@@ -1875,6 +1884,19 @@ struct CollabVoiceFloatingCapsule: View {
             Capsule()
                 .fill(Material.regular)
                 .shadow(color: Color.black.opacity(0.15), radius: 6, y: 3)
+        )
+        .offset(x: accumulatedOffset.width + dragOffset.width,
+                y: accumulatedOffset.height + dragOffset.height)
+        .gesture(
+            DragGesture(minimumDistance: 4)
+                .onChanged { val in
+                    dragOffset = val.translation
+                }
+                .onEnded { val in
+                    accumulatedOffset.width += val.translation.width
+                    accumulatedOffset.height += val.translation.height
+                    dragOffset = .zero
+                }
         )
     }
 }

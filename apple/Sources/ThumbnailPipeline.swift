@@ -31,12 +31,19 @@ import PencilKit
 @MainActor
 final class ThumbnailSlot: ObservableObject {
     @Published fileprivate(set) var version = 0
+    func notifyChanged() { version += 1 }
 }
 
 @MainActor
 final class ThumbnailPipeline {
     // profile-scope: device 縮圖快取以筆記本 id 為鍵，內容不跨筆記本
     static let shared = ThumbnailPipeline()
+
+    func markDirty(notebookId: String, pageIndex: Int) {
+        let pk = pageKey(notebookId, pageIndex)
+        done.removeObject(forKey: pk as NSString)
+        slots[pk]?.notifyChanged()
+    }
 
     struct Request {
         let notebook: NotebookDocument

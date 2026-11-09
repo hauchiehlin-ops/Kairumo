@@ -526,9 +526,7 @@ public class CollaborationManager: ObservableObject {
     /// `room_closed` 會讓雲端共享的協作者連同共享資料夾一起停掉（見 `handleIncomingMessage`）。
     /// 要結束整場協同請在面板按「結束協同」。
     public func leaveRoom(ifBoundTo notebookId: String) {
-        if let bound = roomNotebookId {
-            guard bound == notebookId.lowercased() else { return }
-        }
+        guard let bound = roomNotebookId, bound == notebookId.lowercased() else { return }
         disconnect()
     }
 
@@ -1465,6 +1463,18 @@ public class CollaborationManager: ObservableObject {
                    !sel.hasPrefix(Self.typingPrefix), uid < currentUserId {
                     leaseLost.send((id: mine, holder: peers[idx].userName))
                 }
+            } else if uid != currentUserId {
+                // 自動自癒：收到在線成員 presence 時，若清單缺失立即加回在線成員
+                let newPeer = CollaboratorPeer(
+                    userId: uid,
+                    userName: String(uid.prefix(6)),
+                    userColor: "#4A90E2",
+                    role: .editor,
+                    cursor: PeerCursor(x: x, y: y, isDrawing: isDrawing, tool: tool, selectedId: selectedId),
+                    selectedId: selectedId,
+                    lastActive: Date()
+                )
+                peers.append(newPeer)
             }
 
         case "peer_left":
@@ -1480,6 +1490,15 @@ public class CollaborationManager: ObservableObject {
                   let rawPayload = json["payload"] as? [String: Any] else { return }
             if let idx = peers.firstIndex(where: { $0.userId == uid }) {
                 peers[idx].lastActive = Date()
+            } else if uid != currentUserId {
+                let newPeer = CollaboratorPeer(
+                    userId: uid,
+                    userName: String(uid.prefix(6)),
+                    userColor: "#4A90E2",
+                    role: .editor,
+                    lastActive: Date()
+                )
+                peers.append(newPeer)
             }
             let lamport = (json["lamport"] as? NSNumber)?.uint64Value ?? 0
             let isEncrypted = (json["encrypted"] as? Bool) ?? false
@@ -1588,21 +1607,39 @@ public class CollaborationManager: ObservableObject {
     private func startPingTimer() {
         pingTimer?.invalidate()
         pingTimer = Timer.scheduledTimer(
-            withTimeInterval: Double(collabTuning().pingIntervalS),
+            withTimeInterval: 5.0,
             repeats: true
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.sendJson(["type": "ping"])
+                if case .connected(let rid) = self.status {
+                    self.sendPresenceHeartbeat(roomId: rid)
+                }
                 self.pruneStalePeers()
             }
         }
     }
 
+    private func sendPresenceHeartbeat(roomId: String) {
+        let heartbeat: [String: Any] = [
+            "type": "presence",
+            "room_id": roomId,
+            "user_id": currentUserId,
+            "cursor": [
+                "x": Float(lastCursorLocation.x),
+                "y": Float(lastCursorLocation.y),
+                "is_drawing": false,
+                "tool": "heartbeat"
+            ]
+        ]
+        sendJson(heartbeat)
+    }
+
     /// 定期清理失聯成員（防止離線未收到通知時殘留幽靈在線燈）
     private func pruneStalePeers() {
         let now = Date()
-        let timeout: TimeInterval = 18.0
+        let timeout: TimeInterval = 35.0
         let stale = peers.filter { now.timeIntervalSince($0.lastActive) > timeout }
         guard !stale.isEmpty else { return }
         for s in stale {
