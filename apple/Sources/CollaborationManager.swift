@@ -8,6 +8,9 @@
 import SwiftUI
 import Foundation
 import Combine
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// 協同成員權限角色
 public enum CollaboratorRole: String, Codable {
@@ -211,6 +214,21 @@ public class CollaborationManager: ObservableObject {
     private let maxReconnectAttempts: Int = Int(collabTuning().maxReconnectAttempts)
     private var reconnectTimer: Timer?
     private var userInitiatedDisconnect: Bool = false
+    /// 這間房至少成功加入過一次。加入過之後的斷線（App 進背景、螢幕關閉、網路切換）**不會放棄重連** ——
+    /// 只有使用者自己按「離開／結束協同」才真的離開會議室。從沒連上過的才照次數上限報錯。
+    private var joinedThisRoom = false
+    /// 最近一次收到中繼任何訊息的時間（含 pong）。太久沒收到＝連線已死（背景被系統掛起後常見），主動重連。
+    private var lastInboundAt = Date()
+    /// 進背景的時間：回前景時據此判斷連線是不是已經被系統掐掉。
+    private var backgroundedAt: Date?
+    #if canImport(UIKit) && !os(watchOS)
+    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    #endif
+    private var lifecycleObservers: [NSObjectProtocol] = []
+    /// 收不到任何訊息超過這個秒數就當連線已死（每 5 秒送一次 ping，中繼一定回 pong）。
+    static let silenceTimeout: TimeInterval = 20
+    /// 在背景超過這個秒數，回前景時一律重建連線（底層 socket 多半已被系統關掉、卻還沒回報錯誤）。
+    static let backgroundReconnectAfter: TimeInterval = 5
     public var maxKnownLamport: UInt64 = 0
     /// Lamport 時鐘（設計 §3）。送出時 +1；收到時取最大值。
     public private(set) var lamportClock: UInt64 = 0
@@ -287,7 +305,86 @@ public class CollaborationManager: ObservableObject {
         let savedServer = ProfileDefaults.current.string(forKey: "kairumo_relay_server_url")
         self.serverAddress = savedServer ?? collabTuning().defaultServer
         self.customCloudRelay = ProfileDefaults.current.string(forKey: Self.customCloudRelayKey) ?? ""
+        observeAppLifecycle()
+    }
 
+    // MARK: - 常駐連線：只有使用者自己離開才離開
+
+    /// 在會議室裡（加入或開了房間、而且不是使用者自己離開的）。
+    public var isInRoom: Bool { !currentRoomId.isEmpty && !userInitiatedDisconnect }
+
+    /// App 進出背景：進背景時向系統多要一點時間（短暫切出去不斷線），回前景時把連線接回來。
+    /// 以前沒有這段：iOS 一掛起 App，WebSocket 就被關掉；回來時重連幾次失敗就放棄，
+    /// 使用者看到的是「回個首頁、螢幕暗掉就被踢出會議室」。
+    private func observeAppLifecycle() {
+        #if canImport(UIKit) && !os(watchOS)
+        let center = NotificationCenter.default
+        lifecycleObservers.append(center.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.handleEnterBackground() }
+        })
+        lifecycleObservers.append(center.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.handleBecomeActive() }
+        })
+        #endif
+    }
+
+    private func handleEnterBackground() {
+        guard isInRoom else { return }
+        backgroundedAt = Date()
+        #if canImport(UIKit) && !os(watchOS)
+        if backgroundTask == .invalid {
+            backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "kairumo.collab") { [weak self] in
+                Task { @MainActor [weak self] in self?.endBackgroundTask() }
+            }
+        }
+        #endif
+    }
+
+    private func endBackgroundTask() {
+        #if canImport(UIKit) && !os(watchOS)
+        guard backgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTask)
+        backgroundTask = .invalid
+        #endif
+    }
+
+    private func handleBecomeActive() {
+        endBackgroundTask()
+        let away = backgroundedAt.map { Date().timeIntervalSince($0) } ?? 0
+        backgroundedAt = nil
+        updateIdleTimer()
+        guard isInRoom else { return }
+        let connected: Bool = { if case .connected = status { return true } else { return false } }()
+        if !connected || away > Self.backgroundReconnectAfter
+            || Date().timeIntervalSince(lastInboundAt) > Self.silenceTimeout {
+            reconnectNow()
+        }
+    }
+
+    /// 丟掉目前的連線，立刻以同一間房重連（從看過的序號接著補發）。
+    private func reconnectNow() {
+        guard isInRoom else { return }
+        reconnectTimer?.invalidate()
+        reconnectTimer = nil
+        reconnectAttempt = 0
+        let old = webSocketTask
+        webSocketTask = nil
+        old?.close()
+        connect(roomId: currentRoomId, asHost: isHost, isReconnecting: true)
+    }
+
+    /// 在會議室裡時不讓螢幕自動關閉（系統閒置鎖定會讓 App 進背景、連線被掐掉）。離開會議室就恢復。
+    private func updateIdleTimer() {
+        #if canImport(UIKit) && !os(watchOS)
+        let keepAwake = isInRoom
+        if UIApplication.shared.isIdleTimerDisabled != keepAwake {
+            UIApplication.shared.isIdleTimerDisabled = keepAwake
+        }
+        #endif
     }
 
     // MARK: - 端對端加密輔助函式
@@ -561,10 +658,12 @@ public class CollaborationManager: ObservableObject {
     /// 連線至中繼伺服器
     public func connect(roomId: String, asHost: Bool, isReconnecting: Bool = false) {
         userInitiatedDisconnect = false
+        lastInboundAt = Date()
 
         if !isReconnecting {
             disconnect(userInitiated: false)
             reconnectAttempt = 0
+            joinedThisRoom = false
             self.currentRoomId = roomId
             // 新的房間從頭來；斷線重連回同一個房間則從看過的序號接著補。
             self.lastSeq = 0
@@ -737,7 +836,10 @@ public class CollaborationManager: ObservableObject {
             self.currentRoomId = ""
             self.roomNotebookId = nil
             self.isHost = false
+            self.joinedThisRoom = false
             self.peers.removeAll()
+            updateIdleTimer()
+            endBackgroundTask()
             if isHostingLocalRelay || LocalRelayServer.shared.isRunning {
                 LocalRelayServer.shared.stop()
                 isHostingLocalRelay = false
@@ -765,7 +867,7 @@ public class CollaborationManager: ObservableObject {
     /// 排程自動重新連線（指數退避）
     private func scheduleReconnect() {
         guard !userInitiatedDisconnect, !currentRoomId.isEmpty else { return }
-        if reconnectAttempt >= maxReconnectAttempts {
+        if reconnectAttempt >= maxReconnectAttempts, !joinedThisRoom {
             print("❌ 已達到最大重連次數 (\(maxReconnectAttempts))")
             self.lastErrorMessage = L10n.f("collab_err_unreachable", activeServerAddress)
             self.status = .disconnected
@@ -773,7 +875,8 @@ public class CollaborationManager: ObservableObject {
         }
 
         reconnectAttempt += 1
-        self.status = .reconnecting(attempt: reconnectAttempt, maxAttempts: maxReconnectAttempts)
+        // 加入過的房間不放棄：次數顯示停在上限，之後每 16 秒再試（直到使用者自己離開）。
+        self.status = .reconnecting(attempt: min(reconnectAttempt, maxReconnectAttempts), maxAttempts: maxReconnectAttempts)
 
         let delay = min(pow(2.0, Double(reconnectAttempt - 1)), 16.0)
         reconnectTimer?.invalidate()
@@ -978,9 +1081,16 @@ public class CollaborationManager: ObservableObject {
 
     /// 現在該由這台寄存：在雲端中繼上、有變動、離上次夠久，而且房間裡（含自己）使用者 id 最小的是我 ——
     /// 每個人都寄存只是把同一份內容多寫幾遍。
+    ///
+    /// **房主在線就只由房主寄存**：以前純粹以 id 大小決定，剛加入、只同步到一半的協作者可能拿到寄存權，
+    /// 把「只有第 1 頁、第 2、3 頁標成已刪除」的半份狀態寄存上去，蓋掉房主的完整版本 —— 之後每個
+    /// 雲端加入者都先套用這份壞掉的寄存（帶較新的時戳，房主的回覆反而蓋不過），只剩第一頁。
+    /// 協作者另外要等整份狀態完整收過一次才可寄存（見編輯器 `depositCollabState`）。
     public var shouldDepositState: Bool {
         guard isOnCloudRelay, case .connected = status, stateDirty else { return false }
         if let last = lastDepositAt, Date().timeIntervalSince(last) < Self.depositMinInterval { return false }
+        if isHost { return true }
+        if peers.contains(where: { $0.role == .owner }) { return false }
         return !peers.contains { $0.userId < currentUserId }
     }
 
@@ -1391,6 +1501,7 @@ public class CollaborationManager: ObservableObject {
     }
 
     private func handleIncomingMessage(_ jsonString: String) {
+        lastInboundAt = Date()
         guard let data = jsonString.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let type = json["type"] as? String else { return }
@@ -1400,7 +1511,13 @@ public class CollaborationManager: ObservableObject {
             joinTimer?.invalidate()
             joinTimer = nil
             if let rid = json["room_id"] as? String {
+                let rejoined = joinedThisRoom
+                self.joinedThisRoom = true
                 self.status = .connected(roomId: rid)
+                updateIdleTimer()
+                // 斷線重連回來（進背景、螢幕關閉、網路切換）：中繼可能重開過（房主的本機中繼被系統停掉），
+                // 補發不一定補得齊。加入者向房間要一次整份狀態（合併規則冪等，多要不會出錯）。
+                if rejoined, !isHost { DispatchQueue.main.async { [weak self] in self?.stateSyncNeeded.send(()) } }
                 // 連上了就沒有問題可報 —— 最常見的「監聽失敗」其實是埠被
                 // 另一個中繼佔著（例如 `cargo run -p padnote-relay`），
                 // 那種情況照樣連得上，不該對使用者跳警告。
@@ -1597,6 +1714,12 @@ public class CollaborationManager: ObservableObject {
                 self.sendJson(["type": "ping"])
                 if case .connected(let rid) = self.status {
                     self.sendPresenceHeartbeat(roomId: rid)
+                    // 連線看起來還在、其實已經死了（背景掛起後、網路換手）：太久沒收到任何訊息就重連。
+                    if Date().timeIntervalSince(self.lastInboundAt) > Self.silenceTimeout {
+                        print("⚠️ [Collab] \(Int(Self.silenceTimeout)) 秒沒有收到中繼的任何訊息，重新連線")
+                        self.reconnectNow()
+                        return
+                    }
                 }
                 self.pruneStalePeers()
             }

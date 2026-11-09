@@ -17,7 +17,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手冊",
       "tagline": "手寫、打字、錄音三合一的筆記本。零基礎也能一步一步跟著做。",
-      "version": "適用版本 v6.6.1（build 181）· 2026 年 9 月 26 日",
+      "version": "適用版本 v6.6.2（build 182）· 2026 年 9 月 26 日",
       "tocTitle": "目錄",
       "tocHint": "點任一項目直接跳到該段落",
       "stepsLabel": "操作步驟",
@@ -31,6 +31,26 @@ window.KAIRUMO_MANUAL = {
     },
     "sections": [
       {
+        "id": "intro",
+        "title": "前言：Kairumo 與眾不同的地方",
+        "lead": "Kairumo 不只是一本電子筆記本。下面這幾項是市面上同類型 App 少見、甚至沒有的能力 —— 這裡只做重點介紹，詳細操作請到各自的章節。",
+        "buttons": [],
+        "steps": [
+          "**零帳號、端對端加密的線上協同**：不需要註冊任何帳號，掃一下 QR Code 就能多人即時共筆。同一個 Wi‑Fi 時由你自己的裝置擔任中繼、資料不出區網；不同地點走「雲端共享（跨網路）」。所有內容以 AES-256-GCM 端對端加密，連中繼都看不懂。多人可以同時在同一個文字方塊打字，誰正在哪一頁書寫也會即時協調。→ 見「線上協同（零基礎教學）」",
+          "**協同中的語音即時通話**：共筆時直接按住（或點一下）語音膠囊說話，像對講機一樣即時傳給房內隊友。聲音同樣端對端加密、不錄音、不保存，不用另外開會議軟體。→ 見「線上協同（零基礎教學）」",
+          "**錄音和筆跡在同一條時間軸**：邊錄音邊寫，之後點一下任何文字或筆跡，就跳回寫下它的那一刻重聽。→ 見「錄音與轉錄」",
+          "**完全在裝置上的語音轉文字與翻譯**：Whisper 辨識與翻譯都在你的裝置上執行，錄音不上傳、不收費、不需要帳號。→ 見「語音轉文字（專章）」",
+          "**掃描翻譯筆**：像拿實體翻譯筆一樣，在講義、外文筆記、表格甚至手寫字上一劃就翻譯並朗讀，結果可一鍵轉成圖釘、註解或遮蔽膠帶。→ 見「掃描翻譯筆（專章）」",
+          "**專業書寫引擎**：真實壓感與「永字八法」書法物理筆刷，提按、頓挫都寫得出來；雙環比例橡皮擦精準擦除。→ 見「手寫」",
+          "**完整的圖學（工程製圖）教學**：從畫第一條線、三視圖、標尺寸到練習題自動批改，並可匯出 DXF、STL 等工程檔。→ 見「圖學（工程製圖）：從零開始的完整教學」",
+          "**里程碑快照（時光機）**：在重要時刻插一個名字，之後整本退回那一刻，退回後還能再退回來。→ 見「里程碑快照（時光機）」",
+          "**本地優先、跨平台同一核心**：筆記存在你自己的裝置上，沒有 Kairumo 帳號；手機、平板與電腦各平台使用同一套核心引擎，不同平台的裝置之間也能協同與同步。同步走你自己的 Google 雲端硬碟或資料夾。→ 見「資料備份與同步」",
+          "**一台裝置多位使用者**：最多 5 位使用者各自擁有筆記、設定與雲端帳號，可加上 PIN 或生物辨識鎖。→ 見「多人共用一台裝置（使用者）」"
+        ],
+        "tip": "第一次使用建議依目錄順序從「開始之前」讀起；想先體驗特色功能，直接點目錄跳到對應章節即可。",
+        "fig": null
+      },
+      {
         "id": "start",
         "title": "開始之前",
         "lead": "Kairumo 是一本把手寫、打字與錄音放在同一條時間軸上的筆記本。完全免費、開放原始碼，資料留在你自己的裝置上。",
@@ -40,9 +60,9 @@ window.KAIRUMO_MANUAL = {
           "第一次打開不需要註冊帳號，也不需要網路連線。",
           "第一次打開會有兩本範例筆記（「歡迎使用 Kairumo」與「課堂與會議記錄」），裡面是可以直接改的圖、文、表範例。不需要就整本刪掉。",
           "你寫下的每一筆都存在這台裝置裡。要在多台裝置之間同步，就挑一個自己的雲端硬碟資料夾（見「資料備份與同步」）。",
-          "桌機版視窗左上角會顯示版本號（例如 Kairumo v6.6.1），回報問題時請附上它。"
+          "桌機版視窗左上角會顯示版本號（例如 Kairumo v6.6.2），回報問題時請附上它。"
         ],
-        "tip": "沒有伺服器、沒有帳號，就沒有「忘記密碼」這回事 —— 但也代表裝置遺失時沒有雲端副本，請自己做備份。",
+        "tip": "沒有 Kairumo 帳號，就沒有「忘記密碼」這回事 —— 但也代表我們手上沒有你的副本：裝置遺失時，只能靠你自己的備份或雲端同步救回。",
         "fig": null
       },
       {
@@ -56,7 +76,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "steps": [
           "這一頁講三件事：Kairumo 是什麼、不需要帳號也沒有我們的伺服器、以及唯一會用到的那一個權限。",
-          "只有**麥克風**一個權限，而且只有錄音會用到。不給也可以 —— 手寫、打字、匯出、同步全都不受影響。",
+          "這一頁只講**麥克風**這一個權限：錄音，以及線上協同時的語音通話會用到。不給也可以 —— 手寫、打字、匯出、同步、協同共筆全都不受影響。",
           "按「允許使用麥克風」才會跳出系統的權限對話框。那個對話框**一個 App 一輩子只會出現一次**。",
           "如果當下按了不允許，按鈕會換成「前往設定」。那之後只能從系統設定裡把權限打開，App 自己沒有辦法再問你一次。",
           "按「開始使用」進入首頁。這一頁之後不會再出現。"
@@ -559,7 +579,7 @@ window.KAIRUMO_MANUAL = {
           "同步的節奏：開著 App 時約每 60 秒檢查一次；連續幾次都沒有變更，就自動進入安靜狀態，不再頻繁連線、也不耗電（仍會定期慢慢確認）。你一有編輯、按「立即同步」或切回 App，就會馬上恢復正常節奏。",
           "預載的範例筆記本（歡迎、功能範例、Kairumo 手冊、圖學範例、會議記錄）是每台裝置各自產生的標準內容，不會跨裝置同步；你自己建立的筆記本才會同步。在範例上寫的筆跡只留在那一台裝置。想把範例上的東西保留或帶到別台，請複製成新的筆記本再編輯。"
         ],
-        "tip": "檔案的搬運交給你原本就在用的雲端硬碟。我們不碰網路，也沒有你的資料 —— 這也是為什麼找不到「登入 Kairumo」。同步只會新增檔案，不會覆蓋別台裝置寫的內容。",
+        "tip": "檔案的搬運交給你自己的 Google 雲端硬碟或你選的資料夾，筆記從不經過我們的伺服器 —— 這也是為什麼找不到「登入 Kairumo」。同步只會新增檔案，不會覆蓋別台裝置寫的內容。",
         "fig": "data",
         "cap": "首頁的「資料與同步」：雲端同步、建立備份、從備份還原",
         "fig2": "storage",
@@ -614,7 +634,7 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "線上協同（零基礎教學）",
-        "lead": "多人即時共筆。零知識 AES-256-GCM 端對端加密，任何中繼都看不到內容。兩種連線方式：「同一個 Wi‑Fi」（中繼就是你自己的裝置），以及「雲端共享（跨網路）」——房間開在 Cloudflare 的加密中繼上，任何網路都連得到，不需要任何帳號。",
+        "lead": "多人即時共筆。零知識 AES-256-GCM 端對端加密，任何中繼都看不到內容。兩種連線方式：「同一個 Wi‑Fi」（中繼就是你自己的裝置），以及「雲端共享（跨網路）」——房間開在 Cloudflare 的加密中繼上，任何網路都連得到，不需要任何帳號。共筆時還能按住語音膠囊即時通話。",
         "buttons": [
           "線上協同",
           "同一 Wi‑Fi",
@@ -638,7 +658,10 @@ window.KAIRUMO_MANUAL = {
           "── **連線成功與共筆操作** ──",
           "**步驟 1｜確認在線成員。** 兩台裝置的「在線成員」都會即時列出對方的名字，房主會標記為「房主（擁有者）」。若在多裝置登錄同一個 Google 帳號測試，系統會自動在名稱旁加上裝置後綴（例如「您的名字 (裝置 1)」與「您的名字 (裝置 2)」），彼此各自擁有專屬辨識色與游標，清晰區分互不衝突！",
           "**步驟 2｜即時共筆與多人協同體驗。** 任何一方的手寫筆畫、貼紙、圖片、文字方塊、表格、圖形、連接線、連結預覽、3D 模型與圖釘，都會毫秒級雙向同步並自動儲存留存在雙方的筆記中：\n① **文字方塊多人同時打字**：支援多人同時在同一個文字方塊中輸入，系統以文字 CRDT 即時融合，字元級格式完整保留，並會顯示「協作者正在打字」的提示，絕不互相覆蓋。\n② **即時游標與選取外框**：畫面上能即時看見隊友的游標動態；當隊友選取或編輯某物件時，會以其代表色高亮外框並顯示「正在編輯」提示，避免碰撞。\n③ **頁面增刪與智慧復原**：協作中新增、刪除或調換頁面順序全員即時同步；執行復原（Undo）時，系統會智慧復原您自己的操作，他人後續修改將完整保留。",
-          "**步驟 3｜結束協同。** 房主點擊「結束協同會議」將關閉房間；隊友點擊「中斷連線」則只有自己退出，不影響其他成員。"
+          "**步驟 3｜語音即時通話。** 連線後畫面上會出現語音膠囊（拖曳「≡」把手可以移動位置）：**按住**說話、放開結束；或**點一下**開始說話、再點一下結束。房內隊友會看到「某某正在說話」，喇叭按鈕可以把別人的聲音靜音。聲音以房間金鑰端對端加密即時轉送，不錄音、不保存；第一次使用會詢問麥克風權限。",
+          "**步驟 4｜常駐連線，自己按離開才離開。** 協同期間螢幕不會自動關閉；回到主畫面、切到別的 App 或裝置進入待機都不會讓你離開會議室，回到 Kairumo 時會自動重新連線並補齊離開期間的內容（頂端「線上協同」按鈕亮綠燈＝已連線）。只有你自己按「中斷連線」（隊友）或「結束協同會議」（房主），或關掉這本筆記，才會真正離開。",
+          "**步驟 5｜同一頁一次一人書寫。** 有人正在某一頁書寫時，其他人在同一頁下筆會看到「目前由某某正在進行編輯中，請稍後再進行編輯」；對方停筆約一秒後就能接著寫。對方換到別頁書寫時，你的畫面會自動跳到那一頁跟著看。",
+          "**步驟 6｜結束協同。** 房主點擊「結束協同會議」將關閉房間；隊友點擊「中斷連線」則只有自己退出，不影響其他成員。"
         ],
         "tip": "【安全與隱私保證】協同內容全程以 AES-256-GCM 端對端加密，金鑰只存在邀請連結片段（#key=...）中，中繼點只負責轉發看不懂的密文，任何第三方甚至中繼伺服器都無法解讀。離線期間的操作會自動暫存於本機佇列，網路恢復後自動補齊。頂部工具列採用群組折疊排版，工具收納於「插入」與「更多工具」中，畫面簡潔不擁擠。",
         "fig": "collab",
@@ -854,7 +877,12 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "線上協同連不上怎麼辦？",
-            "看你是哪一種情況。**同一個網路**：（一）確認兩台真的在同一個網路；（二）若要自動看見房間，iOS/iPadOS 請在「設定 > Kairumo > 區域網路」開啟，macOS 請在「系統設定 > 隱私權與安全性 > 區域網路」開啟允許（若被系統隱私阻擋，App 會自動降級為純本機中繼模式，隊友只要手動填入房主顯示的區域網路位址即可正常加入）；（三）隊友的「協同伺服器位址」已改成房主畫面上顯示的 ws://…:9002，而不是預設的 127.0.0.1。**不同網域**：協同沒有被綁在同一個網路 —— 但公開網路上的位址必須是 wss://（加密），填 ws:// 會被擋下並顯示「這個中繼在公開網路上，必須用 wss://」。取得 wss:// 位址的三種方式見上面「線上協同」那一節。",
+            "看你是哪一種情況。**同一個網路**：（一）確認兩台真的在同一個網路；（二）若要自動看見房間，iOS/iPadOS 請在「設定 > Kairumo > 區域網路」開啟，macOS 請在「系統設定 > 隱私權與安全性 > 區域網路」開啟允許（若被系統隱私阻擋，App 會自動降級為純本機中繼模式，隊友只要手動填入房主顯示的區域網路位址即可正常加入）；（三）隊友的「協同伺服器位址」已改成房主畫面上顯示的 ws://…:9002，而不是預設的 127.0.0.1。**不同網域**：協同沒有被綁在同一個網路 —— 但公開網路上的位址必須是 wss://（加密），填 ws:// 會被擋下並顯示「這個中繼在公開網路上，必須用 wss://」。最簡單的跨網路方式是「雲端共享（跨網路）」，不需要自己填位址；自架中繼的做法見「線上協同」那一節。",
+            "collab"
+          ],
+          [
+            "協同時回到主畫面或螢幕關掉，會被踢出會議室嗎？",
+            "不會。協同期間螢幕不會自動關閉；就算你切到別的 App、回到主畫面或讓裝置待機，也不會離開會議室，回到 Kairumo 時會自動重新連線並補齊離開期間的內容。只有自己按「中斷連線」或「結束協同會議」（或關掉這本筆記）才會真正離開。",
             "collab"
           ],
           [
@@ -869,7 +897,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "需要註冊帳號嗎？",
-            "不需要。Kairumo 沒有帳號系統，也沒有後端伺服器。",
+            "不需要。Kairumo 沒有自己的帳號系統，也沒有保存筆記的伺服器。Google 雲端硬碟同步是選用的；線上協同（包含雲端共享）也不需要任何帳號。",
             "data"
           ],
           [
@@ -879,7 +907,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎麼回報問題？",
-            "請附上桌機版視窗左上角顯示的版本號（例如 Kairumo v6.6.1）與操作步驟。",
+            "請附上桌機版視窗左上角顯示的版本號（例如 Kairumo v6.6.2）與操作步驟。",
             "help"
           ],
           [
@@ -943,7 +971,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo User Manual",
       "tagline": "Handwriting, typing and audio in one notebook. Step by step, from zero.",
-      "version": "For version 6.6.1 (build 181) · 26 September 2026",
+      "version": "For version 6.6.2 (build 182) · 26 September 2026",
       "tocTitle": "Contents",
       "tocHint": "Tap any entry to jump straight to it",
       "stepsLabel": "Steps",
@@ -957,6 +985,26 @@ window.KAIRUMO_MANUAL = {
     },
     "sections": [
       {
+        "id": "intro",
+        "title": "Introduction: what makes Kairumo different",
+        "lead": "Kairumo is more than a digital notebook. The features below are rare — or missing — in other apps of its kind. This page is only an overview; each one has its own chapter with step-by-step instructions.",
+        "buttons": [],
+        "steps": [
+          "**Account-free, end-to-end encrypted collaboration**: no sign-up — scan a QR code and write together in real time. On the same Wi‑Fi your own device is the relay and nothing leaves your network; from different places, use Cloud sharing (any network). Everything is end-to-end encrypted with AES-256-GCM, so not even the relay can read it. Several people can type in the same text box at once, and who is writing on which page is coordinated live. → See “Real-time collaboration (beginner tutorial)”",
+          "**Live voice while you collaborate**: hold (or tap) the voice capsule and talk to everyone in the room, walkie-talkie style. Voice is end-to-end encrypted too, never recorded or stored — no separate meeting app needed. → See “Real-time collaboration (beginner tutorial)”",
+          "**Audio and ink on one timeline**: write while you record, then tap any word or stroke to jump back to the moment it was written. → See “Recording and transcription”",
+          "**On-device speech to text and translation**: Whisper recognition and translation run on your device — no upload, no fee, no account. → See “Speech to text (in depth)”",
+          "**Scan Translation Pen**: swipe across handouts, foreign-language notes, tables or even handwriting to translate and read aloud, then turn the result into a pin, note or masking tape in one tap. → See “Scan Translation Pen (in depth)”",
+          "**A professional writing engine**: real pressure and calligraphy brushes built on the “Eight Principles of Yong” physics, plus a dual-ring proportional eraser. → See “Handwriting”",
+          "**A complete drafting course**: from your first line through three views, dimensions and auto-graded practice problems, with DXF, STL and other engineering exports. → See “Drafting (engineering drawing): a complete guide from zero”",
+          "**Milestone snapshots (time machine)**: name an important moment and roll the whole notebook back to it later — and roll forward again. → See “Milestone snapshots (time machine)”",
+          "**Local-first, one engine on every platform**: notes live on your own device and there is no Kairumo account. phones, tablets and computers on every platform share the same core engine, so devices on different platforms collaborate and sync with each other. Sync uses your own Google Drive or folder. → See “Backup and sync”",
+          "**Several users on one device**: up to 5 users, each with their own notes, settings and cloud account, optionally locked with a PIN or biometrics. → See “Sharing one device (users)”"
+        ],
+        "tip": "New here? Read the chapters in order from “Before you start”. Want to try the highlights first? Jump straight to them from the contents.",
+        "fig": null
+      },
+      {
         "id": "start",
         "title": "Before you start",
         "lead": "Kairumo is a notebook that puts handwriting, typing and audio on one shared timeline. Free, open source, and your notes stay on your own device.",
@@ -966,9 +1014,9 @@ window.KAIRUMO_MANUAL = {
           "No account and no internet connection are needed to start.",
           "On first launch you get two sample notebooks (“Welcome to Kairumo” and “Lectures & Meetings”) with editable text, tables, charts and shapes. Delete them if you do not want them.",
           "Everything you write is stored on this device. To sync across devices, point them at a folder in your own cloud drive (see “Backup and sync”).",
-          "On desktop the window title shows the version (for example Kairumo v6.6.1) — include it when you report a problem."
+          "On desktop the window title shows the version (for example Kairumo v6.6.2) — include it when you report a problem."
         ],
-        "tip": "No server and no account means there is no password to forget — and no cloud copy if you lose the device, so make your own backup.",
+        "tip": "No Kairumo account means there is no password to forget — but it also means we hold no copy of your notes: if you lose the device, only your own backup or cloud sync can bring them back.",
         "fig": null
       },
       {
@@ -982,7 +1030,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "steps": [
           "The page covers three things: what Kairumo is, that there is no account and no server of ours, and the one permission it can use.",
-          "There is only **one** permission — the microphone — and only recording uses it. Decline it and handwriting, typing, export and sync all still work.",
+          "This page covers only **one** permission — the microphone. It is used for recording and for voice calls during collaboration. Decline it and handwriting, typing, export, sync and co-authoring all still work.",
           "Tapping “Allow Microphone” is what brings up the system permission dialog. That dialog appears **only once in an app's lifetime**.",
           "If you decline, the button changes to “Open Settings”. From then on the permission can only be switched on in the system settings — the app cannot ask you again.",
           "Tap “Get Started” to go to the home screen. This page will not come back."
@@ -1485,7 +1533,7 @@ window.KAIRUMO_MANUAL = {
           "Sync rhythm: while the app is open it checks about every 60 seconds. After several checks with no change it goes quiet — no frequent connections and no battery use (it still checks slowly now and then). Any edit, “Sync Now”, or coming back to the app brings the normal rhythm straight back.",
           "The built-in sample notebooks (Welcome, Feature showcase, Kairumo manual, Drafting example, Meeting notes) are standard content that each device generates for itself, so they are not synced between devices; only the notebooks you create yourself are. Anything you write on a sample stays on that device. To keep it or move it to another device, duplicate the sample into a new notebook and edit that."
         ],
-        "tip": "Moving the files is your cloud drive's job — the one you already use. We never touch the network and never hold your data, which is why there is no “Sign in to Kairumo”. Syncing only adds files; it never overwrites what another device wrote.",
+        "tip": "Moving the files is the job of your own Google Drive or the folder you chose — your notes never pass through a server of ours, which is why there is no “Sign in to Kairumo”. Sync only adds files; it never overwrites what another device wrote.",
         "fig": "data",
         "cap": "“Data & Sync” on the home screen: cloud sync, create backup, restore from backup",
         "fig2": "storage",
@@ -1540,7 +1588,7 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "Real-time collaboration (beginner tutorial)",
-        "lead": "Write together in real time. Zero-knowledge AES-256-GCM end-to-end encryption — no relay can read your content. Two ways to connect: Same Wi‑Fi (the relay is your own device) and Cloud sharing (any network), where the room runs on an encrypted relay on Cloudflare that works from any network, with no account needed.",
+        "lead": "Write together in real time. Zero-knowledge AES-256-GCM end-to-end encryption — no relay can read your content. Two ways to connect: Same Wi‑Fi (the relay is your own device) and Cloud sharing (any network), where the room runs on an encrypted relay on Cloudflare that works from any network, with no account needed. While you write together, you can also hold the voice capsule to talk live.",
         "buttons": [
           "Collaborate",
           "Start Collaboration",
@@ -1564,7 +1612,10 @@ window.KAIRUMO_MANUAL = {
           "── **Connected session & co-authoring** ──",
           "**Step 1 — Verify online members.** Both devices will list each other under “Online Participants”, with the host marked as “Host (Owner)”. If testing multiple devices using the same Google account, devices are automatically distinguished with device tags (e.g. “Your Name (Device 1)” vs “Your Name (Device 2)”) with dedicated cursor colors.",
           "**Step 2 — Real-time co-authoring experience.** Handwritten strokes, stickers, images, text boxes, tables, shapes, connectors, link previews, 3D models and pins sync bidirectionally in milliseconds and persist locally on both devices:\n① **Concurrent typing in a single text box**: Multiple people can type in the same text box simultaneously. Rich-text CRDT merges text seamlessly, preserves individual formatting, and displays a peer typing banner without overwriting.\n② **Live cursors and peer outlines**: You can see teammates' cursors in real time; selecting or editing an object outlines it with their identity colour and shows an “editing” badge to prevent conflicts.\n③ **Live page operations and smart undo**: Adding, removing, or reordering pages syncs instantly to all participants. Pressing Undo rolls back only your own actions while preserving edits made by others afterwards.",
-          "**Step 3 — Ending the session.** The host taps “End Collaboration” to close the room; guests tapping “Disconnect” only leave individually without affecting others."
+          "**Step 3 — Live voice.** Once connected, a voice capsule appears on screen (drag its “≡” handle to move it). **Hold** to talk and release to stop, or **tap** to start talking and tap again to stop. Teammates see “… is speaking”, and the speaker button mutes everyone else. Voice is end-to-end encrypted with the room key and streamed live — never recorded or stored. The first time, you will be asked for microphone permission.",
+          "**Step 4 — Stay connected until you choose to leave.** While collaborating, the screen does not turn off by itself. Going to the home screen, switching apps or letting the device sleep does not take you out of the room: when you return to Kairumo it reconnects automatically and catches up on what you missed (a green light on the Collaborate button means connected). You only really leave when you tap “Disconnect” (teammates) or “End Collaboration” (host), or close the notebook.",
+          "**Step 5 — One writer per page at a time.** While someone is writing on a page, anyone else who starts writing on that page sees “… is currently editing. Please wait until they finish before editing.” About a second after they lift the pen, you can continue. When they move to another page, your view follows them there automatically.",
+          "**Step 6 — Ending the session.** The host taps “End Collaboration” to close the room; guests tapping “Disconnect” only leave individually without affecting others."
         ],
         "tip": "【Security & Privacy Guarantees】Canvas content is fully end-to-end encrypted with AES-256-GCM. The encryption key travels strictly inside the invite link fragment (#key=...), and the relay only forwards opaque ciphertext. Edits made while offline are queued locally and synchronized automatically upon reconnection. The top toolbar is neatly grouped into “Insert” and “More Tools” to keep your workspace uncluttered.",
         "fig": "collab",
@@ -1784,13 +1835,18 @@ window.KAIRUMO_MANUAL = {
             "collab"
           ],
           [
+            "Will I be kicked out of the room if I go to the home screen or the screen turns off?",
+            "No. While collaborating the screen does not turn off by itself, and switching apps, going to the home screen or letting the device sleep does not take you out of the room — when you return to Kairumo it reconnects automatically and catches up. You only leave when you tap “Disconnect” or “End Collaboration” yourself (or close the notebook).",
+            "collab"
+          ],
+          [
             "Can my notes get lost?",
             "Every stroke is written to a local file as you go. Sync files are append-only and each device only ever writes its own file, so nothing overwrites anything.",
             "data"
           ],
           [
             "Do I need an account?",
-            "No. Kairumo has no accounts and no backend server.",
+            "No. Kairumo has no account system of its own and no server that keeps your notes. Google Drive sync is optional, and collaboration (including Cloud sharing) needs no account either.",
             "data"
           ],
           [
@@ -1800,7 +1856,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "How do I report a problem?",
-            "Include the version shown in the desktop window title (for example Kairumo v6.6.1) and the steps you took.",
+            "Include the version shown in the desktop window title (for example Kairumo v6.6.2) and the steps you took.",
             "help"
           ],
           [
@@ -1864,7 +1920,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手册",
       "tagline": "手写、打字、录音三合一的笔记本。零基础也能一步一步跟着做。",
-      "version": "适用版本 v6.6.1（build 181）· 2026 年 9 月 26 日",
+      "version": "适用版本 v6.6.2（build 182）· 2026 年 9 月 26 日",
       "tocTitle": "目录",
       "tocHint": "点任一项目直接跳到该段落",
       "stepsLabel": "操作步骤",
@@ -1878,6 +1934,26 @@ window.KAIRUMO_MANUAL = {
     },
     "sections": [
       {
+        "id": "intro",
+        "title": "前言：Kairumo 与众不同的地方",
+        "lead": "Kairumo 不只是一本电子笔记本。下面这几项是市面上同类 App 少见、甚至没有的能力 —— 这里只做重点介绍，详细操作请到各自的章节。",
+        "buttons": [],
+        "steps": [
+          "**零账号、端对端加密的在线协作**：不需要注册任何账号，扫一下二维码就能多人实时共笔。同一个 Wi‑Fi 时由你自己的设备担任中继、数据不出局域网；不同地点走“云端共享（跨网络）”。所有内容以 AES-256-GCM 端对端加密，连中继都看不懂。多人可以同时在同一个文本框打字，谁正在哪一页书写也会实时协调。→ 见“在线协作（零基础教学）”",
+          "**协作中的语音实时通话**：共笔时直接按住（或点一下）语音胶囊说话，像对讲机一样实时传给房内队友。声音同样端对端加密、不录音、不保存，不用另外开会议软件。→ 见“在线协作（零基础教学）”",
+          "**录音和笔迹在同一条时间轴**：边录音边写，之后点一下任何文字或笔迹，就跳回写下它的那一刻重听。→ 见“录音与转写”",
+          "**完全在设备上的语音转文字与翻译**：Whisper 识别与翻译都在你的设备上运行，录音不上传、不收费、不需要账号。→ 见“语音转文字（专章）”",
+          "**扫描翻译笔**：像拿实体翻译笔一样，在讲义、外文笔记、表格甚至手写字上一划就翻译并朗读，结果可一键转成图钉、注释或遮蔽胶带。→ 见“扫描翻译笔（专章）”",
+          "**专业书写引擎**：真实压感与“永字八法”书法物理笔刷，提按、顿挫都写得出来；双环比例橡皮擦精准擦除。→ 见“手写”",
+          "**完整的图学（工程制图）教学**：从画第一条线、三视图、标尺寸到练习题自动批改，并可导出 DXF、STL 等工程文件。→ 见“图学（工程制图）：从零开始的完整教学”",
+          "**里程碑快照（时光机）**：在重要时刻插一个名字，之后整本退回那一刻，退回后还能再退回来。→ 见“里程碑快照（时光机）”",
+          "**本地优先、跨平台同一核心**：笔记存在你自己的设备上，没有 Kairumo 账号；手机、平板与电脑各平台使用同一套核心引擎，不同平台的设备之间也能协作与同步。同步走你自己的 Google 云端硬盘或文件夹。→ 见“数据备份与同步”",
+          "**一台设备多位用户**：最多 5 位用户各自拥有笔记、设置与云端账号，可加上 PIN 或生物识别锁。→ 见“多人共用一台设备（用户）”"
+        ],
+        "tip": "第一次使用建议按目录顺序从“开始之前”读起；想先体验特色功能，直接点目录跳到对应章节即可。",
+        "fig": null
+      },
+      {
         "id": "start",
         "title": "开始之前",
         "lead": "Kairumo 是一本把手写、打字与录音放在同一条时间轴上的笔记本。完全免费、开放源代码，数据留在你自己的设备上。",
@@ -1887,9 +1963,9 @@ window.KAIRUMO_MANUAL = {
           "第一次打开不需要注册账号，也不需要联网。",
           "第一次打开会有两本范例笔记（「欢迎使用 Kairumo」与「课堂与会议记录」），里面是可以直接改的图、文、表范例。不需要就整本删掉。",
           "你写下的每一笔都存在这台设备里。要在多台设备之间同步，就挑一个自己的云端硬盘文件夹（见「数据备份与同步」）。",
-          "台式机版窗口左上角会显示版本号（例如 Kairumo v6.6.1），反馈问题时请附上它。"
+          "台式机版窗口左上角会显示版本号（例如 Kairumo v6.6.2），反馈问题时请附上它。"
         ],
-        "tip": "没有服务器、没有账号，就没有“忘记密码”这回事 —— 但也意味着设备丢失时没有云端副本，请自己做备份。",
+        "tip": "没有 Kairumo 账号，就没有“忘记密码”这回事 —— 但也意味着我们手上没有你的副本：设备丢失时，只能靠你自己的备份或云端同步找回。",
         "fig": null
       },
       {
@@ -1903,7 +1979,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "steps": [
           "这一页讲三件事：Kairumo 是什么、不需要账号也没有我们的服务器、以及唯一会用到的那一个权限。",
-          "只有**麦克风**一个权限，而且只有录音会用到。不给也可以 —— 手写、打字、导出、同步全都不受影响。",
+          "这一页只讲**麦克风**这一个权限：录音，以及在线协作时的语音通话会用到。不给也可以 —— 手写、打字、导出、同步、协作共笔全都不受影响。",
           "按「允许使用麦克风」才会弹出系统的权限对话框。那个对话框**一个 App 一辈子只会出现一次**。",
           "如果当时按了不允许，按钮会换成「前往设置」。那之后只能从系统设置里把权限打开，App 自己没有办法再问你一次。",
           "按「开始使用」进入首页。这一页之后不会再出现。"
@@ -2406,7 +2482,7 @@ window.KAIRUMO_MANUAL = {
           "同步的节奏：开着 App 时约每 60 秒检查一次；连续几次都没有变更，就自动进入安静状态，不再频繁联网、也不耗电（仍会定期慢慢确认）。你一有编辑、按“立即同步”或切回 App，就会马上恢复正常节奏。",
           "预载的示范笔记本（欢迎、功能示范、Kairumo 手册、图学示范、会议记录）是每台设备各自生成的标准内容，不会跨设备同步；只有你自己创建的笔记本才会同步。在示范笔记本上写的笔迹只留在那一台设备。想保留或带到别的设备，请先复制成新的笔记本再编辑。"
         ],
-        "tip": "文件搬运交给你原本就在用的云端硬盘。我们不碰网络，也没有你的数据 —— 这也是为什么找不到“登录 Kairumo”。同步只会新增文件，不会覆盖别台设备写的内容。",
+        "tip": "文件搬运交给你自己的 Google 云端硬盘或你选的文件夹，笔记从不经过我们的服务器 —— 这也是为什么找不到“登录 Kairumo”。同步只会新增文件，不会覆盖别的设备写的内容。",
         "fig": "data",
         "cap": "首页的「数据与同步」：云端同步、创建备份、从备份还原",
         "fig2": "storage",
@@ -2461,7 +2537,7 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "在线协作（零基础教学）",
-        "lead": "多人实时共笔。零知识 AES-256-GCM 端对端加密，任何中继都看不到内容。两种连接方式：“同一个 Wi‑Fi”（中继就是你自己的设备），以及“云端共享（跨网络）”——房间开在 Cloudflare 的加密中继上，任何网络都连得上，不需要任何账号。",
+        "lead": "多人实时共笔。零知识 AES-256-GCM 端对端加密，任何中继都看不到内容。两种连接方式：“同一个 Wi‑Fi”（中继就是你自己的设备），以及“云端共享（跨网络）”——房间开在 Cloudflare 的加密中继上，任何网络都连得上，不需要任何账号。共笔时还能按住语音胶囊实时通话。",
         "buttons": [
           "在线协作",
           "开始多人协作",
@@ -2485,7 +2561,10 @@ window.KAIRUMO_MANUAL = {
           "── **连接成功与共笔操作** ──",
           "**步骤 1｜确认在线成员。** 两台设备的“在线成员”都会实时列出对方的名字，房主会标记为“房主（拥有者）”。若在多设备登录同一个 Google 账号测试，系统会自动在名称旁加上设备后缀（例如“您的名字 (设备 1)”与“您的名字 (设备 2)”），彼此各自拥有专属辨识色与光标，清晰区分互不冲突！",
           "**步骤 2｜实时共笔与多人协作体验。** 任何一方的手写笔画、贴纸、图片、文本框、表格、图形、连接线、链接预览、3D 模型与图钉，都会毫秒级双向同步并自动储存留存在双方的笔记中：\n① **文本框多人同时打字**：支持多人同时在同一个文本框中输入，系统以文字 CRDT 实时融合，字符级格式完整保留，并会显示“协作者正在打字”的提示，绝不互相覆盖。\n② **实时光标与选取外框**：画面上能实时看见队友的光标动态；当队友选取或编辑某对象时，会以其代表色高亮外框并显示“正在编辑”提示，避免碰撞。\n③ **页面增删与智能复原**：协作中新增、删除或调换页面顺序全员实时同步；执行复原（Undo）时，系统会智能复原您自己的操作，他人后续修改将完整保留。",
-          "**步骤 3｜结束协作。** 房主点击“结束协作会议”将关闭房间；队友点击“断开连接”则只有自己退出，不影响其他成员。"
+          "**步骤 3｜语音实时通话。** 连接后画面上会出现语音胶囊（拖动“≡”把手可以移动位置）：**按住**说话、松开结束；或**点一下**开始说话、再点一下结束。房内队友会看到“某某正在说话”，喇叭按钮可以把别人的声音静音。声音以房间密钥端对端加密实时转发，不录音、不保存；第一次使用会询问麦克风权限。",
+          "**步骤 4｜常驻连接，自己按离开才离开。** 协作期间屏幕不会自动关闭；回到主屏幕、切到别的 App 或设备进入待机都不会让你离开会议室，回到 Kairumo 时会自动重新连接并补齐离开期间的内容（顶部“线上协同”按钮亮绿灯＝已连接）。只有你自己按“断开连接”（队友）或“结束协同会议”（房主），或关掉这本笔记，才会真正离开。",
+          "**步骤 5｜同一页一次一人书写。** 有人正在某一页书写时，其他人在同一页下笔会看到“目前由某某正在进行编辑中，请稍后再进行编辑”；对方停笔约一秒后就能接着写。对方换到别页书写时，你的画面会自动跳到那一页跟着看。",
+          "**步骤 6｜结束协作。** 房主点击“结束协作会议”将关闭房间；队友点击“断开连接”则只有自己退出，不影响其他成员。"
         ],
         "tip": "【安全与隐私保证】协作内容全程以 AES-256-GCM 端对端加密，密钥只存在邀请链接片段（#key=...）中，中继点只负责转发看不懂的密文，任何第三方甚至中继服务器都无法解密。离线期间的操作会自动暂存于本地队列，网络恢复后自动补发。顶部工具栏采用分组折叠排版，工具收纳于“插入”与“更多工具”中，画面简洁不拥挤。",
         "fig": "collab",
@@ -2705,13 +2784,18 @@ window.KAIRUMO_MANUAL = {
             "collab"
           ],
           [
+            "协作时回到主屏幕或屏幕关掉，会被踢出会议室吗？",
+            "不会。协作期间屏幕不会自动关闭；就算你切到别的 App、回到主屏幕或让设备待机，也不会离开会议室，回到 Kairumo 时会自动重新连接并补齐离开期间的内容。只有自己按“断开连接”或“结束协同会议”（或关掉这本笔记）才会真正离开。",
+            "collab"
+          ],
+          [
             "笔记会不会丢失？",
             "每一笔都实时写入本机文件。同步文件只新增不修改，每台设备只写自己的文件，所以不会互相覆盖。",
             "data"
           ],
           [
             "需要注册账号吗？",
-            "不需要。Kairumo 没有账号系统，也没有后端服务器。",
+            "不需要。Kairumo 没有自己的账号系统，也没有保存笔记的服务器。Google 云端硬盘同步是可选的；在线协作（包括云端共享）也不需要任何账号。",
             "data"
           ],
           [
@@ -2721,7 +2805,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎么反馈问题？",
-            "请附上台式机版窗口左上角显示的版本号（例如 Kairumo v6.6.1）与操作步骤。",
+            "请附上台式机版窗口左上角显示的版本号（例如 Kairumo v6.6.2）与操作步骤。",
             "help"
           ],
           [
@@ -2785,7 +2869,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作マニュアル",
       "tagline": "手書き・タイピング・録音をひとつにしたノート。はじめての方でも順番どおりに進められます。",
-      "version": "対象バージョン v6.6.1（build 181）· 2026年9月26日",
+      "version": "対象バージョン v6.6.2（build 182）· 2026年9月26日",
       "tocTitle": "目次",
       "tocHint": "項目をタップすると該当セクションへ移動します",
       "stepsLabel": "手順",
@@ -2799,6 +2883,26 @@ window.KAIRUMO_MANUAL = {
     },
     "sections": [
       {
+        "id": "intro",
+        "title": "はじめに：Kairumo ならではの機能",
+        "lead": "Kairumo は単なるデジタルノートではありません。以下は同種のアプリではあまり見られない、あるいは存在しない機能です。ここでは概要だけを紹介し、詳しい操作はそれぞれの章で説明します。",
+        "buttons": [],
+        "steps": [
+          "**アカウント不要・エンドツーエンド暗号化の共同編集**：登録なしで、QR コードを読み取るだけで複数人がリアルタイムに書き込めます。同じ Wi‑Fi ならあなたの端末自身がリレーになり、データはローカルネットワークの外に出ません。離れた場所からは「クラウド共有」を使います。すべての内容は AES-256-GCM でエンドツーエンド暗号化され、リレーにも読めません。同じテキストボックスへの同時入力や、誰がどのページに書いているかの調整もリアルタイムで行われます。→「リアルタイム共同編集（ゼロ基礎チュートリアル）」へ",
+          "**共同編集中のリアルタイム音声通話**：音声カプセルを長押し（またはタップ）して話すと、トランシーバーのようにルームの参加者にすぐ届きます。声もエンドツーエンド暗号化され、録音・保存はされません。別の会議アプリは不要です。→「リアルタイム共同編集（ゼロ基礎チュートリアル）」へ",
+          "**録音と筆跡が同じタイムライン上に**：録音しながら書き、あとで文字や筆跡をタップすると、それを書いた瞬間に戻って聞き直せます。→「録音と文字起こし」へ",
+          "**端末内で完結する文字起こしと翻訳**：Whisper による認識と翻訳はすべて端末内で実行。録音はアップロードされず、料金もアカウントも不要です。→「音声の書き起こし（詳しく）」へ",
+          "**スキャン翻訳ペン**：実物の翻訳ペンのように、プリントや外国語のノート、表、手書き文字までなぞるだけで翻訳・読み上げ。結果はワンタップでピン、注釈、マスキングテープにできます。→「スキャン翻訳ペン（詳しく）」へ",
+          "**本格的な筆記エンジン**：実際の筆圧と「永字八法」の物理モデルによる書道ブラシ、比例式のダブルリング消しゴム。→「手書き」へ",
+          "**本格的な製図（工学図面）講座**：最初の 1 本の線から三面図、寸法、自動採点の練習問題まで。DXF や STL などの工学ファイルも書き出せます。→「製図（工学図面）：ゼロから始める完全ガイド」へ",
+          "**マイルストーンスナップショット（タイムマシン）**：大切な瞬間に名前を付け、あとでノート全体をその時点に戻せます。戻したあとでも元に戻せます。→「マイルストーンスナップショット（タイムマシン）」へ",
+          "**ローカルファースト、全プラットフォームで同じエンジン**：ノートはあなたの端末に保存され、Kairumo アカウントはありません。スマートフォン・タブレット・パソコンのどのプラットフォームも同じコアエンジンを使うため、異なるプラットフォームの端末同士でも共同編集・同期できます。同期にはご自身の Google ドライブまたはフォルダーを使います。→「バックアップと同期」へ",
+          "**1 台を複数人で**：最大 5 人のユーザーがそれぞれのノート・設定・クラウドアカウントを持て、PIN や生体認証でロックできます。→「1 台を複数人で使う（ユーザー）」へ"
+        ],
+        "tip": "初めての方は目次の順に「はじめる前に」から読むのがおすすめです。特長的な機能を先に試したい場合は、目次から該当の章へ直接移動できます。",
+        "fig": null
+      },
+      {
         "id": "start",
         "title": "はじめる前に",
         "lead": "Kairumo は手書き・タイピング・録音を同じタイムライン上に置くノートです。完全無料、オープンソース、データは端末内に留まります。",
@@ -2808,9 +2912,9 @@ window.KAIRUMO_MANUAL = {
           "アカウント登録もインターネット接続も不要です。",
           "初回起動時にサンプルノートが2冊（「Kairumo へようこそ」と「授業と会議の記録」）入っています。そのまま編集できる文章・表・グラフ・図形の例です。不要なら削除してください。",
           "書いた内容はこの端末に保存されます。複数の端末で同期するには、ご自身のクラウドのフォルダを指定してください（「バックアップと同期」参照）。",
-          "デスクトップ版ではウインドウのタイトルにバージョン（例：Kairumo v6.6.1）が表示されます。不具合報告の際は添えてください。"
+          "デスクトップ版ではウインドウのタイトルにバージョン（例：Kairumo v6.6.2）が表示されます。不具合報告の際は添えてください。"
         ],
-        "tip": "サーバーもアカウントもないためパスワードを忘れる心配はありません。その代わりクラウド上の控えもないので、バックアップはご自身で。",
+        "tip": "Kairumo アカウントがないのでパスワードを忘れる心配はありません。その代わり当方はノートの控えを持たないため、端末を失くしたときに頼れるのはご自身のバックアップかクラウド同期だけです。",
         "fig": null
       },
       {
@@ -2824,7 +2928,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "steps": [
           "このページでは 3 つを説明します。Kairumo とは何か、アカウントも当方のサーバーも不要であること、そして使う可能性のある唯一の権限です。",
-          "権限は**マイク**の 1 つだけで、使うのは録音のときだけです。許可しなくても手書き・入力・書き出し・同期はすべて動きます。",
+          "このページで説明する権限は**マイク**の 1 つだけです。録音と、共同編集中の音声通話で使います。許可しなくても手書き・入力・書き出し・同期・共同編集はすべて動きます。",
           "「マイクを許可」を押してはじめてシステムの権限ダイアログが出ます。このダイアログは**アプリの一生で一度しか表示されません**。",
           "そこで拒否すると、ボタンは「設定を開く」に変わります。以降はシステム設定からしか有効にできず、アプリ側から再度たずねることはできません。",
           "「はじめる」を押すとホームに進みます。このページが再び出ることはありません。"
@@ -3327,7 +3431,7 @@ window.KAIRUMO_MANUAL = {
           "同期のリズム：アプリを開いている間は約 60 秒ごとに確認します。何度か続けて変更がなければ静かな状態になり、頻繁な通信もバッテリー消費もなくなります（ゆっくり定期的には確認します）。編集、「今すぐ同期」、アプリへの復帰のいずれかで、すぐ通常のリズムに戻ります。",
           "組み込みのサンプルノート（ウェルカム、機能サンプル、Kairumo マニュアル、製図サンプル、会議メモ）は、各端末がそれぞれ生成する標準コンテンツのため、端末間では同期されません。同期されるのは自分で作成したノートだけです。サンプルに書いた内容はその端末にだけ残ります。残したり別の端末に移したりするには、サンプルを新しいノートに複製してから編集してください。"
         ],
-        "tip": "ファイルの運搬は普段お使いのクラウドが担当します。当方はネットワークに触れず、データも保持しません。だから「Kairumo にサインイン」はありません。同期はファイルを追加するだけで、別の端末が書いた内容を上書きしません。",
+        "tip": "ファイルの運搬はご自身の Google ドライブか選んだフォルダーが担当し、ノートが当方のサーバーを経由することはありません。だから「Kairumo にログイン」が見当たらないのです。同期はファイルを追加するだけで、別の端末が書いた内容を上書きしません。",
         "fig": "data",
         "cap": "ホームの「データと同期」：クラウド同期・バックアップ作成・バックアップから復元",
         "fig2": "storage",
@@ -3382,7 +3486,7 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "リアルタイム共同編集（ゼロ基礎チュートリアル）",
-        "lead": "複数人で同時に書けます。ゼロ知識 AES-256-GCM エンドツーエンド暗号化で、どのリレーも内容を読めません。接続方法は 2 つ：「同じ Wi‑Fi」（リレーはあなたの端末）と「クラウド共有」——ルームは Cloudflare 上の暗号化リレーで動き、どのネットワークからでもアカウントなしでつながります。",
+        "lead": "複数人で同時に書けます。ゼロ知識 AES-256-GCM エンドツーエンド暗号化で、どのリレーも内容を読めません。接続方法は 2 つ：「同じ Wi‑Fi」（リレーはあなたの端末）と「クラウド共有」——ルームは Cloudflare 上の暗号化リレーで動き、どのネットワークからでもアカウントなしでつながります。共同編集中は音声カプセルを押してリアルタイムに話すこともできます。",
         "buttons": [
           "共同編集",
           "共同編集を開始",
@@ -3406,7 +3510,10 @@ window.KAIRUMO_MANUAL = {
           "── **接続成功と共同編集の操作** ──",
           "**手順1 — 参加者を確認：** 両端末の「参加者」に互いの名前が表示されます。同一 Google アカウントで複数端末をテストする場合も、端末タグ（例:「お名前 (端末 1)」と「お名前 (端末 2)」）が自動付与され、色分けされたカーソルで混同なく操作できます！",
           "**ステップ 2｜リアルタイム共同編集と快適な同期体験**。手書きの筆跡、ステッカー、画像、テキストボックス、表、図形、コネクタ、リンクプレビュー、3D モデル、付箋ピンなど、あらゆる操作がミリ秒単位で双方向同期され、双方の端末に自動保存されます：\n① **同一テキストボックスの同時入力**：複数の参加者が同じテキストボックス内で同時にタイピングできます。文字 CRDT によりスムーズに統合され、個別の書式も保持され、「〇〇が入力中」と表示されて上書き衝突を防ぎます。\n② **リアルタイムカーソルと選択枠**：仲間のカーソル移動がリアルタイムに表示されます。他の参加者がオブジェクトを選択または編集中は、その参加者のカラーで枠線がハイライトされ「編集中」のバッジが表示されます。\n③ **ページの動的増減とスマート取り消し**：ページの追加・削除・並べ替えも全員へ瞬時に反映されます。取り消し（Undo）を実行すると、自分が行った操作のみを賢く戻し、他の人が後から編集した内容はそのまま維持されます。",
-          "**手順3 — 終了：** ホストが「共同編集を終了」を押すとルームが閉じ、参加者が「切断」を押すと自分だけ退出します。"
+          "**手順3 — リアルタイム音声通話：** 接続すると画面に音声カプセルが表示されます（「≡」ハンドルをドラッグして移動できます）。**長押し**で話し、離すと終了。または**タップ**で話し始め、もう一度タップで終了します。参加者には「〇〇 が話しています」と表示され、スピーカーボタンで他の人の声をミュートできます。声はルームキーでエンドツーエンド暗号化されてリアルタイムに送られ、録音・保存はされません。初回はマイクの許可を求められます。",
+          "**手順4 — 自分で退出するまで接続を維持：** 共同編集中は画面が自動で消えません。ホーム画面に戻る、別のアプリに切り替える、端末がスリープするといった操作ではルームから退出せず、Kairumo に戻ると自動で再接続し、離れていた間の内容を取り込みます（上部の共同編集ボタンが緑色＝接続中）。本当に退出するのは、自分で「切断」（参加者）または「共同編集を終了」（ホスト）を押したとき、あるいはノートを閉じたときだけです。",
+          "**手順5 — 1 ページに書けるのは 1 人ずつ：** 誰かがあるページに書いている間に同じページに書き始めると「現在〇〇が編集しています。終了するまでしばらくお待ちください。」と表示されます。相手がペンを離して約 1 秒後に書けるようになります。相手が別のページに移って書き始めると、あなたの画面も自動でそのページに移動します。",
+          "**手順6 — 終了：** ホストが「共同編集を終了」を押すとルームが閉じ、参加者が「切断」を押すと自分だけ退出します。"
         ],
         "tip": "【セキュリティとプライバシー保証】キャンバスの内容はすべて AES-256-GCM でエンドツーエンド暗号化されます。暗号鍵は招待リンクのフラグメント（#key=...）内にのみ存在し、中継地点は読めない暗号文を転送するだけです。オフライン中の編集はローカルに蓄積され、再接続時に自動送信されます。上部ツールバーは「挿入」と「詳細ツール」にすっきりグループ化されています。",
         "fig": "collab",
@@ -3626,13 +3733,18 @@ window.KAIRUMO_MANUAL = {
             "collab"
           ],
           [
+            "共同編集中にホーム画面に戻ったり画面が消えたりすると、ルームから外れますか？",
+            "外れません。共同編集中は画面が自動で消えず、別のアプリへの切り替え、ホーム画面への移動、スリープでもルームから退出しません。Kairumo に戻ると自動で再接続し、離れていた間の内容を取り込みます。退出するのは自分で「切断」または「共同編集を終了」を押したとき（またはノートを閉じたとき）だけです。",
+            "collab"
+          ],
+          [
             "ノートが消えることは？",
             "書いたそばからローカルファイルに保存されます。同期ファイルは追記のみで、各端末は自分のファイルしか書かないため上書きは起こりません。",
             "data"
           ],
           [
             "アカウントは必要？",
-            "不要です。Kairumo にはアカウントもバックエンドサーバーもありません。",
+            "不要です。Kairumo には独自のアカウントも、ノートを保管するサーバーもありません。Google ドライブ同期は任意で、共同編集（クラウド共有を含む）にもアカウントは要りません。",
             "data"
           ],
           [
@@ -3642,7 +3754,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "不具合はどう報告しますか？",
-            "デスクトップ版のウインドウタイトルに表示されるバージョン（例：Kairumo v6.6.1）と、操作手順を添えてください。",
+            "デスクトップ版のウインドウタイトルに表示されるバージョン（例：Kairumo v6.6.2）と、操作手順を添えてください。",
             "help"
           ],
           [
@@ -3706,7 +3818,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 사용 설명서",
       "tagline": "손글씨·타이핑·녹음을 하나로 묶은 노트. 처음이어도 순서대로 따라 하면 됩니다.",
-      "version": "대상 버전 v6.6.1 (build 181) · 2026년 9월 26일",
+      "version": "대상 버전 v6.6.2 (build 182) · 2026년 9월 26일",
       "tocTitle": "목차",
       "tocHint": "항목을 누르면 해당 섹션으로 이동합니다",
       "stepsLabel": "따라 하기",
@@ -3720,6 +3832,26 @@ window.KAIRUMO_MANUAL = {
     },
     "sections": [
       {
+        "id": "intro",
+        "title": "머리말: Kairumo만의 특별한 기능",
+        "lead": "Kairumo는 단순한 디지털 노트가 아닙니다. 아래 기능들은 같은 종류의 앱에서 보기 드물거나 아예 없는 것들입니다. 여기서는 요점만 소개하며, 자세한 사용법은 각 장에서 설명합니다.",
+        "buttons": [],
+        "steps": [
+          "**계정 없이, 종단 간 암호화된 공동 작업**: 가입 없이 QR 코드만 스캔하면 여러 사람이 실시간으로 함께 필기합니다. 같은 Wi‑Fi에서는 내 기기가 직접 릴레이가 되어 데이터가 로컬 네트워크를 벗어나지 않고, 다른 장소에서는 '클라우드 공유'를 사용합니다. 모든 내용은 AES-256-GCM으로 종단 간 암호화되어 릴레이조차 읽을 수 없습니다. 같은 텍스트 상자에 여러 명이 동시에 입력할 수 있고, 누가 어느 페이지에서 쓰고 있는지도 실시간으로 조율됩니다. → '실시간 협업 (초보자 튜토리얼)' 참조",
+          "**공동 작업 중 실시간 음성 통화**: 음성 캡슐을 길게 누르거나(또는 탭하고) 말하면 무전기처럼 방 안의 참여자에게 바로 전달됩니다. 목소리도 종단 간 암호화되며 녹음·저장되지 않아 별도의 회의 앱이 필요 없습니다. → '실시간 협업 (초보자 튜토리얼)' 참조",
+          "**녹음과 필기가 하나의 타임라인에**: 녹음하면서 필기하고, 나중에 글자나 획을 탭하면 그것을 쓴 순간으로 돌아가 다시 들을 수 있습니다. → '녹음과 전사' 참조",
+          "**기기 안에서 끝나는 음성 텍스트 변환과 번역**: Whisper 인식과 번역이 모두 기기에서 실행됩니다. 녹음은 업로드되지 않으며 요금도 계정도 필요 없습니다. → '음성 텍스트 변환 (자세히)' 참조",
+          "**스캔 번역펜**: 실제 번역펜처럼 유인물, 외국어 노트, 표, 손글씨까지 쓱 훑기만 하면 번역하고 읽어 줍니다. 결과는 탭 한 번으로 핀, 주석, 마스킹 테이프로 바꿀 수 있습니다. → '스캔 번역펜 (자세히)' 참조",
+          "**전문 필기 엔진**: 실제 필압과 '영자팔법' 물리 모델 기반의 서예 브러시, 비례식 이중 링 지우개. → '손글씨' 참조",
+          "**완전한 제도(공학 도면) 강좌**: 첫 선 긋기부터 삼면도, 치수, 자동 채점 연습 문제까지. DXF, STL 등 공학 파일로 내보낼 수 있습니다. → '제도(공학 도면): 처음부터 시작하는 완전 가이드' 참조",
+          "**마일스톤 스냅샷(타임머신)**: 중요한 순간에 이름을 붙이고 나중에 노트 전체를 그 시점으로 되돌릴 수 있으며, 되돌린 뒤에도 다시 원래대로 돌아올 수 있습니다. → '마일스톤 스냅샷(타임머신)' 참조",
+          "**로컬 우선, 모든 플랫폼에서 같은 엔진**: 노트는 내 기기에 저장되고 Kairumo 계정은 없습니다. 휴대폰, 태블릿, 컴퓨터 등 모든 플랫폼이 같은 핵심 엔진을 사용하므로 서로 다른 플랫폼의 기기끼리도 공동 작업하고 동기화할 수 있습니다. 동기화는 내 Google 드라이브나 폴더를 사용합니다. → '백업 및 동기화' 참조",
+          "**한 기기를 여러 사람이**: 최대 5명의 사용자가 각자의 노트, 설정, 클라우드 계정을 갖고 PIN이나 생체 인증으로 잠글 수 있습니다. → '한 기기를 여러 사람이 쓰기 (사용자)' 참조"
+        ],
+        "tip": "처음이라면 목차 순서대로 '시작하기 전에'부터 읽어 보세요. 특별한 기능을 먼저 써 보고 싶다면 목차에서 해당 장으로 바로 이동하면 됩니다.",
+        "fig": null
+      },
+      {
         "id": "start",
         "title": "시작하기 전에",
         "lead": "Kairumo는 손글씨·타이핑·녹음을 하나의 타임라인에 올려 두는 노트입니다. 무료이며 오픈 소스이고, 데이터는 기기에 남습니다.",
@@ -3729,9 +3861,9 @@ window.KAIRUMO_MANUAL = {
           "계정 가입도, 인터넷 연결도 필요 없습니다.",
           "처음 실행하면 샘플 노트 두 권(“Kairumo에 오신 것을 환영합니다”, “수업·회의 기록”)이 들어 있습니다. 바로 고칠 수 있는 글·표·차트·도형 예시입니다. 필요 없으면 지우세요.",
           "작성한 내용은 이 기기에 저장됩니다. 여러 기기에서 동기화하려면 본인 클라우드의 폴더를 지정하세요(「백업 및 동기화」 참고).",
-          "데스크톱에서는 창 제목에 버전(예: Kairumo v6.6.1)이 표시됩니다. 문제를 알릴 때 함께 적어 주세요."
+          "데스크톱에서는 창 제목에 버전(예: Kairumo v6.6.2)이 표시됩니다. 문제를 알릴 때 함께 적어 주세요."
         ],
-        "tip": "서버도 계정도 없으므로 비밀번호를 잊을 일이 없습니다. 대신 클라우드 사본도 없으니 백업은 직접 해 두세요.",
+        "tip": "Kairumo 계정이 없으니 비밀번호를 잊을 일이 없습니다. 대신 저희가 노트 사본을 갖고 있지 않으므로, 기기를 잃어버리면 직접 만든 백업이나 클라우드 동기화로만 되찾을 수 있습니다.",
         "fig": null
       },
       {
@@ -3745,7 +3877,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "steps": [
           "이 페이지는 세 가지를 설명합니다. Kairumo가 무엇인지, 계정도 저희 서버도 필요 없다는 점, 그리고 사용할 수 있는 단 하나의 권한입니다.",
-          "권한은 **마이크** 하나뿐이며 녹음할 때만 사용합니다. 허용하지 않아도 손글씨·입력·내보내기·동기화는 모두 그대로 동작합니다.",
+          "이 화면에서 설명하는 권한은 **마이크** 하나뿐입니다. 녹음과 공동 작업 중 음성 통화에 사용합니다. 허용하지 않아도 손글씨·입력·내보내기·동기화·공동 작업은 모두 그대로 동작합니다.",
           "「마이크 허용」을 눌러야 시스템 권한 대화상자가 나타납니다. 이 대화상자는 **앱당 평생 한 번만** 표시됩니다.",
           "그때 거부하면 버튼이 「설정 열기」로 바뀝니다. 이후에는 시스템 설정에서만 켤 수 있으며 앱이 다시 물어볼 수 없습니다.",
           "「시작하기」를 누르면 홈으로 이동합니다. 이 페이지는 다시 나오지 않습니다."
@@ -4248,7 +4380,7 @@ window.KAIRUMO_MANUAL = {
           "동기화 주기: 앱을 열어 두면 약 60초마다 확인합니다. 여러 번 연속으로 변경이 없으면 조용한 상태가 되어 잦은 연결도 배터리 소모도 없어집니다(천천히 주기적으로는 계속 확인합니다). 편집, “지금 동기화”, 앱으로 돌아오기 중 하나만 있어도 바로 정상 주기로 돌아갑니다.",
           "기본 제공 샘플 노트(환영, 기능 예제, Kairumo 설명서, 제도 예제, 회의 기록)는 각 기기가 스스로 생성하는 표준 콘텐츠라 기기 간에 동기화되지 않습니다. 직접 만든 노트만 동기화됩니다. 샘플에 쓴 필기는 그 기기에만 남습니다. 보관하거나 다른 기기로 옮기려면 샘플을 새 노트로 복제한 뒤 편집하세요."
         ],
-        "tip": "파일 이동은 이미 쓰고 계신 클라우드가 맡습니다. 저희는 네트워크를 건드리지 않고 데이터도 보관하지 않습니다. 그래서 “Kairumo 로그인”이 없습니다. 동기화는 파일을 추가만 하며 다른 기기의 내용을 덮어쓰지 않습니다.",
+        "tip": "파일 이동은 내 Google 드라이브나 선택한 폴더가 맡으며, 노트가 저희 서버를 거치는 일은 없습니다. 그래서 'Kairumo 로그인'이 없습니다. 동기화는 파일을 추가만 할 뿐 다른 기기가 쓴 내용을 덮어쓰지 않습니다.",
         "fig": "data",
         "cap": "홈의 “데이터 및 동기화”: 클라우드 동기화, 백업 생성, 백업에서 복원",
         "fig2": "storage",
@@ -4303,7 +4435,7 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "실시간 협업 (초보자 튜토리얼)",
-        "lead": "여러 사람이 동시에 필기합니다. 영지식 AES-256-GCM 종단 간 암호화로 어떤 릴레이도 내용을 볼 수 없습니다. 연결 방법은 두 가지: '같은 Wi‑Fi'(릴레이는 내 기기)와 '클라우드 공유' —— 방이 Cloudflare의 암호화 릴레이에서 열려 어떤 네트워크에서든 계정 없이 연결됩니다.",
+        "lead": "여러 사람이 동시에 필기합니다. 영지식 AES-256-GCM 종단 간 암호화로 어떤 릴레이도 내용을 볼 수 없습니다. 연결 방법은 두 가지: '같은 Wi‑Fi'(릴레이는 내 기기)와 '클라우드 공유' —— 방이 Cloudflare의 암호화 릴레이에서 열려 어떤 네트워크에서든 계정 없이 연결됩니다. 함께 필기하는 동안 음성 캡슐을 눌러 실시간으로 대화할 수도 있습니다.",
         "buttons": [
           "공동 편집",
           "공동 편집 시작",
@@ -4327,7 +4459,10 @@ window.KAIRUMO_MANUAL = {
           "── **연결 성공 및 협업 작업** ──",
           "**1단계 — 참여자 확인:** 양쪽 기기의 “참여자” 목록에 서로의 이름이 실시간으로 표시됩니다. 동일한 Google 계정으로 여러 기기를 테스트할 때도 기기 태그(예: “이름 (기기 1)” 및 “이름 (기기 2)”)가 자동으로 붙어 색상별 커서로 혼동 없이 구분됩니다!",
           "**단계 2｜실시간 공동 작업 및 협업 환경**. 손글씨 획, 스티커, 이미지, 텍스트 상자, 표, 도형, 연결선, 링크 미리보기, 3D 모델, 핀 등 모든 작업이 밀리초 단위로 양방향 동기화되며 양쪽 기기 모두에 자동 저장됩니다:\n① **단일 텍스트 상자 동시 입력**: 여러 참여자가 동일한 텍스트 상자 안에서 동시에 타이핑할 수 있습니다. 텍스트 CRDT를 통해 충돌 없이 병합되고 각자의 서식이 유지되며 “입력 중” 알림이 표시됩니다.\n② **실시간 커서 및 개체 선택 윤곽선**: 동료의 실시간 커서가 표시되며, 다른 사람이 개체를 선택하거나 편집 중일 때는 해당 사용자의 고유 색상 윤곽선과 “편집 중” 배지가 표시되어 혼선을 방지합니다.\n③ **실시간 페이지 편집 및 스마트 실행 취소**: 페이지 추가, 삭제, 순서 변경이 모두에게 즉시 반영됩니다. 실행 취소(Undo) 시 내가 한 작업만 선택적으로 되돌리고 다른 참여자가 이후 수정한 내용은 안전하게 보존합니다.",
-          "**3단계 — 협업 종료:** 호스트가 “공동 편집 종료”를 누르면 방이 닫히며, 참여자가 “연결 해제”를 누르면 본인만 퇴장합니다."
+          "**3단계 — 실시간 음성 통화:** 연결되면 화면에 음성 캡슐이 나타납니다('≡' 손잡이를 끌어 위치를 옮길 수 있습니다). **길게 누르면** 말하고 손을 떼면 끝납니다. 또는 **탭**하면 말하기 시작하고 다시 탭하면 끝납니다. 참여자에게는 '○○ 님이 말하는 중...'이 표시되며, 스피커 버튼으로 다른 사람의 소리를 음소거할 수 있습니다. 목소리는 방 키로 종단 간 암호화되어 실시간 전송되며 녹음·저장되지 않습니다. 처음에는 마이크 권한을 묻습니다.",
+          "**4단계 — 직접 나갈 때까지 연결 유지:** 공동 작업 중에는 화면이 자동으로 꺼지지 않습니다. 홈 화면으로 가거나, 다른 앱으로 전환하거나, 기기가 대기 상태가 되어도 방에서 나가지 않으며, Kairumo로 돌아오면 자동으로 다시 연결하고 그동안의 내용을 받아옵니다(상단 공동 편집 버튼이 초록색이면 연결됨). 실제로 나가는 것은 직접 '연결 끊기'(참여자)나 '공동 편집 종료'(호스트)를 누르거나 노트를 닫을 때뿐입니다.",
+          "**5단계 — 한 페이지에는 한 번에 한 명씩:** 누군가 어떤 페이지에 쓰고 있을 때 다른 사람이 같은 페이지에 쓰기 시작하면 '현재 ○○ 님이 편집 중입니다. 편집이 끝날 때까지 잠시 기다려 주세요.'가 표시됩니다. 상대가 펜을 뗀 뒤 약 1초가 지나면 이어서 쓸 수 있습니다. 상대가 다른 페이지로 옮겨 쓰기 시작하면 내 화면도 자동으로 그 페이지로 따라갑니다.",
+          "**6단계 — 협업 종료:** 호스트가 “공동 편집 종료”를 누르면 방이 닫히며, 참여자가 “연결 끊기”를 누르면 본인만 퇴장합니다."
         ],
         "tip": "【보안 및 개인정보 보호】캔버스 내용은 전 구간 AES-256-GCM 종단 간 암호화됩니다. 암호화 키는 초대 링크의 프래그먼트(#key=...)에만 존재하며, 중계기는 해독 불가능한 암호문만 전달합니다. 오프라인 중 작업은 로컬 큐에 보관되었다가 재연결 시 자동으로 전송됩니다. 상단 툴바는 “삽입” 및 “더보기”로 깔끔하게 그룹화되어 있습니다.",
         "fig": "collab",
@@ -4547,13 +4682,18 @@ window.KAIRUMO_MANUAL = {
             "collab"
           ],
           [
+            "공동 작업 중 홈 화면으로 가거나 화면이 꺼지면 방에서 나가게 되나요?",
+            "아니요. 공동 작업 중에는 화면이 자동으로 꺼지지 않으며, 다른 앱으로 전환하거나 홈 화면으로 가거나 기기가 대기 상태가 되어도 방에서 나가지 않습니다. Kairumo로 돌아오면 자동으로 다시 연결하고 그동안의 내용을 받아옵니다. 직접 '연결 끊기'나 '공동 편집 종료'를 누르거나 노트를 닫을 때만 나가게 됩니다.",
+            "collab"
+          ],
+          [
             "노트가 사라질 수 있나요?",
             "쓰는 즉시 로컬 파일에 저장됩니다. 동기화 파일은 추가만 하며 각 기기는 자기 파일만 쓰기 때문에 덮어쓰기가 일어나지 않습니다.",
             "data"
           ],
           [
             "계정이 필요한가요?",
-            "아니요. Kairumo에는 계정도, 백엔드 서버도 없습니다.",
+            "아니요. Kairumo에는 자체 계정 시스템도, 노트를 보관하는 서버도 없습니다. Google 드라이브 동기화는 선택 사항이며, 공동 작업(클라우드 공유 포함)에도 계정이 필요 없습니다.",
             "data"
           ],
           [
@@ -4563,7 +4703,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "문제는 어떻게 알리나요?",
-            "데스크톱 창 제목에 보이는 버전(예: Kairumo v6.6.1)과 진행한 단계를 함께 알려 주세요.",
+            "데스크톱 창 제목에 보이는 버전(예: Kairumo v6.6.2)과 진행한 단계를 함께 알려 주세요.",
             "help"
           ],
           [
@@ -4627,7 +4767,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "คู่มือการใช้งาน Kairumo",
       "tagline": "สมุดจดที่รวมลายมือ การพิมพ์ และการอัดเสียงไว้ด้วยกัน ทำตามทีละขั้นได้แม้เพิ่งเริ่มใช้",
-      "version": "สำหรับเวอร์ชัน v6.6.1 (build 181) · 26 กันยายน 2026",
+      "version": "สำหรับเวอร์ชัน v6.6.2 (build 182) · 26 กันยายน 2026",
       "tocTitle": "สารบัญ",
       "tocHint": "แตะหัวข้อเพื่อไปยังส่วนนั้นทันที",
       "stepsLabel": "ขั้นตอน",
@@ -4641,6 +4781,26 @@ window.KAIRUMO_MANUAL = {
     },
     "sections": [
       {
+        "id": "intro",
+        "title": "บทนำ: สิ่งที่ทำให้ Kairumo แตกต่าง",
+        "lead": "Kairumo ไม่ใช่แค่สมุดโน้ตดิจิทัล ฟีเจอร์ด้านล่างนี้หาได้ยากหรือไม่มีเลยในแอปประเภทเดียวกัน หน้านี้เป็นเพียงภาพรวม วิธีใช้อย่างละเอียดอยู่ในบทของแต่ละฟีเจอร์",
+        "buttons": [],
+        "steps": [
+          "**ทำงานร่วมกันโดยไม่ต้องมีบัญชีและเข้ารหัสต้นทางถึงปลายทาง**: ไม่ต้องสมัคร แค่สแกน QR Code ก็เขียนพร้อมกันได้แบบเรียลไทม์ เมื่ออยู่ Wi‑Fi เดียวกัน เครื่องของคุณเองทำหน้าที่เป็นรีเลย์และข้อมูลไม่ออกนอกเครือข่ายท้องถิ่น ถ้าอยู่คนละที่ให้ใช้ “แชร์ผ่านคลาวด์” เนื้อหาทั้งหมดเข้ารหัสด้วย AES-256-GCM ตั้งแต่ต้นทางถึงปลายทาง แม้แต่รีเลย์ก็อ่านไม่ได้ หลายคนพิมพ์ในกล่องข้อความเดียวกันพร้อมกันได้ และระบบประสานแบบเรียลไทม์ว่าใครกำลังเขียนหน้าไหน → ดูบท “ทำงานร่วมกันแบบเรียลไทม์ (บทเรียนสำหรับผู้เริ่มต้น)”",
+          "**สนทนาด้วยเสียงแบบเรียลไทม์ระหว่างทำงานร่วมกัน**: กดค้าง (หรือแตะ) แคปซูลเสียงแล้วพูด เสียงจะส่งถึงทุกคนในห้องทันทีเหมือนวิทยุสื่อสาร เสียงก็เข้ารหัสต้นทางถึงปลายทางเช่นกัน ไม่มีการอัดหรือเก็บไว้ จึงไม่ต้องเปิดแอปประชุมแยก → ดูบท “ทำงานร่วมกันแบบเรียลไทม์ (บทเรียนสำหรับผู้เริ่มต้น)”",
+          "**เสียงและลายมืออยู่บนไทม์ไลน์เดียวกัน**: จดไปพร้อมกับอัดเสียง แล้วแตะคำหรือเส้นใดก็ได้เพื่อย้อนกลับไปฟังช่วงที่เขียนสิ่งนั้น → ดูบท “อัดเสียงและถอดความ”",
+          "**แปลงเสียงเป็นข้อความและแปลภาษาในเครื่อง**: การรู้จำเสียงด้วย Whisper และการแปลทำงานในเครื่องของคุณทั้งหมด ไม่อัปโหลด ไม่มีค่าใช้จ่าย และไม่ต้องมีบัญชี → ดูบท “แปลงเสียงเป็นข้อความ (ฉบับละเอียด)”",
+          "**ปากกาสแกนแปลภาษา**: เหมือนถือปากกาแปลภาษาจริง ลากผ่านเอกสาร โน้ตภาษาต่างประเทศ ตาราง หรือแม้แต่ลายมือ เพื่อแปลและอ่านออกเสียง แล้วเปลี่ยนผลลัพธ์เป็นหมุด หมายเหตุ หรือเทปปิดบังได้ในแตะเดียว → ดูบท “ปากกาสแกนแปลภาษา (ฉบับละเอียด)”",
+          "**เอนจินการเขียนระดับมืออาชีพ**: แรงกดจริงและพู่กันอักษรวิจิตรที่สร้างจากแบบจำลองฟิสิกส์ “หลักแปดประการของอักษรหย่ง” พร้อมยางลบวงแหวนคู่แบบสัดส่วน → ดูบท “เขียนด้วยลายมือ”",
+          "**หลักสูตรเขียนแบบวิศวกรรมฉบับสมบูรณ์**: ตั้งแต่เส้นแรก ภาพฉายสามด้าน การบอกขนาด ไปจนถึงแบบฝึกหัดที่ตรวจให้อัตโนมัติ และส่งออกเป็นไฟล์วิศวกรรม เช่น DXF และ STL → ดูบท “การเขียนแบบ (แบบวิศวกรรม): คู่มือฉบับสมบูรณ์จากศูนย์”",
+          "**สแนปช็อตเหตุการณ์สำคัญ (ไทม์แมชชีน)**: ตั้งชื่อช่วงเวลาสำคัญ แล้วย้อนทั้งสมุดกลับไปยังจุดนั้นได้ภายหลัง และย้อนกลับมาได้อีก → ดูบท “สแนปช็อตเหตุการณ์สำคัญ (ไทม์แมชชีน)”",
+          "**เก็บในเครื่องเป็นหลัก ใช้เอนจินเดียวกันทุกแพลตฟอร์ม**: โน้ตอยู่ในเครื่องของคุณและไม่มีบัญชี Kairumo โทรศัพท์ แท็บเล็ต และคอมพิวเตอร์ทุกแพลตฟอร์มใช้เอนจินหลักชุดเดียวกัน อุปกรณ์ต่างแพลตฟอร์มจึงทำงานร่วมกันและซิงค์กันได้ การซิงค์ใช้ Google Drive หรือโฟลเดอร์ของคุณเอง → ดูบท “สำรองข้อมูลและซิงค์”",
+          "**หลายผู้ใช้ในเครื่องเดียว**: ผู้ใช้สูงสุด 5 คน แต่ละคนมีโน้ต การตั้งค่า และบัญชีคลาวด์ของตัวเอง และล็อกด้วย PIN หรือไบโอเมตริกได้ → ดูบท “ใช้อุปกรณ์เครื่องเดียวร่วมกัน (ผู้ใช้)”"
+        ],
+        "tip": "ถ้าเพิ่งเริ่มใช้ แนะนำให้อ่านตามลำดับสารบัญตั้งแต่ “ก่อนเริ่มต้น” ถ้าอยากลองฟีเจอร์เด่นก่อน ก็กดจากสารบัญไปยังบทนั้นได้เลย",
+        "fig": null
+      },
+      {
         "id": "start",
         "title": "ก่อนเริ่มต้น",
         "lead": "Kairumo คือสมุดจดที่วางลายมือ ข้อความ และเสียงไว้บนไทม์ไลน์เดียวกัน ใช้ฟรี เป็นโอเพนซอร์ส และข้อมูลอยู่ในเครื่องของคุณ",
@@ -4650,9 +4810,9 @@ window.KAIRUMO_MANUAL = {
           "ไม่ต้องสมัครบัญชีและไม่ต้องต่ออินเทอร์เน็ต",
           "เมื่อเปิดครั้งแรกจะมีสมุดตัวอย่างสองเล่ม (“ยินดีต้อนรับสู่ Kairumo” และ “บันทึกการเรียนและการประชุม”) ซึ่งมีข้อความ ตาราง แผนภูมิ และรูปทรงที่แก้ไขได้ทันที ลบทิ้งได้ถ้าไม่ต้องการ",
           "ทุกอย่างที่คุณเขียนถูกเก็บไว้ในเครื่องนี้ หากต้องการซิงค์ระหว่างหลายเครื่อง ให้ชี้ไปที่โฟลเดอร์บนคลาวด์ของคุณเอง (ดู “สำรองข้อมูลและซิงค์”)",
-          "บนเดสก์ท็อป ชื่อหน้าต่างจะแสดงเวอร์ชัน (เช่น Kairumo v6.6.1) โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
+          "บนเดสก์ท็อป ชื่อหน้าต่างจะแสดงเวอร์ชัน (เช่น Kairumo v6.6.2) โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
         ],
-        "tip": "เมื่อไม่มีเซิร์ฟเวอร์และไม่มีบัญชี ก็ไม่มีรหัสผ่านให้ลืม แต่ก็ไม่มีสำเนาบนคลาวด์เช่นกัน จึงควรสำรองข้อมูลเอง",
+        "tip": "เมื่อไม่มีบัญชี Kairumo ก็ไม่มีรหัสผ่านให้ลืม แต่ก็หมายความว่าเราไม่มีสำเนาโน้ตของคุณ หากเครื่องหาย จะกู้คืนได้จากข้อมูลสำรองหรือการซิงค์คลาวด์ของคุณเองเท่านั้น",
         "fig": null
       },
       {
@@ -4666,7 +4826,7 @@ window.KAIRUMO_MANUAL = {
         ],
         "steps": [
           "หน้านี้อธิบายสามเรื่อง คือ Kairumo คืออะไร ไม่ต้องมีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา และสิทธิ์เพียงหนึ่งเดียวที่อาจถูกใช้",
-          "มีสิทธิ์เพียง **ไมโครโฟน** อย่างเดียว และใช้เฉพาะตอนบันทึกเสียง ไม่อนุญาตก็ได้ การเขียนด้วยลายมือ การพิมพ์ การส่งออก และการซิงค์ยังทำงานได้ทั้งหมด",
+          "หน้านี้อธิบายสิทธิ์เพียงอย่างเดียวคือ **ไมโครโฟน** ซึ่งใช้ตอนบันทึกเสียงและตอนสนทนาด้วยเสียงระหว่างทำงานร่วมกัน ไม่อนุญาตก็ได้ การเขียนด้วยลายมือ การพิมพ์ การส่งออก การซิงค์ และการทำงานร่วมกันยังทำงานได้ทั้งหมด",
           "การแตะ “อนุญาตไมโครโฟน” คือสิ่งที่ทำให้กล่องโต้ตอบของระบบปรากฏ กล่องนี้จะปรากฏ**เพียงครั้งเดียวตลอดอายุของแอป**",
           "หากตอนนั้นเลือกไม่อนุญาต ปุ่มจะเปลี่ยนเป็น “เปิดการตั้งค่า” หลังจากนั้นจะเปิดสิทธิ์ได้จากการตั้งค่าของระบบเท่านั้น แอปไม่สามารถถามซ้ำได้",
           "แตะ “เริ่มใช้งาน” เพื่อเข้าสู่หน้าแรก หน้านี้จะไม่กลับมาอีก"
@@ -5164,7 +5324,7 @@ window.KAIRUMO_MANUAL = {
           "จังหวะการซิงก์: ขณะเปิดแอปจะตรวจประมาณทุก 60 วินาที หากตรวจหลายครั้งติดกันแล้วไม่มีการเปลี่ยนแปลง จะเข้าสู่โหมดเงียบ ไม่เชื่อมต่อถี่และไม่กินแบต (ยังตรวจช้า ๆ เป็นระยะ) เมื่อมีการแก้ไข กด “ซิงก์ทันที” หรือกลับมาที่แอป จะกลับสู่จังหวะปกติทันที",
           "สมุดตัวอย่างที่มีมาให้ (ยินดีต้อนรับ ตัวอย่างฟีเจอร์ คู่มือ Kairumo ตัวอย่างงานเขียนแบบ บันทึกการประชุม) เป็นเนื้อหามาตรฐานที่แต่ละอุปกรณ์สร้างขึ้นเอง จึงไม่ซิงก์ข้ามอุปกรณ์ เฉพาะสมุดที่คุณสร้างเองเท่านั้นที่ซิงก์ ลายมือที่เขียนบนตัวอย่างจะอยู่เฉพาะอุปกรณ์เครื่องนั้น หากต้องการเก็บไว้หรือย้ายไปอุปกรณ์อื่น ให้คัดลอกตัวอย่างเป็นสมุดใหม่แล้วแก้ไขที่สมุดนั้น"
         ],
-        "tip": "การย้ายไฟล์เป็นหน้าที่ของคลาวด์ที่คุณใช้อยู่แล้ว เราไม่แตะเครือข่ายและไม่เก็บข้อมูลของคุณ จึงไม่มีปุ่ม “ลงชื่อเข้าใช้ Kairumo” การซิงก์เพิ่มไฟล์เท่านั้น ไม่เขียนทับสิ่งที่เครื่องอื่นเขียนไว้",
+        "tip": "การย้ายไฟล์เป็นหน้าที่ของ Google Drive หรือโฟลเดอร์ที่คุณเลือกเอง โน้ตไม่เคยผ่านเซิร์ฟเวอร์ของเรา จึงไม่มีปุ่ม “เข้าสู่ระบบ Kairumo” การซิงค์จะเพิ่มไฟล์เท่านั้น ไม่เขียนทับสิ่งที่อุปกรณ์อื่นเขียนไว้",
         "fig": "data",
         "cap": "“ข้อมูลและการซิงก์” บนหน้าแรก: ซิงก์คลาวด์ สร้างข้อมูลสำรอง กู้คืนจากข้อมูลสำรอง",
         "fig2": "storage",
@@ -5219,7 +5379,7 @@ window.KAIRUMO_MANUAL = {
       {
         "id": "collab",
         "title": "ทำงานร่วมกันแบบเรียลไทม์ (บทเรียนสำหรับผู้เริ่มต้น)",
-        "lead": "เขียนพร้อมกันหลายคนแบบเรียลไทม์ เข้ารหัส Zero-Knowledge AES-256-GCM แบบต้นทางถึงปลายทาง ไม่มีรีเลย์ใดอ่านเนื้อหาได้ เชื่อมต่อได้ 2 แบบ: “Wi‑Fi เดียวกัน” (รีเลย์คือเครื่องของคุณ) และ “แชร์ผ่านคลาวด์” —— ห้องเปิดบนรีเลย์เข้ารหัสของ Cloudflare เชื่อมต่อได้จากทุกเครือข่ายโดยไม่ต้องมีบัญชี",
+        "lead": "เขียนพร้อมกันหลายคนแบบเรียลไทม์ เข้ารหัส Zero-Knowledge AES-256-GCM แบบต้นทางถึงปลายทาง ไม่มีรีเลย์ใดอ่านเนื้อหาได้ เชื่อมต่อได้ 2 แบบ: “Wi‑Fi เดียวกัน” (รีเลย์คือเครื่องของคุณ) และ “แชร์ผ่านคลาวด์” —— ห้องเปิดบนรีเลย์เข้ารหัสของ Cloudflare เชื่อมต่อได้จากทุกเครือข่ายโดยไม่ต้องมีบัญชี ระหว่างเขียนร่วมกัน ยังกดแคปซูลเสียงค้างไว้เพื่อคุยกันแบบเรียลไทม์ได้ด้วย",
         "buttons": [
           "การทำงานร่วมกัน",
           "เริ่มการทำงานร่วมกัน",
@@ -5243,7 +5403,10 @@ window.KAIRUMO_MANUAL = {
           "── **การเชื่อมต่อสำเร็จและการทำงานร่วมกัน** ──",
           "**ขั้นที่ 1 — ยืนยันผู้เข้าร่วม:** ทั้งสองเครื่องจะแสดงชื่อกันใน “ผู้เข้าร่วม” โดยผู้เปิดห้องจะระบุเป็น “เจ้าของห้อง” หากล็อกอินบัญชี Google เดียวกันบนหลายเครื่อง ระบบจะเติมแท็กชื่ออุปกรณ์ให้ (เช่น “ชื่อของคุณ (เครื่อง 1)” กับ “ชื่อของคุณ (เครื่อง 2)”) พร้อมเคอร์เซอร์แยกสีชัดเจนไม่สับสน!",
           "**ขั้นที่ 2 — การทำงานร่วมกันแบบเรียลไทม์** ลายมือ สติกเกอร์ รูปภาพ กล่องข้อความ ตาราง รูปทรง เส้นเชื่อม ตัวอย่างลิงก์ โมเดล 3 มิติ และหมุด จะซิงค์สองทางในระดับมิลลิวินาทีและบันทึกไว้ในสมุดของทั้งสองฝ่ายโดยอัตโนมัติ:\n① **พิมพ์พร้อมกันในกล่องข้อความเดียว**: หลายคนสามารถพิมพ์ในกล่องข้อความเดียวกันได้พร้อมกัน ระบบ CRDT จะผสานข้อความอย่างราบรื่น รักษาการจัดรูปแบบของแต่ละคน และแสดงแถบแจ้งเตือนว่าเพื่อนกำลังพิมพ์อยู่โดยไม่เขียนทับกัน\n② **เคอร์เซอร์สดและเส้นขอบการเลือก**: คุณจะเห็นเคอร์เซอร์ของเพื่อนร่วมทีมแบบเรียลไทม์ เมื่อมีคนเลือกหรือแก้ไขวัตถุ วัตถุจะแสดงเส้นขอบตามสีประจำตัวของผู้นั้นพร้อมป้าย “กำลังแก้ไข” เพื่อป้องกันการชนกัน\n③ **จัดการหน้าสดและเลิกทำอย่างชาญฉลาด**: การเพิ่ม ลบ หรือจัดเรียงหน้าใหม่จะซิงค์กับทุกคนทันที การกดเลิกทำ (Undo) จะย้อนกลับเฉพาะการกระทำของคุณเอง โดยรักษาการแก้ไขของผู้อื่นไว้",
-          "**ขั้นที่ 3 — สิ้นสุด:** ผู้เปิดห้องแตะ “สิ้นสุดการทำงานร่วมกัน” เพื่อปิดห้อง ผู้เข้าร่วมแตะ “ตัดการเชื่อมต่อ” จะออกเฉพาะตัวเอง"
+          "**ขั้นที่ 3 — สนทนาด้วยเสียงแบบเรียลไทม์:** เมื่อเชื่อมต่อแล้วจะมีแคปซูลเสียงบนหน้าจอ (ลากที่จับ “≡” เพื่อย้ายตำแหน่ง) **กดค้าง**เพื่อพูดแล้วปล่อยเพื่อจบ หรือ**แตะ**หนึ่งครั้งเพื่อเริ่มพูดและแตะอีกครั้งเพื่อจบ ผู้ร่วมงานจะเห็นข้อความ “… กำลังพูด” และปุ่มลำโพงใช้ปิดเสียงคนอื่นได้ เสียงเข้ารหัสด้วยกุญแจห้องและส่งแบบเรียลไทม์ ไม่มีการอัดหรือเก็บไว้ ครั้งแรกระบบจะขอสิทธิ์ไมโครโฟน",
+          "**ขั้นที่ 4 — เชื่อมต่อต่อเนื่องจนกว่าคุณจะออกเอง:** ระหว่างทำงานร่วมกัน หน้าจอจะไม่ดับเอง การกลับไปหน้าโฮม สลับไปแอปอื่น หรือให้เครื่องเข้าสู่โหมดพัก จะไม่ทำให้คุณออกจากห้อง เมื่อกลับมาที่ Kairumo แอปจะเชื่อมต่อใหม่อัตโนมัติและดึงเนื้อหาที่พลาดไป (ปุ่มทำงานร่วมกันด้านบนเป็นสีเขียว = เชื่อมต่อแล้ว) คุณจะออกจากห้องจริง ๆ ก็ต่อเมื่อแตะ “ตัดการเชื่อมต่อ” (ผู้ร่วมงาน) หรือ “สิ้นสุดการทำงานร่วมกัน” (ผู้เปิดห้อง) หรือปิดโน้ตเล่มนั้นเท่านั้น",
+          "**ขั้นที่ 5 — หนึ่งหน้า เขียนได้ทีละคน:** ขณะที่มีคนกำลังเขียนในหน้าใดหน้าหนึ่ง หากคนอื่นเริ่มเขียนในหน้าเดียวกันจะเห็นข้อความ “ขณะนี้…กำลังแก้ไขอยู่ โปรดรอสักครู่แล้วจึงค่อยแก้ไข” ประมาณหนึ่งวินาทีหลังอีกฝ่ายยกปากกา คุณก็เขียนต่อได้ เมื่ออีกฝ่ายย้ายไปเขียนหน้าอื่น หน้าจอของคุณจะตามไปยังหน้านั้นโดยอัตโนมัติ",
+          "**ขั้นที่ 6 — สิ้นสุด:** ผู้เปิดห้องแตะ “สิ้นสุดการทำงานร่วมกัน” เพื่อปิดห้อง ผู้เข้าร่วมแตะ “ตัดการเชื่อมต่อ” จะออกเฉพาะตัวเอง"
         ],
         "tip": "【การรับประกันความปลอดภัยและความเป็นส่วนตัว】เนื้อหาทั้งหมดเข้ารหัสแบบ End-to-End ด้วย AES-256-GCM กุญแจอยู่ในส่วนท้ายของลิงก์ (#key=...) เท่านั้น รีเลย์เพียงส่งผ่านข้อมูลที่อ่านไม่ออก ข้อมูลช่วงออฟไลน์จะถูกพักไว้และส่งอัตโนมัติเมื่อกลับมาออนไลน์ แถบเครื่องมือด้านบนจัดกลุ่มเป็น “แทรก” และ “เครื่องมือเพิ่มเติม” สบายตาไม่แออัด",
         "fig": "collab",
@@ -5463,13 +5626,18 @@ window.KAIRUMO_MANUAL = {
             "collab"
           ],
           [
+            "ระหว่างทำงานร่วมกัน ถ้ากลับไปหน้าโฮมหรือหน้าจอดับ จะหลุดออกจากห้องไหม",
+            "ไม่หลุด ระหว่างทำงานร่วมกันหน้าจอจะไม่ดับเอง และการสลับแอป กลับไปหน้าโฮม หรือให้เครื่องพัก จะไม่ทำให้ออกจากห้อง เมื่อกลับมาที่ Kairumo แอปจะเชื่อมต่อใหม่อัตโนมัติและดึงเนื้อหาที่พลาดไป คุณจะออกก็ต่อเมื่อแตะ “ตัดการเชื่อมต่อ” หรือ “สิ้นสุดการทำงานร่วมกัน” เอง (หรือปิดโน้ตเล่มนั้น)",
+            "collab"
+          ],
+          [
             "โน้ตหายได้ไหม",
             "ทุกเส้นถูกบันทึกลงไฟล์ในเครื่องทันทีที่เขียน ไฟล์ซิงก์เป็นแบบเพิ่มอย่างเดียว และแต่ละเครื่องเขียนเฉพาะไฟล์ของตัวเอง จึงไม่ทับกัน",
             "data"
           ],
           [
             "ต้องมีบัญชีไหม",
-            "ไม่ต้อง Kairumo ไม่มีระบบบัญชีและไม่มีเซิร์ฟเวอร์เบื้องหลัง",
+            "ไม่ต้อง Kairumo ไม่มีระบบบัญชีของตัวเอง และไม่มีเซิร์ฟเวอร์ที่เก็บโน้ต การซิงก์ Google Drive เป็นตัวเลือก และการทำงานร่วมกัน (รวมถึงแชร์ผ่านคลาวด์) ก็ไม่ต้องมีบัญชี",
             "data"
           ],
           [
@@ -5479,7 +5647,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "รายงานปัญหาอย่างไร",
-            "โปรดแจ้งเวอร์ชันที่แสดงบนชื่อหน้าต่างของเดสก์ท็อป (เช่น Kairumo v6.6.1) พร้อมขั้นตอนที่ทำ",
+            "โปรดแจ้งเวอร์ชันที่แสดงบนชื่อหน้าต่างของเดสก์ท็อป (เช่น Kairumo v6.6.2) พร้อมขั้นตอนที่ทำ",
             "help"
           ],
           [
