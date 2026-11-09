@@ -111,6 +111,7 @@ object NotebookTrash {
     fun restore(context: Context, id: String): Boolean {
         if (!restoreLocally(context, id)) return false
         AccountSyncStore.recordRestore(context, id)
+        NotebookLibrary.forgetDeleting(id)
         return true
     }
 

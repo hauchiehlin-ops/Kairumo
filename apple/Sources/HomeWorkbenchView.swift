@@ -5056,9 +5056,8 @@ struct NotebookEditorHost: View {
                 Color.clear.onAppear { DispatchQueue.main.async { dismiss() } }
             }
         }
-        // 關掉這本筆記回首頁：沒自己按「結束協同」的話，房間也一起離開，
-        // 免得下一本打開時面板還是上一本的房間。
-        .onDisappear { CollaborationManager.shared.leaveRoom(ifBoundTo: currentNotebookId) }
+        // 關掉這本筆記回首頁：會議室不離開（只有自己按「離開／結束協同」才離開）。
+        // 下一本若是別本，編輯器打開時會以 `leaveRoom(unlessBoundTo:)` 先離開這間。
     }
 
     /// 以 id 在**存取當下**查索引的綁定。

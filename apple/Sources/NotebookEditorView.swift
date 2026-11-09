@@ -1434,6 +1434,8 @@ public struct NotebookEditorView: View {
     }
 
     private func handleOnAppear() {
+        // 會議室綁在別本上：先離開（別本的內容不能套進這本）。同一本則接回原本的連線。
+        CollaborationManager.shared.leaveRoom(unlessBoundTo: notebook.id)
         FrameGovernor.shared.start()
         FieldTelemetry.shared.start()
         configureLassoCallbacks(forPage: currentPageIndex)
@@ -1466,7 +1468,7 @@ public struct NotebookEditorView: View {
         }
         // 協同的物件影子（整本每個物件攤平成欄位字典）只在協同中才用得到；進房間時
         // `onChange(currentRoomId)` 會重建一次。不在協同中就不在開啟時付這筆主執行緒成本。
-        if isCollaborating { collabSync.reset(to: notebook) }
+        if isCollaborating { enterCollabRoomBaseline() }
         // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
         if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
             applyEditorTool(.drafting)
@@ -1483,10 +1485,10 @@ public struct NotebookEditorView: View {
 
     private func handleOnDisappear() {
         FrameGovernor.shared.stop()
-        // 先存檔、再放掉焦點與離開協同房間。
+        // 先存檔、再放掉焦點。協同會議室不離開：回首頁仍在房裡，只有使用者自己按「離開／結束協同」
+        // 或打開別本（見 `handleOnAppear` 的 `leaveRoom(unlessBoundTo:)`）才離開。
         saveCurrentPageDrawing()
         let leavingId = notebook.id
-        CollaborationManager.shared.leaveRoom(ifBoundTo: leavingId)
         InkEventSink.unregister(notebookId: leavingId)
         endCollabImportHold()
         afterCoreInkWrites {

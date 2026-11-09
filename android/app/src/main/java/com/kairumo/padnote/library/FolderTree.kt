@@ -34,7 +34,14 @@ object FolderTree {
         get() = _treeVersion.intValue
 
     fun notifyChanged() {
-        _treeVersion.intValue++
+        // 索引常在同步的背景執行緒寫入；驅動畫面重組的狀態一律回主執行緒推進
+        // （AGENTS.md Layer 3）。已在主執行緒（或沒有主 Looper 的單元測試）就直接加。
+        val main = runCatching { android.os.Looper.getMainLooper() }.getOrNull()
+        if (main == null || main.thread === Thread.currentThread()) {
+            _treeVersion.intValue++
+        } else {
+            android.os.Handler(main).post { _treeVersion.intValue++ }
+        }
     }
 
     /**

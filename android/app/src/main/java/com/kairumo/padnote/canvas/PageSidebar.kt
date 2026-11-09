@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -266,6 +267,22 @@ fun PageSidebar(
         }
 
         val actualCount = maxOf(1, maxOf(pageCount, session?.pageCount()?.toInt() ?: 1))
+        // 目前頁換了（自己點、上下頁、或協作時跟著對方跳頁）就把縮圖捲到看得見的位置。
+        // 與 Apple 側欄的 ScrollViewReader 對齊：只有目前頁不在可視範圍內才捲，避免使用者手動瀏覽時被拉走。
+        val pageListState = rememberLazyListState()
+        LaunchedEffect(pageIndex, actualCount) {
+            if (android.os.Looper.myLooper() == null) return@LaunchedEffect
+            val target = pageIndex.coerceIn(0, actualCount - 1)
+            val visible = pageListState.layoutInfo.visibleItemsInfo
+            val fullyVisible = visible.any { item ->
+                item.index == target &&
+                    item.offset >= pageListState.layoutInfo.viewportStartOffset &&
+                    item.offset + item.size <= pageListState.layoutInfo.viewportEndOffset
+            }
+            if (!fullyVisible) {
+                runCatching { pageListState.animateScrollToItem(target) }
+            }
+        }
         if (android.os.Looper.myLooper() == null) {
             // 在無 Looper 的背景測試重組環境下（如快照通知派發至 Worker 執行緒），
             // 以標準 Column 替代 LazyColumn，避免 AndroidPrefetchScheduler 初始化 Choreographer 拋錯。
@@ -293,6 +310,7 @@ fun PageSidebar(
             }
         } else {
             LazyColumn(
+                state = pageListState,
                 modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
                 verticalArrangement = Arrangement.spacedBy(DS.Space.m)

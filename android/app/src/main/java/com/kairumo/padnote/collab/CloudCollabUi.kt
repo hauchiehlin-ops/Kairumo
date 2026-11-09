@@ -78,7 +78,7 @@ fun CloudShareSection(
         Text(l("cloud_collab_share_link_hint"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
         // 房主打開面板時確定房間開在雲端中繼上（QR Code 指向的就是那一間）。
-        LaunchedEffect(entry.notebookId) { CloudCollab.ensurePublicRoom(entry, collab) }
+        LaunchedEffect(entry.notebookId) { CloudCollab.ensurePublicRoom(context, entry, collab) }
         val invite = link.ifEmpty { CloudCollab.inviteLink(entry, collab) }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CloudQrCode(invite, Modifier.size(140.dp).testTag("cloudcollab.qr"))

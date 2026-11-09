@@ -91,9 +91,16 @@ class CollaborationManager(private val context: Context) {
     }
 
     private val tuning = collabTuning()
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
-    var status by mutableStateOf<Status>(Status.Disconnected)
-        private set
+    private var statusState by mutableStateOf<Status>(Status.Disconnected)
+    var status: Status
+        get() = statusState
+        private set(value) {
+            val changed = value != statusState
+            statusState = value
+            if (changed) mainHandler.post { updateRelayBridge() }
+        }
     var serverAddress by mutableStateOf(loadServer())
     var roomId by mutableStateOf("")
         private set
@@ -107,8 +114,14 @@ class CollaborationManager(private val context: Context) {
         private set
     var lastError by mutableStateOf<String?>(null)
         private set
-    var isHostingLocalRelay by mutableStateOf(false)
-        private set
+    private var hostingLocalRelayState by mutableStateOf(false)
+    var isHostingLocalRelay: Boolean
+        get() = hostingLocalRelayState
+        private set(value) {
+            val changed = value != hostingLocalRelayState
+            hostingLocalRelayState = value
+            if (changed) mainHandler.post { updateRelayBridge() }
+        }
     var lanRelayAddress by mutableStateOf<String?>(null)
         private set
     var queuedOplogCount by mutableIntStateOf(0)
@@ -292,6 +305,63 @@ class CollaborationManager(private val context: Context) {
         if (collabIsValidRoomKey(keyBase64)) roomKeyBase64 = keyBase64
         serverAddress = server
         connect(room, asHost = true)
+    }
+
+    // ── 同時開放雲端（見 CollabRelayBridge.kt）──
+
+    /** 會議室開在本機中繼（同一 Wi‑Fi）時，也以同一間房開放到這個雲端中繼。`null`＝只開在一個中繼上。 */
+    var cloudBridgeUrl by mutableStateOf<String?>(null)
+        private set
+    private var relayBridge: CollabRelayBridge? = null
+    /** 上一座橋帶進來的雲端成員（重建橋時不把他們誤當成 Wi‑Fi 這邊的人）。 */
+    private var bridgedCloudUserIds: Set<String> = emptySet()
+
+    /** 這間會議室是不是同時開在雲端（房主正在橋接）。 */
+    val isBridgingCloud: Boolean get() = relayBridge != null
+
+    /** 房主：同一 Wi‑Fi 的會議室也開放雲端共享（傳 `null` 關掉）。與 Apple `enableCloudBridge` 相同。 */
+    fun enableCloudBridge(url: String?) {
+        cloudBridgeUrl = url
+        mainHandler.post { updateRelayBridge() }
+    }
+
+    /**
+     * 房主按「同一 Wi‑Fi」：會議室已開在雲端時不另開一間 —— 同一間房改開在本機中繼，雲端那邊用橋接續上，
+     * 兩種方式加入的人都在同一間會議室。其餘照舊開新房。與 Apple `startLocalRoom` 相同。
+     */
+    fun startLocalRoom() {
+        val key = roomKeyBase64
+        val cloud = serverAddress
+        if (isHost && status is Status.Connected && roomId.isNotEmpty() && key != null &&
+            cloud == cloudRelayUrl && !savedCustomRemoteRelay
+        ) {
+            hostRoom(roomId, key, localRoomServer)
+            enableCloudBridge(cloud)
+            return
+        }
+        createRoom(localRoomServer)
+    }
+
+    /** 依目前狀態開或關橋：房主、連在自己的本機中繼上、已連線、而且開放了雲端。只在主執行緒呼叫。 */
+    private fun updateRelayBridge() {
+        val cloud = cloudBridgeUrl
+        val host = runCatching { java.net.URI(serverAddress.trim()).host ?: "" }.getOrDefault("")
+        val wanted = !cloud.isNullOrEmpty() && isHost && isHostingLocalRelay && status is Status.Connected &&
+            collabIsLoopbackHost(host) && cloud != serverAddress
+        val existing = relayBridge
+        if (wanted && existing == null && cloud != null) {
+            val profile = AccountManager.load(context, fallbackName = "Kairumo")
+            val me = CollabRelayBridge.Member(
+                currentUserId, "${profile.displayName.ifEmpty { "Kairumo" }} (Android)", profile.colorHex
+            )
+            val bridge = CollabRelayBridge(cloud, serverAddress.trim(), roomId, me)
+            bridge.start(peers.map { CollabRelayBridge.Member(it.userId, it.userName, it.userColor) }, bridgedCloudUserIds)
+            relayBridge = bridge
+        } else if (!wanted && existing != null) {
+            bridgedCloudUserIds = existing.cloudUserIds
+            existing.stop()
+            relayBridge = null
+        }
     }
 
     /** 房號、邀請連結、連結帶金鑰三種都吃得下（解析在核心）。 */
@@ -514,6 +584,8 @@ class CollaborationManager(private val context: Context) {
             offlineQueue.clear()
             queuedOplogCount = 0
             roomKeyBase64 = null
+            cloudBridgeUrl = null
+            bridgedCloudUserIds = emptySet()
         }
         val s = socket
         if (s != null && status is Status.Connected) {
@@ -646,7 +718,8 @@ class CollaborationManager(private val context: Context) {
     val relaySeq: Long get() = lastSeq
 
     /** 這場協同開在雲端中繼上（`wss://`）。區網的本機中繼不收寄存（它會照常轉送給每個人）。 */
-    val isOnCloudRelay: Boolean get() = serverAddress.lowercase().startsWith("wss://")
+    // 同時開放雲端（橋接）時也寄存：橋會把寄存送進雲端，房主不在線時新加入的人才拿得到最新版。
+    val isOnCloudRelay: Boolean get() = serverAddress.lowercase().startsWith("wss://") || relayBridge != null
 
     /** 編輯器在協同中掛上：把這本目前的整份狀態寄存到中繼。 */
     var stateDepositor: (suspend () -> Unit)? = null
@@ -1011,7 +1084,10 @@ class CollaborationManager(private val context: Context) {
     }
 
     private fun send(msg: JSONObject) {
-        socket?.send(msg.toString())
+        val text = msg.toString()
+        socket?.send(text)
+        // 同時開放雲端時，房主自己的操作也送進雲端（見 CollabRelayBridge）。
+        if (relayBridge != null) mainHandler.post { relayBridge?.hostSent(JSONObject(text)) }
     }
 
     private fun drainOfflineQueue() {
@@ -1086,6 +1162,8 @@ class CollaborationManager(private val context: Context) {
 
     private fun handle(text: String) {
         val json = runCatching { JSONObject(text) }.getOrNull() ?: return
+        // 同時開放雲端時，本機中繼這邊的成員與操作也轉進雲端（見 CollabRelayBridge）。
+        mainHandler.post { relayBridge?.lanReceived(json) }
         when (json.optString("type")) {
             "joined" -> {
                 candidateServers.clear()

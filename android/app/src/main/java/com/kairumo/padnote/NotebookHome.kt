@@ -139,7 +139,12 @@ internal fun NotebookHome(
     // 見 `SeedNotebooks.seedIfEmpty`。
     // 範例修復、筆記本核心重播和錄音索引讀取都可能很慢；不要在 Compose 主執行緒開啟套件。
     var seedGeneration by remember { mutableIntStateOf(-1) }
-    var allEntries by remember { mutableStateOf(emptyList<NotebookLibrary.Entry>()) }
+    // 從上一份清單開始（記憶體，不碰磁碟）。從空的開始的話，每次從編輯器回到首頁、
+    // 或同步剛改過套件而要重開每一本時，畫面會先是「全部筆記 (0)」、資料夾全是 (0)，
+    // 幾秒後才回來 —— 看起來就是筆記本時隱時現。
+    var allEntries by remember {
+        mutableStateOf(NotebookLibrary.lastKnown(activity, sort) ?: emptyList<NotebookLibrary.Entry>())
+    }
     var recordings by remember { mutableStateOf(emptyList<RecordingIndex.Recording>()) }
     LaunchedEffect(Unit) {
         seedGeneration = withContext(Dispatchers.IO) {
@@ -153,7 +158,8 @@ internal fun NotebookHome(
             val recentRecordings = RecordingIndex.recent(activity, device, notebooks = notebooks)
             notebooks to recentRecordings
         }
-        allEntries = loaded.first
+        // 讀取途中按下刪除的那一本，這一輪讀到的清單可能還有它：以現在的刪除記號再過濾一次。
+        allEntries = loaded.first.filterNot { NotebookLibrary.isDeleting(it.id) }
         recordings = loaded.second
     }
     // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
@@ -1181,12 +1187,21 @@ internal fun NotebookHome(
             l = ::l,
             onDismiss = { deleting = null },
             onConfirm = {
-                // 與 Apple `deleteNotebook` 同一條路：移進回收桶＋寫墓碑。
-                // 沒移成功不能悄悄吞掉 —— 使用者只會看到「按了刪除沒反應」。
-                if (!NotebookLibrary.delete(activity, entry.id)) {
-                    message = l("sync_fail_delete").replace("%@", entry.title)
+                // 與 Apple `deleteNotebook` 同一條路：**當下**就從清單拿掉，
+                // 寫墓碑、移進回收桶都在背景做（主執行緒不碰磁碟）。
+                // 原本在主執行緒刪完再整份重讀清單 —— 重讀要重開每一本，同步剛跑過時
+                // 要好幾秒，使用者看到的是「按了刪除沒反應，很久之後才消失」。
+                NotebookLibrary.markDeleting(entry.id)
+                allEntries = allEntries.filterNot { it.id == entry.id }
+                autoSyncScope.launch {
+                    val ok = withContext(Dispatchers.IO) { NotebookLibrary.delete(activity, entry.id) }
+                    // 沒移成功不能悄悄吞掉 —— 使用者只會看到「按了刪除沒反應」。
+                    if (!ok) message = l("sync_fail_delete").replace("%@", entry.title)
+                    revision++
+                    // 刪除要讓別台也知道：排一輪背景同步（節奏由核心排程器決定）。
+                    if (ok) com.kairumo.padnote.sync.AutoSync.request(
+                        activity, uniffi.padnote_core.FfiSyncTrigger.LOCAL_EDIT)
                 }
-                revision++
             }
         )
     }

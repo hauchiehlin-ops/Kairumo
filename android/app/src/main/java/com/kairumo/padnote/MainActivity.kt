@@ -303,6 +303,18 @@ class MainActivity : FragmentActivity() {
         super.onPause()
     }
 
+    // 常駐連線：App 進背景（系統首頁、螢幕關閉）不離開會議室，回前景立刻接回來。
+    // 會議室活在 App 層級（`CollabSessions`），所以不論目前在編輯器還是首頁都要通知。
+    override fun onStart() {
+        super.onStart()
+        com.kairumo.padnote.collab.CollabSessions.current?.onAppForeground()
+    }
+
+    override fun onStop() {
+        com.kairumo.padnote.collab.CollabSessions.current?.onAppBackground()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.kairumo.padnote.platform.CrashLogger.install(applicationContext)

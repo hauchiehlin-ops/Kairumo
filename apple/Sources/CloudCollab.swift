@@ -16,7 +16,8 @@
 //  - 保存期限：房間沒人之後（含房主按「結束協同」）中繼保留一段時間再整個刪除，讓不在線的協作者
 //    回來時還拿得到最終版本。
 //
-//  同一 Wi‑Fi（本機中繼）照舊，與這裡無關。
+//  同一 Wi‑Fi（本機中繼）與雲端共享可以同時開放同一間會議室：會議室開在房主的本機中繼上，
+//  雲端那邊由房主橋接（見 CollabRelayBridge.swift）。協作者用哪一種方式加入都在同一間。
 //
 
 import Combine
@@ -77,7 +78,7 @@ final class CloudCollabManager: ObservableObject {
         defer { busyMessage = nil }
         var entry = shared(notebookId) ?? FfiSharedNotebook(
             notebookId: notebookId, folderId: "", roomId: "", keyBase64: "", role: "owner", title: title)
-        ensurePublicRoom(for: entry, force: true)
+        ensurePublicRoom(for: entry)
         for _ in 0..<50 where collab.roomKeyBase64 == nil || collab.currentRoomId.isEmpty {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
@@ -95,14 +96,26 @@ final class CloudCollabManager: ObservableObject {
 
     /// 房主：這本的房間開在雲端中繼上。已經在那裡就不動；記過房號與金鑰就沿用。
     /// 若目前這本筆記已經開在本機中繼（同一 Wi‑Fi）上，尊重使用者當下的選擇，不強行搬回雲端。
-    func ensurePublicRoom(for entry: FfiSharedNotebook, force: Bool = false) {
+    func ensurePublicRoom(for entry: FfiSharedNotebook) {
         let collab = CollaborationManager.shared
         let relay = collab.cloudRelayURL
         guard !relay.isEmpty, entry.role == "owner" else { return }
         let bound = collab.roomNotebookId == entry.notebookId.lowercased()
         if bound, collab.status != .disconnected {
             if collab.activeServerAddress == relay { return }
-            if !force && collab.isHostingLocalRelay { return }
+            // 會議室開在同一 Wi‑Fi（本機中繼）：不搬家、不另開一間 —— 同一間房也開放到雲端（橋接，
+            // 見 CollabRelayBridge）。雲端邀請要指向這一間，登記的房號與金鑰換成目前的。
+            if collab.isHostingLocalRelay {
+                guard collab.isHost, !collab.currentRoomId.isEmpty, let key = collab.roomKeyBase64 else { return }
+                if entry.roomId != collab.currentRoomId || entry.keyBase64 != key {
+                    var updated = entry
+                    updated.roomId = collab.currentRoomId
+                    updated.keyBase64 = key
+                    registryJson = sharedRegistryUpsert(json: registryJson, entry: updated)
+                }
+                if collab.cloudBridgeURL != relay { collab.enableCloudBridge(relay) }
+                return
+            }
         }
         if !entry.roomId.isEmpty, !entry.keyBase64.isEmpty {
             collab.hostRoom(roomId: entry.roomId, keyBase64: entry.keyBase64,
