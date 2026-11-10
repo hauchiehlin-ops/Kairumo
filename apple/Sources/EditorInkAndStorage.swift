@@ -310,6 +310,10 @@ extension NotebookEditorView {
             .onReceive(collaborationManager.relayNotice) { message in
                 showCanvasNotice(message)
             }
+            .onReceive(FillPickState.shared.$outcome) { outcome in
+                guard let (result, _) = outcome else { return }
+                showCanvasNotice(localizationManager.localized(result == .filled ? "fill_region_done" : "fill_region_not_closed"))
+            }
             .onChange(of: collaborationManager.outdatedPeerIds) { ids in
                 guard !ids.isEmpty else { return }
                 showCanvasNotice(localizationManager.localized("collab_peer_outdated"))
@@ -1150,7 +1154,7 @@ extension NotebookEditorView {
 
     /// 全域復原用的 manager：畫布的（與 PencilKit、專業筆畫共用）。
     var historyUndoManager: UndoManager {
-        canvasView?.undoManager ?? fallbackUndoManager
+        canvasView?.undoManager ?? EditorUndoRegistry.manager(for: notebook.id)
     }
 
     /// 編輯器寫回筆記本的唯一入口：先讓物件復原紀錄比對這一次的變更，再存檔。

@@ -331,8 +331,13 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     private let internalUndoManager = UndoManager()
+    /// 這本筆記固定的復原管理器（見 `EditorUndoRegistry`）。
+    var persistentUndoManager: UndoManager?
     override var undoManager: UndoManager? {
-        super.undoManager ?? internalUndoManager
+        // 優先用這本筆記固定的那一個：視窗的（`super.undoManager`）會在切到打字模式、文字框成為
+        // 第一回應者時被換掉或清空 —— 切回手寫按復原什麼都沒有；選單開著時落下的那一筆也登記不到
+        // （實測：點畫布關選單留下的墨點，按復原去不掉）。
+        persistentUndoManager ?? super.undoManager ?? internalUndoManager
     }
     override var canBecomeFirstResponder: Bool { true }
     var initialLoadedStrokeCount: Int = 0
@@ -1259,6 +1264,27 @@ final class AdaptiveCanvasView: PKCanvasView {
 /// 橡皮擦雙模式：筆劃橡皮擦（一碰擦整條線）vs 像素橡皮擦（局部擦除）
 enum EraserMode: String { case stroke, pixel }
 
+/// 每本筆記一個固定的復原管理器：畫布重建、切換手寫／打字模式都沿用同一個，復原紀錄不會消失。
+/// 關掉這本筆記（離開編輯器）時丟掉。只在主執行緒用。
+@MainActor
+enum EditorUndoRegistry {
+    // profile-scope: device 只是編輯中的復原紀錄（記憶體），離開編輯器就丟掉；切換設定檔會關閉編輯器
+    private static var managers: [String: UndoManager] = [:]
+
+    static func manager(for notebookId: String) -> UndoManager {
+        let key = notebookId.lowercased()
+        if let existing = managers[key] { return existing }
+        let created = UndoManager()
+        created.levelsOfUndo = 0
+        managers[key] = created
+        return created
+    }
+
+    static func discard(_ notebookId: String) {
+        managers.removeValue(forKey: notebookId.lowercased())?.removeAllActions()
+    }
+}
+
 /// PencilKit 畫布之 SwiftUI 封裝（跨 iOS / iPadOS / Mac Catalyst，支援無限高度延長、背景同步滾動與套索選取監聽）
 struct ProInkBinding {
     let directory: URL
@@ -1272,6 +1298,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     var proInk: ProInkBinding? = nil
     /// 圖學狀態：換筆、換圖層、改角度鎖定都要讓畫布重新套用工具設定。
     @ObservedObject var drafting = DraftingState.shared
+    /// 區域填色：開著時，下一次點畫布就填滿點到的封閉區域。
+    @ObservedObject var fillPick = FillPickState.shared
     var selectedTool: EditorToolType
     var selectedColor: Color
     var strokeWidth: CGFloat
@@ -1360,6 +1388,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
+        if let id = proInk?.notebookId { canvas.persistentUndoManager = EditorUndoRegistry.manager(for: id) }
         canvas.clipsToBounds = false
         canvas.delaysContentTouches = false
         canvas.hitPassThroughCheck = hitPassThroughCheck
@@ -1741,7 +1770,7 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 專業筆刷：設好層、手勢與目前的筆色／筆寬。
     private func applyProInk(to canvas: PKCanvasView) {
         guard let adaptive = canvas as? AdaptiveCanvasView else { return }
-        let mode: AdaptiveCanvasView.ProMode
+        var mode: AdaptiveCanvasView.ProMode
         let isDrafting = selectedTool == .drafting
         if isDrafting {
             mode = drafting.tool != .none ? .tool
@@ -1783,6 +1812,17 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.proLayerId = 0
             adaptive.proLineType = 0
             adaptive.proSnapStep = nil
+        }
+        if fillPick.active {
+            // 區域填色：這一下點按交給填色（用目前的顏色、麥克筆 1 號的筆寬掃滿），填完自動回到原本的工具。
+            mode = .tool
+            let color = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
+            let paper = paperId
+            adaptive.onProTool = { [weak adaptive] phase, point in
+                guard phase == .ended, let layer = adaptive?.proLayer else { return }
+                let width = toolBaseWidth(tool: .marker, size: FillPickState.brushSize)
+                FillPickState.shared.finish(layer.fillRegion(at: point, color: color, width: width, paperId: paper))
+            }
         }
         // 與 PencilKit 橡皮擦同一個寬度（兩種模式皆是），螢幕上的圓圈才與實際擦除範圍一比一。
         adaptive.proEraserRadius = max(4, pixelEraserWidth / 2)

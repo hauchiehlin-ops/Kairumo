@@ -52,6 +52,10 @@ public struct NotebookEditorView: View {
     /// 存在 AppStorage 而不是筆記裡：它是「怎麼看」而不是「內容是什麼」，
     /// 跟著人走比跟著筆記走合理 —— 跟著筆記的話，同一個人在不同本筆記裡
     /// 會拿到不同的捲動方式。
+    /// 兩頁並排（跨頁檢視）。只在連續模式生效：每頁仍是自己的畫布，只是排成兩欄。
+    @AppStorage(ProfileContext.scopedKey("kairumo.editor.spreadPages"))
+    var spreadPagesEnabled: Bool = false
+    var isSpreadActive: Bool { pageDisplayMode == .continuous && spreadPagesEnabled }
     @AppStorage(ProfileContext.scopedKey("kairumo.editor.pageDisplayMode"))
     var pageDisplayModeRaw: String = (NotebookEditorView.isTabletOrDesktopDevice ? PageDisplayMode.continuous : PageDisplayMode.single).rawValue
     var pageDisplayMode: PageDisplayMode {
@@ -289,7 +293,6 @@ public struct NotebookEditorView: View {
     /// 分塊送來的大圖（`state_blob`）收到一半的進度。
     @State var collabBlobAssembler = CollabBlobAssembler()
     /// 畫布還沒掛上視窗時的備用（正常情況下用畫布的 `undoManager`）。
-    @State var fallbackUndoManager = UndoManager()
     @ObservedObject var watchdog = InteractionWatchdog.shared
 
 
@@ -1514,6 +1517,8 @@ public struct NotebookEditorView: View {
         saveCurrentPageDrawing()
         let leavingId = notebook.id
         InkEventSink.unregister(notebookId: leavingId)
+        // 這本的復原紀錄跟著編輯器走：離開就丟掉（重新打開是新的編輯階段）。
+        EditorUndoRegistry.discard(leavingId)
         endCollabImportHold()
         afterCoreInkWrites {
             if store.activeNotebookId == leavingId {

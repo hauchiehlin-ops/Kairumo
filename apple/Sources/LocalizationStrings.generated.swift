@@ -11351,6 +11351,38 @@ extension LocalizationManager {
             .ko: "채우기 색",
             .th: "สีพื้น"
         ],
+        "fill_region": [
+            .zhHant: "區域填色",
+            .en: "Fill Region",
+            .zhHans: "区域填色",
+            .ja: "領域を塗りつぶす",
+            .ko: "영역 채우기",
+            .th: "เติมสีพื้นที่"
+        ],
+        "fill_region_done": [
+            .zhHant: "已填色，可以復原",
+            .en: "Filled. You can undo it.",
+            .zhHans: "已填色，可以撤销",
+            .ja: "塗りつぶしました。取り消せます",
+            .ko: "채웠습니다. 실행 취소할 수 있습니다",
+            .th: "เติมสีแล้ว เลิกทำได้"
+        ],
+        "fill_region_hint": [
+            .zhHant: "點一下要填色的封閉區域（用目前的顏色）",
+            .en: "Tap a closed area to fill it with the current color",
+            .zhHans: "点一下要填色的封闭区域（用当前的颜色）",
+            .ja: "塗りつぶす閉じた領域をタップ（現在の色）",
+            .ko: "채울 닫힌 영역을 탭하세요(현재 색상)",
+            .th: "แตะพื้นที่ปิดที่ต้องการเติมสี (ใช้สีปัจจุบัน)"
+        ],
+        "fill_region_not_closed": [
+            .zhHant: "這裡不是封閉區域：先把邊界畫成一圈再填色",
+            .en: "This area isn't closed. Draw a complete outline first.",
+            .zhHans: "这里不是封闭区域：先把边界画成一圈再填色",
+            .ja: "閉じた領域ではありません。先に輪郭を一周描いてください",
+            .ko: "닫힌 영역이 아닙니다. 먼저 경계를 한 바퀴 그려 주세요",
+            .th: "พื้นที่นี้ยังไม่ปิด วาดเส้นขอบให้ครบรอบก่อน"
+        ],
         "filter_ai": [
             .zhHant: "AI 概念渲染",
             .en: "AI Concepts",
@@ -13711,6 +13743,14 @@ extension LocalizationManager {
             .ko: "이미지 삽입",
             .th: "แทรกรูปภาพ"
         ],
+        "insert_legend": [
+            .zhHant: "圖例",
+            .en: "Legend",
+            .zhHans: "图例",
+            .ja: "凡例",
+            .ko: "범례",
+            .th: "คำอธิบายสัญลักษณ์"
+        ],
         "insert_link": [
             .zhHant: "插入連結",
             .en: "Insert Link",
@@ -14142,6 +14182,22 @@ extension LocalizationManager {
             .ja: "レイヤー",
             .ko: "레이어",
             .th: "เลเยอร์"
+        ],
+        "legend_item": [
+            .zhHant: "說明",
+            .en: "Label",
+            .zhHans: "说明",
+            .ja: "説明",
+            .ko: "설명",
+            .th: "คำอธิบาย"
+        ],
+        "legend_title": [
+            .zhHant: "圖例",
+            .en: "Legend",
+            .zhHans: "图例",
+            .ja: "凡例",
+            .ko: "범례",
+            .th: "คำอธิบายสัญลักษณ์"
         ],
         "line_endpoint_handle": [
             .zhHant: "拖曳端點",
@@ -17726,6 +17782,54 @@ extension LocalizationManager {
             .ja: "用紙は文書テンプレートに従います。",
             .ko: "용지는 문서 서식이 결정합니다.",
             .th: "กระดาษกำหนดโดยเทมเพลตเอกสาร"
+        ],
+        "paper_map_russia_central_asia": [
+            .zhHant: "空白地圖：俄羅斯與中亞",
+            .en: "Blank Map: Russia & Central Asia",
+            .zhHans: "空白地图：俄罗斯与中亚",
+            .ja: "白地図：ロシアと中央アジア",
+            .ko: "백지도: 러시아와 중앙아시아",
+            .th: "แผนที่เปล่า: รัสเซียและเอเชียกลาง"
+        ],
+        "paper_map_russia_central_asia_desc": [
+            .zhHant: "俄羅斯與中亞五國外框、俄哈國界與貝加爾湖",
+            .en: "Outline of Russia and Central Asia, the Russia–Kazakhstan border and Lake Baikal",
+            .zhHans: "俄罗斯与中亚五国外框、俄哈国界与贝加尔湖",
+            .ja: "ロシアと中央アジアの輪郭、露カザフ国境、バイカル湖",
+            .ko: "러시아와 중앙아시아 윤곽, 러시아–카자흐스탄 국경, 바이칼호",
+            .th: "โครงร่างรัสเซียและเอเชียกลาง พรมแดนรัสเซีย–คาซัคสถาน และทะเลสาบไบคาล"
+        ],
+        "paper_map_taiwan": [
+            .zhHant: "空白地圖：台灣",
+            .en: "Blank Map: Taiwan",
+            .zhHans: "空白地图：台湾",
+            .ja: "白地図：台湾",
+            .ko: "백지도: 대만",
+            .th: "แผนที่เปล่า: ไต้หวัน"
+        ],
+        "paper_map_taiwan_desc": [
+            .zhHant: "台灣本島輪廓，可著色與標註",
+            .en: "Outline of Taiwan for coloring and labeling",
+            .zhHans: "台湾本岛轮廓，可着色与标注",
+            .ja: "台湾本島の輪郭。塗り分けや書き込みに",
+            .ko: "대만 본섬 윤곽, 색칠과 표기용",
+            .th: "โครงร่างเกาะไต้หวัน สำหรับระบายสีและเขียนกำกับ"
+        ],
+        "paper_map_world": [
+            .zhHant: "空白世界地圖",
+            .en: "Blank World Map",
+            .zhHans: "空白世界地图",
+            .ja: "白地図（世界）",
+            .ko: "백지도(세계)",
+            .th: "แผนที่โลกเปล่า"
+        ],
+        "paper_map_world_desc": [
+            .zhHant: "世界大陸輪廓，上半地圖、下半留給圖例與筆記",
+            .en: "Continent outlines on top, room for a legend and notes below",
+            .zhHans: "世界大陆轮廓，上半地图、下半留给图例与笔记",
+            .ja: "上に大陸の輪郭、下に凡例とメモの余白",
+            .ko: "위에는 대륙 윤곽, 아래는 범례와 메모 공간",
+            .th: "โครงร่างทวีปด้านบน ด้านล่างเว้นไว้สำหรับคำอธิบายและบันทึก"
         ],
         "paper_templates_section": [
             .zhHant: "紙張樣板",
@@ -26399,6 +26503,30 @@ extension LocalizationManager {
             .ko: "텍스트 레이블 표시",
             .th: "แสดงป้ายข้อความ"
         ],
+        "tracing_made": [
+            .zhHant: "已設為描圖底圖：淡化、置於筆跡下並鎖定",
+            .en: "Set as tracing underlay: faded, below ink, and locked",
+            .zhHans: "已设为描图底图：淡化、置于笔迹下并锁定",
+            .ja: "トレース下絵にしました：薄く、インクの下、固定",
+            .ko: "따라 그리기 밑그림으로 설정: 흐리게, 잉크 아래, 고정",
+            .th: "ตั้งเป็นภาพรองลอกลายแล้ว: จาง อยู่ใต้หมึก และล็อก"
+        ],
+        "tracing_make": [
+            .zhHant: "設為描圖底圖（淡化並鎖定在筆跡下）",
+            .en: "Use as tracing underlay (fade and lock below ink)",
+            .zhHans: "设为描图底图（淡化并锁定在笔迹下）",
+            .ja: "トレース下絵にする（薄くしてインクの下に固定）",
+            .ko: "따라 그리기 밑그림으로 사용(흐리게, 잉크 아래 고정)",
+            .th: "ใช้เป็นภาพรองลอกลาย (จางลงและล็อกไว้ใต้หมึก)"
+        ],
+        "tracing_menu": [
+            .zhHant: "描圖底圖",
+            .en: "Tracing Underlay",
+            .zhHans: "描图底图",
+            .ja: "トレース下絵",
+            .ko: "따라 그리기 밑그림",
+            .th: "ภาพรองสำหรับลอกลาย"
+        ],
         "trans_pen_action_copy": [
             .zhHant: "複製",
             .en: "Copy",
@@ -27094,6 +27222,14 @@ extension LocalizationManager {
             .ja: "次のデバイスの確認を待っています: %@",
             .ko: "다음 기기의 확인을 기다리는 중: %@",
             .th: "กำลังรออุปกรณ์เหล่านี้ยืนยัน: %@"
+        ],
+        "two_page_spread": [
+            .zhHant: "兩頁並排",
+            .en: "Two-Page Spread",
+            .zhHans: "两页并排",
+            .ja: "見開き表示",
+            .ko: "두 페이지 보기",
+            .th: "แสดงสองหน้าคู่กัน"
         ],
         "txt_count": [
             .zhHant: "文字",

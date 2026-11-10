@@ -668,7 +668,9 @@ extension NotebookEditorView {
             //
             // 視窗比紙張寬就放大到填滿（上限見 `PageViewportLayout.maxFitScale`），
             // 不留兩片灰邊讓畫布看起來被框住。
-            let available = max(outer.size.width - 32, 1)
+            // 兩頁並排時每一欄只分到一半的寬度（扣掉欄距）。
+            let columns: CGFloat = isSpreadActive ? 2 : 1
+            let available = max((outer.size.width - 32 - (columns - 1) * Self.continuousPageSpacing) / columns, 1)
             let fitWidth = PageViewportLayout.scale(
                 availableWidth: available, pageWidth: PageGeometry.width)
             let viewport = CGSize(width: available, height: max(outer.size.height - 40, 1))
@@ -732,6 +734,19 @@ extension NotebookEditorView {
             }
             .accessibilityIdentifier("editor.zoom.fit_width")
             Divider()
+            // 兩頁並排：連續模式下每頁仍是獨立畫布，只是排成兩欄；從單頁模式選它會一併切到連續模式。
+            Button {
+                if !spreadPagesEnabled, pageDisplayMode != .continuous {
+                    saveCurrentPageDrawing()
+                    pageDisplayModeRaw = PageDisplayMode.continuous.rawValue
+                }
+                spreadPagesEnabled.toggle()
+            } label: {
+                Label(localizationManager.localized("two_page_spread"),
+                      systemImage: isSpreadActive ? "checkmark" : "book.pages")
+            }
+            .accessibilityIdentifier("editor.zoom.two_page_spread")
+            Divider()
             ForEach([50, 75, 125, 150, 200], id: \.self) { percent in
                 Button("\(percent)%") { applyEditorZoom(.ratio(CGFloat(percent) / 100)) }
             }
@@ -752,7 +767,10 @@ extension NotebookEditorView {
     func continuousPages(scale: CGFloat) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
-                LazyVStack(spacing: Self.continuousPageSpacing) {
+                ContinuousPagesStack(
+                    spread: isSpreadActive, spacing: Self.continuousPageSpacing,
+                    columnWidth: PageGeometry.width * scale
+                ) {
                     ForEach(0..<max(1, notebook.pageCount), id: \.self) { index in
                         ScaledPageLayout(scale: scale, unscaledSize: CGSize(width: PageGeometry.width, height: PageGeometry.height)) {
                             ContinuousPageView(
@@ -1073,7 +1091,8 @@ extension NotebookEditorView {
     /// 也只在真的換頁時才讀那一頁的筆跡：每一次落筆都讀檔解碼，筆尖一碰就卡一下。
     /// 第 `page` 頁的物件層拿到的跨頁資訊。只有連續模式才有。
     func pageCrossing(for page: Int) -> PageCrossing? {
-        guard pageDisplayMode == .continuous else { return nil }
+        // 兩頁並排時相鄰頁在旁邊、不在下面：往下拖不代表換到下一頁，與單頁模式一樣夾在本頁。
+        guard pageDisplayMode == .continuous, !isSpreadActive else { return nil }
         return PageCrossing(
             page: page,
             pageCount: max(1, notebook.pageCount),
@@ -1304,7 +1323,8 @@ extension NotebookEditorView {
                                 notebook.attachments?.removeAll { $0.id == item.id }
                                 commitNotebook()
                                 collaborationManager.broadcastSelection(selectedId: nil)
-                            }
+                            },
+                            onMakeTracing: { makeTracingUnderlay(item.id) }
                         )
                         .canvasLocked(lockedSet.contains(item.id.lowercased()))
                         .allowsHitTesting(!yieldsToSelectedChrome(item.id, chrome: chrome))

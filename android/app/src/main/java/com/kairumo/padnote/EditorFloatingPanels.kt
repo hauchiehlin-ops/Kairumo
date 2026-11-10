@@ -715,6 +715,16 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
             languageTag = deviceLanguageTag(),
             onReorder = { op -> objectReorder(image.id, op) },
             onChanged = { imageStore.persist(it); imageRevision++ },
+            // 設為描圖底圖：只用現成的三件事（不透明度、筆跡下方、鎖定），都會同步、都能各自改回。與 Apple 相同。
+            onMakeTracing = {
+                // 存一份新的副本：直接改同一個物件，圖片層看不出有變化（與連續模式相同）。
+                imageStore.persist(image.copy().also { it.opacity = com.kairumo.padnote.image.TRACING_DEFAULT_OPACITY })
+                objectReorder(image.id, com.kairumo.padnote.canvas.ObjectStacking.Reorder.SEND_BELOW_INK)
+                objectLock.setLocked(image.id, true)
+                imageRevision++
+                editingImage = null
+                android.widget.Toast.makeText(activity, l10n("tracing_made"), android.widget.Toast.LENGTH_SHORT).show()
+            },
             onDelete = {
                 imageStore.remove(image)
                 selectImage(null)

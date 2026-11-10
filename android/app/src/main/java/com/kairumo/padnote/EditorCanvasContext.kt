@@ -79,6 +79,55 @@ import java.io.File
  * 集中管理畫布視區、手寫引擎、所有多媒體圖層與 26 個浮動面板的狀態。
  */
 internal class EditorCanvasContext {
+    /**
+     * 工具列「新增文字方塊」放在哪裡（頁面座標）：這一頁現有內容（筆跡、文字、圖片）的下方，避開既有內容。
+     * 以前一律放在 (200, 200)，常常直接蓋在畫好的圖上（實測）。內容已經到頁尾、放不下時退回原位。
+     * 與 Apple `freeTextBoxOrigin` 同一條規則。
+     */
+    fun freeTextBoxOrigin(): Pair<Float, Float> {
+        val fallback = 200f to 200f
+        var bottom = 0f
+        for (stroke in engine.strokes) for (p in stroke.points) bottom = maxOf(bottom, p.y + stroke.baseWidth)
+        for (t in textStore.all) bottom = maxOf(bottom, t.y + t.height)
+        for (img in imageStore.all) bottom = maxOf(bottom, img.y + img.height)
+        // 紙上的引導線（空白地圖的輪廓）也算內容：圖例要放在地圖下面，不是壓在地圖上（實測）。
+        // 整頁都有框線的紙（康乃爾等）放不下，就只看使用者自己的內容 —— 與 Apple 相同。
+        val guideBottom = com.kairumo.padnote.ink.FillPickState.paperOutlines(meta.paperId(pageIndex))
+            .flatMap { it.points }.maxOfOrNull { it.y } ?: 0f
+        val withGuides = maxOf(fallback.second, maxOf(bottom, guideBottom) + FREE_TEXT_GAP)
+        if (guideBottom > 0f && withGuides + FREE_TEXT_MIN_HEIGHT <= com.kairumo.padnote.ink.PageGeometry.height) {
+            return fallback.first to withGuides
+        }
+        if (bottom <= 0f) return fallback
+        val y = maxOf(fallback.second, bottom + FREE_TEXT_GAP)
+        return if (y + FREE_TEXT_MIN_HEIGHT <= com.kairumo.padnote.ink.PageGeometry.height) fallback.first to y else fallback
+    }
+
+    /**
+     * 插入圖例：標題＋三行「■ 說明」。色塊顏色與 UTF-16 位置由核心 `legendBox` 決定，
+     * 與 Apple `insertLegend` 同一份規則。放在 [freeTextBoxOrigin]，插入後直接進入編輯。
+     */
+    fun insertLegend(): com.kairumo.padnote.text.TextBox {
+        val (x, y) = freeTextBoxOrigin()
+        val box = textStore.createBoxed(x, y, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
+        val item = l10n("legend_item")
+        val built = legendBox(l10n("legend_title"), listOf(item, item, item), legendDefaultColors(), box.fontSize)
+        box.text = built.text
+        box.width = minOf(box.width, 220f)
+        box.height = built.height
+        box.runs = built.runs.map { run ->
+            com.kairumo.padnote.text.TextStyleRun(
+                run.start.toInt(), run.length.toInt(),
+                com.kairumo.padnote.text.TextCharStyle(
+                    bold = if (run.bold) true else null,
+                    textColorHex = run.colorHex.ifEmpty { null }
+                )
+            )
+        }
+        textStore.persist(box)
+        return box
+    }
+
     lateinit var sessionRevisionState: MutableIntState
     var sessionRevision: Int
         get() = sessionRevisionState.intValue
@@ -103,6 +152,13 @@ internal class EditorCanvasContext {
     var continuousScrollRequest: Int
         get() = continuousScrollRequestState.intValue
         set(v) { continuousScrollRequestState.intValue = v }
+    lateinit var spreadPagesState: MutableState<Boolean>
+    /** 兩頁並排的開關（記在 active profile）。只在連續模式生效，見 [isSpreadActive]。 */
+    var spreadPages: Boolean
+        get() = spreadPagesState.value
+        set(v) { spreadPagesState.value = v }
+    val isSpreadActive: Boolean
+        get() = pageDisplayMode == PageDisplayMode.CONTINUOUS && spreadPages
     lateinit var pageDisplayModeState: MutableState<PageDisplayMode>
     var pageDisplayMode: PageDisplayMode
         get() = pageDisplayModeState.value
@@ -847,6 +903,9 @@ internal fun rememberEditorCanvasContext(
         )
     }
     var pageDisplayMode by pageDisplayModeState
+    val spreadPagesState = remember {
+        mutableStateOf(ProfileContext.prefs(activity, "kairumo_editor").getBoolean("spreadPages", false))
+    }
 
 
     /**
@@ -2757,7 +2816,9 @@ internal fun rememberEditorCanvasContext(
             engine.layer = 0
             engine.lineType = 0
             engine.colorRgba = hexToRgba(inkColorHex)
-            engine.baseWidth = inkWidth
+            // 滑桿數字 → 這支筆的基準筆寬：查核心的係數表（與 Apple 共用），同一個數字兩平台一樣粗。
+            // 以前直接拿滑桿數字當筆寬，Android 的螢光筆比 iPad 細好幾倍（實測）。橡皮擦等非筆刷照舊。
+            engine.baseWidth = inkTool.kind?.let { uniffi.padnote_core.toolBaseWidth(it, inkWidth) } ?: inkWidth
             engine.snapStepDeg = null
             engine.reassignTarget = null
         }
@@ -3336,6 +3397,7 @@ internal fun rememberEditorCanvasContext(
     ctx.pageIndexState = pageIndexState
     ctx.continuousScrollRequestState = continuousScrollRequestState
     ctx.pageDisplayModeState = pageDisplayModeState
+    ctx.spreadPagesState = spreadPagesState
     ctx.recordingState = recordingState
     ctx.recordingPausedState = recordingPausedState
     ctx.recordSecondsState = recordSecondsState
@@ -3571,3 +3633,7 @@ internal fun EditorCanvasContext.applyFormatToSelectedText(action: com.kairumo.p
     textRevision++
     return true
 }
+
+/** 新文字方塊與上方內容的間距、以及至少要留的高度（頁面單位）。與 Apple 相同。 */
+private const val FREE_TEXT_GAP = 24f
+private const val FREE_TEXT_MIN_HEIGHT = 60f

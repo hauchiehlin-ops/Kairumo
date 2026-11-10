@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -51,6 +52,8 @@ fun ImageEditor(
     onChanged: (NoteImage) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
+    /** 設為描圖底圖：半透明、移到筆跡下面、鎖定位置（編輯器負責圖層與鎖定）。`null` 時不顯示。 */
+    onMakeTracing: (() -> Unit)? = null,
     /** 見 `ShapeEditDialog` 的同名參數：連續頁模式傳 false，照舊用對話框。 */
     asFloatingPanel: Boolean = true
 ) {
@@ -95,6 +98,25 @@ fun ImageEditor(
                                     label = { Text(l(op.labelKey)) }
                                 )
                             }
+                        }
+                    }
+
+                    // 描圖底圖：一鍵設定，或只調不透明度（與 Apple 圖片選單同一組選項）。
+                    Text(l("tracing_menu"), style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (onMakeTracing != null) {
+                            androidx.compose.material3.AssistChip(
+                                onClick = onMakeTracing,
+                                label = { Text(l("tracing_make")) },
+                                modifier = Modifier.testTag("editor.image.tracing_make")
+                            )
+                        }
+                        for (value in TRACING_OPACITIES) {
+                            FilterChip(
+                                selected = kotlin.math.abs((image.opacity ?: 1f) - value) < 0.01f,
+                                onClick = { image.opacity = value; onChanged(image) },
+                                label = { Text("${(value * 100).toInt()}%") }
+                            )
                         }
                     }
 
@@ -202,3 +224,9 @@ fun ImageEditor(
 
 private fun parse(hex: String): Color? =
     com.kairumo.padnote.chart.ChartRenderer.parseColor(hex)?.let { Color(it) }
+
+/** 描圖底圖可選的不透明度。與 Apple `AttachmentItemView.tracingOpacities` 相同。 */
+internal val TRACING_OPACITIES = listOf(1f, 0.7f, 0.5f, 0.35f, 0.2f)
+
+/** 「設為描圖底圖」用的不透明度。與 Apple 相同。 */
+internal const val TRACING_DEFAULT_OPACITY = 0.35f

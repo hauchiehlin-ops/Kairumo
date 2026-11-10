@@ -55,6 +55,34 @@ extension NotebookEditorView {
     @ViewBuilder
     var insertMenuContent: some View {
         Section {
+            // 文字方塊：手寫模式也從「插入」加得到（與 Android 工具列的「新增文字方塊」一致）。
+            // 以前只有打字模式與工具列上一個沒有標籤的小圖示，實測時根本找不到。
+            Button {
+                presentFromMenu {
+                    let draft = insertTextBox(at: freeTextBoxOrigin())
+                    transitionToMode(.type)
+                    inlineEditingTextId = draft.id
+                }
+            } label: { Label(localizationManager.localized("add_text_box"), systemImage: "plus.bubble") }
+                .accessibilityIdentifier("editor.insert.text_box")
+            // 區域填色：下一次點畫布，用目前的顏色填滿點到的封閉區域（地圖著色、圖表塗色）。
+            Button {
+                presentFromMenu {
+                    if editorMode != .draw { transitionToMode(.draw) }
+                    FillPickState.shared.active = true
+                    showCanvasNotice(localizationManager.localized("fill_region_hint"))
+                }
+            } label: { Label(localizationManager.localized("fill_region"), systemImage: "drop.fill") }
+                .accessibilityIdentifier("editor.insert.fill_region")
+            // 圖例：著色後說明「哪個顏色代表什麼」（與 Android「插入」選單同一項）。
+            Button {
+                presentFromMenu {
+                    let draft = insertLegend()
+                    transitionToMode(.type)
+                    inlineEditingTextId = draft.id
+                }
+            } label: { Label(localizationManager.localized("insert_legend"), systemImage: "list.bullet.rectangle") }
+                .accessibilityIdentifier("editor.insert.legend")
             Button {
                 presentFromMenu { showAssetLibrarySheet = true }
             } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
@@ -1203,7 +1231,7 @@ extension NotebookEditorView {
                 onInsertDivider: { insertQuickTextSnippet("────────────────────────────────────────", onNewLine: true) },
                 onInsertSnippet: { insertQuickTextSnippet($0) },
                 onAddTextBox: {
-                    let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+                    let draft = insertTextBox(at: freeTextBoxOrigin())
                     transitionToMode(.type)
                     inlineEditingTextId = draft.id
                 },
@@ -1557,7 +1585,7 @@ extension NotebookEditorView {
 
                     // 文字方塊快捷按鈕
                     Button {
-                        let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+                        let draft = insertTextBox(at: freeTextBoxOrigin())
                         transitionToMode(.type)
                         inlineEditingTextId = draft.id
                     } label: {
@@ -1800,7 +1828,7 @@ extension NotebookEditorView {
                 }
 
                 Button {
-                    let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+                    let draft = insertTextBox(at: freeTextBoxOrigin())
                     transitionToMode(.type)
                     inlineEditingTextId = draft.id
                 } label: {
@@ -2103,7 +2131,7 @@ extension NotebookEditorView {
     var typingToolbarItems: some View {
         // 1. 新增文字方塊按鈕
         Button {
-            let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+            let draft = insertTextBox(at: freeTextBoxOrigin())
             transitionToMode(.type)
             inlineEditingTextId = draft.id
         } label: {

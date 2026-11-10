@@ -415,6 +415,15 @@ fn editor_spec() -> FfiScreenSpec {
                 vec![
                     behind(c("editor.insert.assets", Button, "asset_library"), MoreMenu),
                     behind(
+                        c("editor.insert.text_box", Button, "add_text_box"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.fill_region", Button, "fill_region"),
+                        MoreMenu,
+                    ),
+                    behind(c("editor.insert.legend", Button, "insert_legend"), MoreMenu),
+                    behind(
                         c("editor.insert.stickers", Button, "sticker_library"),
                         MoreMenu,
                     ),

@@ -528,8 +528,14 @@ private class LiveBrushLayers(private val graphicsContext: androidx.compose.ui.g
         var entry = entries[pointerId]
         if (entry == null || !entry.matches(points, tool, baseWidth, lineType, color, density)) {
             entry?.let { release(it) }
-            entry = Entry(points[0], tool, baseWidth, lineType, color, density,
-                LiveBrushStroke(tool, baseWidth, lineType.toUByte()))
+            // 書寫中就套用抬筆後同一組流線防抖（與 Apple `ProInkLayerView` 相同）：畫面上的形狀就是存檔的形狀，
+            // 抬筆時不再重新變形。製圖線（線型非 0）照舊不平滑。
+            val brush = if (lineType == 0) {
+                LiveBrushStroke.newSmoothed(tool, baseWidth, lineType.toUByte(), InkEngine.LIVE_STREAMLINE, 1.0f)
+            } else {
+                LiveBrushStroke(tool, baseWidth, lineType.toUByte())
+            }
+            entry = Entry(points[0], tool, baseWidth, lineType, color, density, brush)
             entries[pointerId] = entry
         }
         if (points.size > entry.fed) {

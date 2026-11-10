@@ -189,21 +189,25 @@ enum ProInk {
     /// 原本 PencilKit 的各支筆各有倍率與下限（鋼筆 ×1.1、原子筆 ×0.65、麥克筆 ×2.8……），
     /// 換成自繪引擎之後沿用，使用者換版本後同一個粗細看起來差不多。
     static func baseWidth(for tool: EditorToolType, strokeWidth: CGFloat) -> CGFloat {
-        let w = max(1.0, strokeWidth)
+        // 係數表在核心（`tool_base_width`），與 Android 共用：同一個數字在兩個平台畫出一樣粗。
+        let kind: ToolKind
         switch tool {
-        case .pen: return w * 1.1
-        case .ballpoint: return w * 0.65
-        case .fineliner: return w * 0.85
-        case .pencil: return w * 1.3
-        case .calligraphy: return w * 1.4
-        case .charcoal, .crayon, .oilpaint: return w * 1.6
-        case .brush: return w * 2.0
-        case .watercolor: return w * 2.4
-        case .airbrush: return w * 2.5
-        case .marker: return w * 2.8
-        case .highlighter: return w * 3.8
-        default: return w * 1.2
+        case .pen: kind = .fountainPen
+        case .ballpoint: kind = .ballPoint
+        case .fineliner: kind = .fineliner
+        case .pencil: kind = .pencil
+        case .calligraphy: kind = .calligraphy
+        case .charcoal: kind = .charcoal
+        case .crayon: kind = .crayon
+        case .oilpaint: kind = .oilPaint
+        case .brush: kind = .brush
+        case .watercolor: kind = .watercolor
+        case .airbrush: kind = .airbrush
+        case .marker: kind = .marker
+        case .highlighter: kind = .highlighter
+        default: return max(1.0, strokeWidth) * 1.2
         }
+        return CGFloat(toolBaseWidth(tool: kind, size: Float(strokeWidth)))
     }
 
     static func strokePoints(_ points: [ProPoint]) -> [StrokePoint] {
@@ -1242,6 +1246,9 @@ enum ProInkCollab {
 }
 
 final class ProInkLayerView: UIView {
+    /// 流線防抖強度：書寫中的即時筆點與抬筆後的整筆平滑共用（兩邊不同就會在抬筆時變形）。與 Android 相同。
+    static let liveStreamline: Float = 0.35
+
     /// 這一頁的識別。換頁時由外面重設並重新載入。
     private(set) var notebookId = ""
     private(set) var pageIndex = 0
@@ -2084,7 +2091,12 @@ final class ProInkLayerView: UIView {
         snapState = nil
         resetLiveBrush()
         if layer == 0, let kind = ProInk.kind(named: name) {
-            liveBrush = LiveBrushStroke(tool: kind, baseWidth: width, lineType: lineType)
+            // 書寫中就套用抬筆後同一組流線防抖（與 Android `InkCanvas` 相同）：畫面上的形狀就是存檔的形狀，
+            // 抬筆時不再重新變形。製圖線（線型非 0）照舊不平滑。
+            liveBrush = lineType == 0
+                ? LiveBrushStroke.newSmoothed(tool: kind, baseWidth: width, lineType: lineType,
+                                              streamline: Self.liveStreamline, gamma: 1.0)
+                : LiveBrushStroke(tool: kind, baseWidth: width, lineType: lineType)
         }
         lastPredictedArea = .null
         refreshLive(dirtyAround: [point])
@@ -2211,7 +2223,7 @@ final class ProInkLayerView: UIView {
                 ? Double(prefs.float(forKey: "kairumo.pen.pressureGamma"))
                 : 1.0
             let gamma = Float(max(0.4, min(2.2, rawGamma)))
-            let smoothed = streamlineSmoothPoints(points: pts, amount: 0.35, gamma: gamma, taper: 0.22, tension: 0.38)
+            let smoothed = streamlineSmoothPoints(points: pts, amount: Self.liveStreamline, gamma: gamma, taper: 0.22, tension: 0.38)
             stroke.points = smoothed.map {
                 ProPoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
             }
@@ -2756,6 +2768,35 @@ final class ProInkLayerView: UIView {
 
     /// 加一組已經做好的筆畫（鏡射、陣列的複本），一次復原。
     @discardableResult
+    /// 封閉區域填色：在 `point`（頁面座標）找出這一頁筆畫圍成的封閉區域，用麥克筆掃滿（整組一次復原）。
+    /// 計算在核心（`fill_region_paths`，與 Android 共用）。找不到封閉區域時回 `false`、什麼都不加。
+    func fillRegion(at point: CGPoint, color: [UInt8], width: Float, paperId: String = "blank") -> Bool {
+        // 邊界 = 這一頁的筆跡 ＋ 紙上的引導線（空白地圖的國界不是筆跡）。與 Android 相同。
+        let outlines = allStrokes.filter { !$0.points.isEmpty }.map { stroke in
+            FfiFillOutline(points: stroke.points.map { FfiPoint(x: $0.x, y: $0.y) }, width: stroke.baseWidth)
+        } + paperFillOutlines(paperId: paperId, width: Float(PageGeometry.width), height: Float(PageGeometry.height))
+        let paths = fillRegionPaths(seedX: Float(point.x), seedY: Float(point.y), outlines: outlines, brushWidth: width)
+        guard !paths.isEmpty, let marker = ProInk.name(of: .marker) else { return false }
+        let made: [ProStroke] = paths.compactMap { path in
+            // 路徑只有轉折點：補成每 4 個單位一點，筆點陣才連續。
+            var points: [ProPoint] = []
+            for (a, b) in zip(path, path.dropFirst()) {
+                let steps = max(1, Int((hypot(b.x - a.x, b.y - a.y) / 4).rounded(.up)))
+                for k in 0..<steps {
+                    let t = Float(k) / Float(steps)
+                    points.append(ProPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t,
+                                           pressure: 0.5, tilt: 0, azimuth: 0, dtUs: 8_000))
+                }
+            }
+            if let last = path.last {
+                points.append(ProPoint(x: last.x, y: last.y, pressure: 0.5, tilt: 0, azimuth: 0, dtUs: 8_000))
+            }
+            guard points.count >= 2 else { return nil }
+            return ProStroke(tool: marker, colorRGBA: color, baseWidth: width, points: points)
+        }
+        return !insert(copies: made).isEmpty
+    }
+
     func insert(copies made: [ProStroke]) -> Set<String> {
         guard !made.isEmpty else { return [] }
         ownStrokes.append(contentsOf: made)
@@ -2933,6 +2974,13 @@ private extension CGRect {
 ///
 /// 兩指以上一律放手給捲動與縮放 —— 看到第二根手指就取消目前這一筆。
 final class ProStrokeGestureRecognizer: UIGestureRecognizer {
+    /// 系統的選單（`Menu`／`UIContextMenuInteraction`）正開著或正在關閉。
+    /// 只看視窗第一層：選單容器就掛在那裡，成本是幾個子視圖的類別名稱比對。
+    static func isDismissingMenu(in window: UIWindow?) -> Bool {
+        guard let window else { return false }
+        return window.subviews.contains { NSStringFromClass(type(of: $0)).contains("ContextMenu") }
+    }
+
     enum Mode { case draw, erase, reassign, marker, tool }
     enum ToolPhase { case began, moved, ended, cancelled }
 
@@ -3007,6 +3055,9 @@ final class ProStrokeGestureRecognizer: UIGestureRecognizer {
               touch.type == .pencil || allowsFingerDrawing() || mode == .tool
                   || mode == .reassign || mode == .marker
         else { state = .failed; return }
+        // 選單（例如「插入」）還開著時點畫布：那一下是「關掉選單」，不是書寫。
+        // 以前會在點下去的地方留下一個墨點（實測）。選單關閉的動畫期間它還在視窗裡，這裡就認得出來。
+        if Self.isDismissingMenu(in: view?.window) { state = .failed; return }
 
         tracked = touch
         lastTimestamp = touch.timestamp

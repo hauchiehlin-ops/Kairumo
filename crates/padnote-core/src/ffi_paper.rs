@@ -428,6 +428,31 @@ pub fn paper_templates() -> Vec<FfiPaperTemplate> {
             PageStyle::Blank,
             Engineering,
         ),
+        // 地理：空白地圖（輪廓由 page_guides 供應，見 guides_maps.rs）。
+        entry(
+            "map_world",
+            "paper_map_world",
+            "globe.asia.australia",
+            "Public",
+            PageStyle::Blank,
+            Method,
+        ),
+        entry(
+            "map_russia_central_asia",
+            "paper_map_russia_central_asia",
+            "map",
+            "Map",
+            PageStyle::Blank,
+            Method,
+        ),
+        entry(
+            "map_taiwan",
+            "paper_map_taiwan",
+            "mappin.and.ellipse",
+            "Place",
+            PageStyle::Blank,
+            Method,
+        ),
     ]
 }
 

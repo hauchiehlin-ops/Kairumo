@@ -1,5 +1,6 @@
 package com.kairumo.padnote
 
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -108,6 +109,8 @@ data class EditorTopBarState(
     val pageIndex: Int = 0,
     val pageCount: Int = 1,
     val pageDisplayMode: PageDisplayMode = PageDisplayMode.SINGLE,
+    /** 兩頁並排是否生效（只在連續模式）。 */
+    val spreadPages: Boolean = false,
     val currentFormat: String = "A4",
     val currentPalette: String = "classic",
     val isCollabConnected: Boolean = false,
@@ -160,6 +163,7 @@ data class EditorTopBarActions(
     val onNextPage: () -> Unit = {},
     val onAddPage: () -> Unit = {},
     val onTogglePageDisplayMode: () -> Unit = {},
+    val onToggleSpreadPages: () -> Unit = {},
     val onSelectPageFormat: (String) -> Unit = {},
     val onApplyCustomFormat: (Float, Float) -> Unit = { _, _ -> },
     val onSelectPalette: (String) -> Unit = {},
@@ -220,6 +224,7 @@ data class EditorTopBarActions(
     val onDuplicateMarquee: () -> Unit = {},
     val onDeleteMarquee: () -> Unit = {},
     val onAddTextBox: () -> Unit = {},
+    val onInsertLegend: () -> Unit = {},
     val onOpenTextStudio: () -> Unit = {},
     val onFormatAction: (WordFormatAction) -> Unit = {},
     val onToggleSnapToGrid: () -> Unit = {},
@@ -1013,7 +1018,20 @@ internal fun EditorTopBar(
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("add_text_box")) },
+                    modifier = Modifier.testTag("editor.insert.text_box"),
                     onClick = { showMenu = false; actions.onAddTextBox() }
+                )
+                // 區域填色：下一次點畫布，用目前的顏色填滿點到的封閉區域（與 Apple 相同）。
+                DropdownMenuItem(
+                    text = { Text(l10n("fill_region")) },
+                    modifier = Modifier.testTag("editor.insert.fill_region"),
+                    onClick = { showMenu = false; com.kairumo.padnote.ink.FillPickState.active = true }
+                )
+                // 圖例：著色後說明「哪個顏色代表什麼」（與 Apple「插入」選單同一項）。
+                DropdownMenuItem(
+                    text = { Text(l10n("insert_legend")) },
+                    modifier = Modifier.testTag("editor.insert.legend"),
+                    onClick = { showMenu = false; actions.onInsertLegend() }
                 )
 
                 HorizontalDivider()
@@ -1097,6 +1115,13 @@ internal fun EditorTopBar(
                     text = { Text(l10n("zoom_actual_size")) },
                     modifier = Modifier.testTag("editor.zoom.actual"),
                     onClick = { showMenu = false; actions.onZoomFit("actual") }
+                )
+                // 兩頁並排：連續模式下每頁仍是獨立畫布，只是排成兩欄（與 Apple 縮放選單同一項）。
+                DropdownMenuItem(
+                    text = { Text(l10n("two_page_spread")) },
+                    trailingIcon = if (state.spreadPages) { { Icon(androidx.compose.material.icons.Icons.Filled.Check, contentDescription = null) } } else null,
+                    modifier = Modifier.testTag("editor.zoom.two_page_spread"),
+                    onClick = { showMenu = false; actions.onToggleSpreadPages() }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },

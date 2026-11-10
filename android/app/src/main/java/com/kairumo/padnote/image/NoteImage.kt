@@ -87,6 +87,8 @@ data class NoteImage(
     var borderWidth: Float? = null,
     /** `"clear"` 為透明。哨符不是顏色，不可走顏色轉換。 */
     var backgroundColorHex: String? = null,
+    /** 不透明度（0.05–1）。描圖底圖用。`null` = 完全不透明（舊檔沒有這個欄位）。與 Apple `opacity` 相同。 */
+    var opacity: Float? = null,
     /** 原始檔名。同步去重要用，不能每次重新產生。 */
     var fileName: String = ""
 )
@@ -141,6 +143,8 @@ object ImageAppearance {
         style.put("width", image.width.toDouble())
         style.put("height", image.height.toDouble())
         image.borderColorHex?.let { style.put("borderColorHex", it) }
+        // 描圖底圖的不透明度（與 Apple 同一個鍵）。從沒調過不寫；調回 1 也要寫，別台才會跟著變回不透明。
+        image.opacity?.let { style.put("opacity", it.toDouble()) }
         image.borderWidth?.let { style.put("borderWidth", it.toDouble()) }
         image.backgroundColorHex?.let { style.put("backgroundColorHex", it) }
 
@@ -172,6 +176,7 @@ object ImageAppearance {
             image.cornerRadius = style.getDouble("cornerRadius").toFloat()
         }
         if (style.has("hasShadow")) image.hasShadow = style.getBoolean("hasShadow")
+        if (style.has("opacity")) image.opacity = style.getDouble("opacity").toFloat().coerceIn(0.05f, 1f)
         if (style.has("hasBorder")) image.hasBorder = style.getBoolean("hasBorder")
         if (style.has("filterStyle")) {
             image.filterStyle = ImageFilterStyle.from(style.getString("filterStyle"))

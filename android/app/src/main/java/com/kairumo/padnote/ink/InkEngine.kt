@@ -784,6 +784,37 @@ class InkEngine(
     }
 
     /** 加一組做好的複本（偏移、鏡射、陣列），一次復原。回傳數量。 */
+    /**
+     * 封閉區域填色：在 `(x, y)`（頁面座標）找出這一頁筆畫圍成的封閉區域，用麥克筆掃滿（整組一次復原）。
+     * 計算在核心（`fill_region_paths`，與 Apple 共用）。回傳加了幾筆；0 = 找不到封閉區域。
+     */
+    fun fillRegion(
+        x: Float, y: Float, color: ByteArray, width: Float,
+        paperOutlines: List<uniffi.padnote_core.FfiFillOutline> = emptyList()
+    ): Int {
+        // 邊界 = 這一頁的筆跡 ＋ 紙上的引導線（空白地圖的國界不是筆跡）。與 Apple 相同。
+        val outlines = _strokes.filter { it.points.isNotEmpty() }.map { s ->
+            uniffi.padnote_core.FfiFillOutline(s.points.map { uniffi.padnote_core.FfiPoint(it.x, it.y) }, s.baseWidth)
+        } + paperOutlines
+        val paths = uniffi.padnote_core.fillRegionPaths(x, y, outlines, width)
+        val now = System.currentTimeMillis()
+        val made = paths.mapNotNull { path ->
+            // 路徑只有轉折點：補成每 4 個單位一點，筆點陣才連續。與 Apple 相同。
+            val points = ArrayList<StrokePoint>()
+            for ((a, b) in path.zipWithNext()) {
+                val steps = maxOf(1, kotlin.math.ceil(kotlin.math.hypot(b.x - a.x, b.y - a.y) / 4f).toInt())
+                for (k in 0 until steps) {
+                    val t = k.toFloat() / steps
+                    points += StrokePoint(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 0.5f, 0f, 0f, 8_000u, 0f)
+                }
+            }
+            path.lastOrNull()?.let { points += StrokePoint(it.x, it.y, 0.5f, 0f, 0f, 8_000u, 0f) }
+            if (points.size < 2) null
+            else CompletedStroke(0uL, null, points, ToolKind.MARKER, now, color.copyOf(), width)
+        }
+        return insertCopies(made)
+    }
+
     fun insertCopies(copies: List<CompletedStroke>): Int {
         if (copies.isEmpty()) return 0
         val group = nextGroup++
@@ -1244,7 +1275,7 @@ class InkEngine(
                 val mapped = (f * 0.4f + (1f - f * 0.4f) * Math.pow(p.toDouble(), g.toDouble()).toFloat()).coerceIn(0.02f, 1f)
                 pt.copy(pressure = mapped)
             }
-            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(curvedPts, 0.35f, g, 0.22f, 0.38f)
+            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(curvedPts, LIVE_STREAMLINE, g, 0.22f, 0.38f)
         }
         snappedKind?.let { onSnapped?.invoke(it) }
 
@@ -1774,6 +1805,8 @@ class InkEngine(
     }
 
     companion object {
+        /** 流線防抖強度：書寫中的即時筆點與抬筆後的整筆平滑共用（兩邊不同就會在抬筆時變形）。與 Apple 相同。 */
+        const val LIVE_STREAMLINE = 0.35f
         /** 抬筆前在終點停多久才算「長按吸附」。與 Apple 的 0.55 秒一致。 */
         private const val SNAP_DWELL_MS = 550L
         /** 停留期間允許的抖動（頁面單位）。 */
