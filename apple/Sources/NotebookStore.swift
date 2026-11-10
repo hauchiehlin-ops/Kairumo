@@ -899,6 +899,8 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     public var borderWidth: CGFloat?
     /// 方框底色。`"clear"` 為透明；`nil` 時不畫底色（圖片本來就是滿版的）。
     public var backgroundColorHex: String?
+    /// 不透明度（0.05–1）。描圖底圖用（半透明墊在筆跡下面描）。`nil` = 完全不透明（舊檔沒有這個欄位）。
+    public var opacity: Double?
     /// 這張圖如果是數字製圖，這裡放它的設定 JSON（見 `ChartSpec`）。
     ///
     /// 有了它，圖表才**改得動**：重新編修時讀回原本的數字與樣式，而不是

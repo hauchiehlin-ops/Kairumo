@@ -1608,6 +1608,17 @@ extension NotebookEditorView {
         continuousObjectGeneration += 1
     }
 
+    /// 設為描圖底圖：半透明、移到筆跡下面、鎖定位置 —— 把地圖或課本圖墊在下面描（與 Android 相同）。
+    /// 只用現成的三件事（不透明度、筆跡下方、鎖定），不另立物件種類；三者都會同步、都能各自改回。
+    func makeTracingUnderlay(_ id: String) {
+        guard let index = notebook.attachments?.firstIndex(where: { $0.id == id }) else { return }
+        notebook.attachments?[index].opacity = AttachmentItemView.tracingDefaultOpacity
+        commitNotebook()
+        reorderObject(id, .sendBelowInk)
+        setObjectLocked(id, true)
+        showCanvasNotice(localizationManager.localized("tracing_made"))
+    }
+
     /// 調整單一物件的層級（選單、編輯面板共用，支援移至筆跡下方/上方）。
     func reorderObject(_ id: String, _ op: ObjectReorderOp) {
         guard let page = pageOfObject(id) else { return }

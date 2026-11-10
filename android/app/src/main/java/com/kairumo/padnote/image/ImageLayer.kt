@@ -158,7 +158,8 @@ private fun ImageObjectView(
                         com.kairumo.padnote.ui.EditingObjectBounds.report(image.id, isSelected, it.boundsInRoot())
                     }
                 )
-                .graphicsLayer { rotationZ = rotation }
+                // 描圖底圖的不透明度（`null` = 完全不透明）。與 Apple `.opacity(attachment.opacity ?? 1)` 相同。
+                .graphicsLayer { rotationZ = rotation; alpha = image.opacity ?: 1f }
                 .then(
                     if (image.hasShadow) Modifier.shadow(4.dp, shape) else Modifier
                 )

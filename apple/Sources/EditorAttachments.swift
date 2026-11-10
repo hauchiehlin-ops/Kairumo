@@ -97,6 +97,8 @@ struct AttachmentItemView: View {
     var onSelect: (() -> Void)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
+    /// 設為描圖底圖：半透明、移到筆跡下面、鎖定位置（編輯器負責圖層與鎖定）。
+    var onMakeTracing: (() -> Void)? = nil
 
     @ObservedObject var store = NotebookStore.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -131,6 +133,32 @@ struct AttachmentItemView: View {
         // 租約有效（5 秒內有續約）而且對方勝出才算鎖住 —— 對方當機時物件不會永遠鎖住。
         collaborationManager.leaseHolder(for: attachment.id)
     }
+
+    /// 描圖底圖：一鍵設定，或只調不透明度（與 Android 同一組選項）。
+    @ViewBuilder
+    private var tracingMenu: some View {
+        Menu {
+            if let onMakeTracing {
+                Button(action: onMakeTracing) {
+                    Label(localizationManager.localized("tracing_make"), systemImage: "square.3.layers.3d.down.backward")
+                }
+            }
+            ForEach(Self.tracingOpacities, id: \.self) { value in
+                Button {
+                    attachment.opacity = value
+                } label: {
+                    Text("\(Int((value * 100).rounded()))%")
+                }
+            }
+        } label: {
+            Label(localizationManager.localized("tracing_menu"), systemImage: "square.on.square.dashed")
+        }
+    }
+
+    /// 描圖底圖可選的不透明度。與 Android `TRACING_OPACITIES` 相同。
+    static let tracingOpacities: [Double] = [1.0, 0.7, 0.5, 0.35, 0.2]
+    /// 「設為描圖底圖」用的不透明度。與 Android 相同。
+    static let tracingDefaultOpacity: Double = 0.35
 
     private var displayWidth: CGFloat { liveSize?.width ?? attachment.width }
     private var displayHeight: CGFloat { liveSize?.height ?? attachment.height }
@@ -196,9 +224,12 @@ struct AttachmentItemView: View {
                         )
                         .shadow(color: (attachment.hasShadow && !isDragging) ? Color.black.opacity(0.18) : Color.clear, radius: 8, x: 2, y: 4)
                         .rotationEffect(.degrees(attachment.canvasRotation))
+                        // 描圖底圖的不透明度（`nil` = 完全不透明）。
+                        .opacity(attachment.opacity ?? 1)
                         .contextMenu {
                             ObjectFrameStyleMenu(style: $attachment)
                             ObjectOrderMenu(id: attachment.id)
+                            tracingMenu
                             Divider()
                             Button(role: .destructive, action: onDelete) {
                                 Label(localizationManager.localized("delete"), systemImage: "trash")

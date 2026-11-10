@@ -261,6 +261,79 @@ pub fn smart_fill(
     })
 }
 
+/// 把填色多邊形換成「麥克筆掃滿」的筆畫路徑（頁面座標）：間距不超過筆寬的水平掃描線。
+///
+/// 為什麼用筆畫而不是新的「填色物件」：筆畫是兩個平台現成的資料（同一套筆點陣算繪、同步、復原、擦除），
+/// 不用為填色另立一種會跨平台分岔的物件。用麥克筆（同一層墨、重疊不加深）掃，畫出來就是一整塊均勻的顏色。
+///
+/// # 不溢出邊界
+///
+/// 筆有寬度：沿著邊界描一圈、或掃描線端點剛好落在邊界上，筆的一半就畫到區域外面
+/// （實測在空白地圖上填色，紅色溢出國界約半個筆寬）。所以每條掃描線取的是
+/// 「`y − r`、`y`、`y + r` 三條線都在裡面」的那一段，再兩端各縮 `r`（`r` = 半個筆寬）——
+/// 筆的圓頭整個落在區域內。代價是貼著斜邊會留一點點白，比畫出界好看。
+///
+/// `reach` 是筆**畫出來**離中心線最遠的距離、`step` 是掃描線間距（要小於筆畫出來的最窄厚度）。
+/// 兩者分開給，是因為同一支筆在兩個平台的算繪不一樣寬（見 `padnote_core::fill_region_paths`）。
+pub fn fill_scan_paths(polygon: &[(f32, f32)], reach: f32, step: f32) -> Vec<Vec<(f32, f32)>> {
+    let mut out = Vec::new();
+    if polygon.len() < 3 || reach <= 0.0 || step <= 0.0 {
+        return out;
+    }
+    let r = reach;
+    let (min_y, max_y) = polygon.iter().fold((f32::MAX, f32::MIN), |(lo, hi), p| {
+        (lo.min(p.1), hi.max(p.1))
+    });
+    // 某一條水平線落在多邊形裡面的區段（由左到右）。
+    let spans = |y: f32| -> Vec<(f32, f32)> {
+        let mut xs: Vec<f32> = Vec::new();
+        let n = polygon.len();
+        for i in 0..n {
+            let (x1, y1) = polygon[i];
+            let (x2, y2) = polygon[(i + 1) % n];
+            // 半開區間：頂點剛好在掃描線上時只算一次。
+            if (y1 <= y && y < y2) || (y2 <= y && y < y1) {
+                xs.push(x1 + (y - y1) / (y2 - y1) * (x2 - x1));
+            }
+        }
+        xs.sort_by(|a, b| a.total_cmp(b));
+        xs.chunks_exact(2).map(|p| (p[0], p[1])).collect()
+    };
+    // 區段 (a, b) 與另一條線上「重疊最多的那一段」的交集。沒有重疊回 None。
+    let clip = |(a, b): (f32, f32), other: &[(f32, f32)]| -> Option<(f32, f32)> {
+        other
+            .iter()
+            .map(|&(c, d)| (a.max(c), b.min(d)))
+            .filter(|(lo, hi)| hi > lo)
+            .max_by(|x, y| (x.1 - x.0).total_cmp(&(y.1 - y.0)))
+    };
+    let step = step.max(0.5);
+    let mut y = min_y + r;
+    if y >= max_y - r {
+        // 比筆還窄的一條：只掃中間那一列。
+        y = (min_y + max_y) * 0.5;
+    }
+    loop {
+        let above = spans(y - r);
+        let below = spans(y + r);
+        for span in spans(y) {
+            let Some(span) = clip(span, &above).and_then(|s| clip(s, &below)) else {
+                continue;
+            };
+            let (a, b) = (span.0 + r, span.1 - r);
+            // 比筆短的段不畫：在窄縫裡畫出來只是一顆圓點，實測看起來是一串墨漬，比留白難看。
+            if b - a >= 2.0 * r {
+                out.push(vec![(a, y), (b, y)]);
+            }
+        }
+        y += step;
+        if y > max_y - r {
+            break;
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,5 +397,52 @@ mod tests {
         };
         let res = smart_fill(100.0, 100.0, &strokes, opts);
         assert!(res.is_none(), "開口圖形應偵測到外洩並拒絕填色");
+    }
+
+    #[test]
+    fn scan_paths_cover_a_square_and_stay_inside() {
+        let square = vec![(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)];
+        let paths = super::fill_scan_paths(&square, 5.0, 7.0);
+        // 每條掃描線一段。
+        assert!(paths.len() > 10, "掃描線太少：{}", paths.len());
+        // 連筆的寬度（半徑 5）都要在方塊裡：不會畫出界。
+        for path in &paths {
+            for &(x, y) in path {
+                assert!(
+                    (5.0..=95.0).contains(&x) && (5.0..=95.0).contains(&y),
+                    "筆畫出界：({x},{y})"
+                );
+            }
+        }
+        // 相鄰掃描線的間距不超過筆寬：不會留白縫。
+        let ys: Vec<f32> = paths.iter().map(|p| p[0].1).collect();
+        for w in ys.windows(2) {
+            assert!(w[1] - w[0] <= 10.0, "掃描線間距過大");
+        }
+    }
+
+    #[test]
+    fn scan_paths_split_concave_rows() {
+        // U 形：中間那一列被切成左右兩段，不會畫過缺口。
+        let u = vec![
+            (0.0, 0.0),
+            (30.0, 0.0),
+            (30.0, 60.0),
+            (70.0, 60.0),
+            (70.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 100.0),
+            (0.0, 100.0),
+        ];
+        let paths = super::fill_scan_paths(&u, 3.0, 4.2);
+        let row = paths.iter().filter(|p| (p[0].1 - 30.0).abs() < 3.0).count();
+        assert!(row >= 2, "凹進去的那一列應該切成兩段");
+        for p in &paths {
+            let (x0, y) = p[0];
+            let x1 = p[1].0;
+            if y < 60.0 {
+                assert!(!(x0 < 40.0 && x1 > 60.0), "掃描線穿過了 U 形的缺口");
+            }
+        }
     }
 }

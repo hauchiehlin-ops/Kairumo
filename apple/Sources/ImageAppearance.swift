@@ -76,6 +76,9 @@ enum ImageAppearance {
         ]
         // `nil` 的欄位不寫進去：接收端才分得出「沒設定」與「設成 0」。
         if let value = item.materialType?.rawValue { style["materialType"] = value }
+        // 描圖底圖的不透明度（與 Android 同一個鍵）。從沒調過（`nil`）不寫，舊檔與舊版看到的不變；
+        // 調回 1 也要寫，別台才會跟著變回不透明。
+        if let value = item.opacity { style["opacity"] = value }
         if let value = item.borderColorHex { style["borderColorHex"] = value }
         if let value = item.borderWidth { style["borderWidth"] = value }
         // "clear" 是哨符不是顏色 —— 原樣帶過去，不要走任何顏色轉換。
@@ -117,6 +120,7 @@ enum ImageAppearance {
         if let value = style["rotationDegrees"] as? Double { item.rotationDegrees = value }
         if let value = style["cornerRadius"] as? Double { item.cornerRadius = CGFloat(value) }
         if let value = style["hasShadow"] as? Bool { item.hasShadow = value }
+        if let value = style["opacity"] as? Double { item.opacity = min(1, max(0.05, value)) }
         if let value = style["hasBorder"] as? Bool { item.hasBorder = value }
         if let raw = style["filterStyle"] as? String,
            let filter = ImageFilterStyle(rawValue: raw) { item.filterStyle = filter }

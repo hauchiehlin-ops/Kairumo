@@ -8,6 +8,25 @@ extension Notification.Name {
     static let kairumoDraftingChanged = Notification.Name("kairumo.drafting.changed")
 }
 
+/// 「區域填色」：下一次點畫布，就填滿點到的那個封閉區域（與 Android `FillPickState` 相同）。
+/// 由「插入」選單開啟；畫布看到 `active` 就把單指點按交給填色，填完（或找不到封閉區域）自動關閉。
+@MainActor
+final class FillPickState: ObservableObject {
+    // profile-scope: device 只是「下一次點畫布要填色」的暫態，填完即清
+    static let shared = FillPickState()
+    enum Outcome { case filled, notClosed }
+    /// 填色用的麥克筆粗細（工具列的數字，經 `tool_base_width` 換成筆寬）。與 Android 相同。
+    nonisolated static let brushSize: Float = 1
+    @Published var active = false
+    /// 上一次的結果（編輯器據此顯示提示）。每次填色都換一個新值，相同結果也會觸發。
+    @Published private(set) var outcome: (Outcome, UUID)?
+
+    func finish(_ filled: Bool) {
+        active = false
+        outcome = (filled ? .filled : .notClosed, UUID())
+    }
+}
+
 /// 圖學的編輯狀態：目前的製圖筆、要畫在哪一層、各圖層的顯示與鎖定、吸附與角度鎖定。
 ///
 /// 圖層**定義**（有幾層、顏色、筆組）在核心 `ffi_draft.rs`，這裡只存使用者的選擇。

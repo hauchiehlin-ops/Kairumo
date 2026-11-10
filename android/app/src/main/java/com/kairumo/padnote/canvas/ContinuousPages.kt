@@ -192,6 +192,8 @@ fun ContinuousPagesView(
     session: PadnoteSession?,
     meta: NotebookMeta,
     pageCount: Int,
+    /** 兩頁並排（跨頁檢視）：一列兩頁。與 Apple `isSpreadActive` 相同。 */
+    spread: Boolean = false,
     focusIndex: Int,
     onFocusChange: (Int) -> Unit,
     ink: InkSettings,
@@ -244,6 +246,9 @@ fun ContinuousPagesView(
     onDeleteAudio: (AudioObject) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
+    val perRow = if (spread) 2 else 1
+    val totalPages = maxOf(1, pageCount)
+    val rowCount = (totalPages + perRow - 1) / perRow
     /** 套索選取屬於哪一頁。只有那一頁畫圈、選取框與工具列，動作也只作用在那一頁的引擎。 */
     var lassoPageId by remember(session) { mutableStateOf<String?>(null) }
     /** 連續模式目前被選取的物件（所屬頁索引 to 物件 ID）。 */
@@ -637,7 +642,7 @@ fun ContinuousPagesView(
             val target = focusIndex.coerceAtLeast(0)
             programmaticScroll = true
             try {
-                listState.animateScrollToItem(target)
+                listState.animateScrollToItem(target / perRow)
             } finally {
                 programmaticScroll = false
             }
@@ -651,7 +656,7 @@ fun ContinuousPagesView(
             val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
             info.visibleItemsInfo.minByOrNull { item ->
                 kotlin.math.abs(item.offset + item.size / 2 - center)
-            }?.index
+            }?.index?.let { it * perRow }
         }.collect { index ->
             if (index != null && index != lastReported && !programmaticScroll) {
                 lastReported = index
@@ -666,7 +671,8 @@ fun ContinuousPagesView(
         // 還是「畫布壞了」。視窗比紙張寬時反過來放大填滿（上限 2 倍，
         // 與 Apple 的 `PageViewportLayout.maxFitScale` 同一個數字），
         // 否則兩側留下的灰邊看起來像畫布被框住。
-        val available = (maxWidth.value - 32f).coerceAtLeast(1f)
+        // 兩頁並排時每一欄只分到一半的寬度（扣掉欄距），與 Apple `continuousPagesContent` 同一條算式。
+        val available = ((maxWidth.value - 32f - (perRow - 1) * PAGE_GAP_DP) / perRow).coerceAtLeast(1f)
         val scale = minOf(MAX_FIT_SCALE, available / PageGeometry.width)
         var momentumJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
         var isCanvasNavigating by remember { mutableStateOf(false) }
@@ -780,10 +786,8 @@ fun ContinuousPagesView(
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp)
         ) {
-            items(
-                count = maxOf(1, pageCount),
-                key = { idx -> pageIdAt(idx).ifEmpty { "page-$idx" } }
-            ) { index ->
+            // 一列一頁；兩頁並排時一列兩頁（每頁仍是自己的畫布與存檔，只是排列不同）。
+            val pageItem: @Composable (Int) -> Unit = { index ->
                 Box(Modifier.scaledPage(scale).zIndex(if (draggingPage == index) 1f else 0f)) {
                     val pageId = remember(session, index, pageCount) { pageIdAt(index) }
                     key(pageId.ifEmpty { index.toString() }) {
@@ -799,7 +803,8 @@ fun ContinuousPagesView(
                                     currentOnFocusChange(index)
                                 }
                             },
-                            canMove = { id -> canMoveAcrossPages(pageId, id) },
+                            // 兩頁並排時相鄰頁在旁邊、不在下面：不換頁，與單頁模式一樣夾在本頁（同 Apple）。
+                            canMove = { id -> !spread && canMoveAcrossPages(pageId, id) },
                             moved = { id, to -> moveObjectToPage(id, index, to) },
                             ended = { draggingPage = null }
                         )
@@ -888,6 +893,23 @@ fun ContinuousPagesView(
                             onDeleteAudio = onDeleteAudio
                         )
                     }
+                }
+            }
+            items(
+                count = rowCount,
+                key = { row ->
+                    val first = row * perRow
+                    (if (spread) "spread-" else "") + pageIdAt(first).ifEmpty { "page-$first" }
+                }
+            ) { row ->
+                if (spread) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(PAGE_GAP_DP.dp)) {
+                        pageItem(row * 2)
+                        if (row * 2 + 1 < totalPages) pageItem(row * 2 + 1)
+                        else Box(Modifier.scaledPage(scale))
+                    }
+                } else {
+                    pageItem(row)
                 }
             }
         }
@@ -1050,7 +1072,7 @@ fun ContinuousPagesView(
         val info = listState.layoutInfo
         val viewport = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
         val itemSpan = info.visibleItemsInfo.firstOrNull()?.size?.toFloat() ?: 0f
-        val total = itemSpan * maxOf(1, pageCount)
+        val total = itemSpan * rowCount
         if (total > 0f && viewport > 0f) {
             val scrolled = listState.firstVisibleItemIndex * itemSpan +
                 listState.firstVisibleItemScrollOffset
@@ -1063,7 +1085,7 @@ fun ContinuousPagesView(
                     .padding(end = 4.dp, top = 10.dp, bottom = 10.dp)
             ) { fraction ->
                 val targetPx = fraction * scrollable
-                val index = (targetPx / itemSpan).toInt().coerceIn(0, maxOf(0, pageCount - 1))
+                val index = (targetPx / itemSpan).toInt().coerceIn(0, maxOf(0, rowCount - 1))
                 val offset = (targetPx - index * itemSpan).toInt().coerceAtLeast(0)
                 scope.launch { listState.scrollToItem(index, offset) }
             }
@@ -1082,6 +1104,8 @@ fun ContinuousPagesView(
 
 /** 自動貼合寬度時的放大上限；與 Apple `PageViewportLayout.maxFitScale` 一致。 */
 private const val MAX_FIT_SCALE = 2f
+/** 頁與頁之間的間距（dp），上下與左右同一個數字（Apple `continuousPageSpacing`）。 */
+private const val PAGE_GAP_DP = 20f
 
 /**
  * 把固定 800 × 1132 的頁面縮進捲動列表的一格。
@@ -1873,6 +1897,31 @@ private fun ContinuousPage(
             )
         }
 
+        // 區域填色：與單頁模式同一層（點到哪一頁的哪個封閉區域就填哪個），邊界含紙上的引導線。
+        if (com.kairumo.padnote.ink.FillPickState.active) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(9_500f)
+                    .testTag("editor.fill.target_layer")
+                    .pointerInput(pageIndex) {
+                        detectTapGestures { offset ->
+                            val width = uniffi.padnote_core.toolBaseWidth(
+                                ToolKind.MARKER, com.kairumo.padnote.ink.FillPickState.BRUSH_SIZE)
+                            val added = engine.fillRegion(
+                                offset.x / density, offset.y / density, ink.colorRgba, width,
+                                com.kairumo.padnote.ink.FillPickState.paperOutlines(paperId))
+                            com.kairumo.padnote.ink.FillPickState.finish(added > 0)
+                            if (added > 0) {
+                                revision++
+                                runtime.bump()
+                                collabBridge?.onLocalChange?.invoke()
+                            }
+                        }
+                    }
+            )
+        }
+
         // 點選位置放置圖釘：全頁透明攔截層
         if (isPlacingCommentPin) {
             Box(
@@ -1998,6 +2047,7 @@ private fun ContinuousPage(
     // ---- 編輯面板（與單頁模式同一批）----
     val languageTag = LocalAppLanguage.current
 
+    val toastContext = androidx.compose.ui.platform.LocalContext.current
     editingImage?.let { image ->
         ImageEditor(
             image = image,
@@ -2005,6 +2055,23 @@ private fun ContinuousPage(
             onChanged = { imageStore.persist(it); revision++ },
             onDelete = { imageStore.remove(image); updateSelectedId(null); revision++ },
             onDismiss = { editingImage = null },
+            // 設為描圖底圖：淡化、移到筆跡下方、鎖定（與單頁模式、Apple 的 makeTracingUnderlay 相同）。
+            onMakeTracing = {
+                // 存一份新的副本：直接改同一個物件，圖片層看不出有變化，要重開才會變淡（實測）。
+                imageStore.persist(image.copy().also { it.opacity = com.kairumo.padnote.image.TRACING_DEFAULT_OPACITY })
+                if (image.id !in underInkIds) {
+                    meta.moveObjectsToInkPlane(session, pageIndex, kindOf.filterKeys { it == image.id },
+                        uniffi.padnote_core.FfiInkPlane.BELOW_INK)
+                }
+                objectLock.setLocked(image.id, true)
+                editingImage = null
+                revision++
+                android.widget.Toast.makeText(
+                    toastContext,
+                    com.kairumo.padnote.LocalizationStrings.localized("tracing_made", com.kairumo.padnote.currentLanguageTag()),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            },
             asFloatingPanel = false
         )
     }

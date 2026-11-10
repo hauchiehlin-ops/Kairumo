@@ -322,6 +322,10 @@ pub struct LiveDabs {
     base_width: f32,
     line: LineState,
     stroke: Option<LiveStroke>,
+    /// 書寫中就套用的流線防抖（與抬筆後 `streamline_smooth_points` 同一個追蹤器、同樣參數）。
+    /// 追蹤器只看已經寫過的點，所以邊寫邊算的位置與抬筆後整筆算的完全一樣 ——
+    /// 抬筆那一刻筆畫不再「跳一下」重新變形（實測回報）。`None` = 不平滑（製圖線）。
+    smoother: Option<crate::streamline::StreamlineTracker>,
 }
 
 #[derive(Clone, Debug)]
@@ -338,7 +342,14 @@ impl LiveDabs {
             base_width,
             line: LineState::new(line_type),
             stroke: None,
+            smoother: None,
         }
+    }
+
+    /// 書寫中就套用流線防抖：參數與抬筆後的整筆平滑相同，畫面上的形狀就是存檔的形狀。
+    pub fn with_streamline(mut self, amount: f32, curve: crate::streamline::PressureCurve) -> Self {
+        self.smoother = Some(crate::streamline::StreamlineTracker::new(amount, curve));
+        self
     }
 
     /// 自繪引擎畫得出這支筆嗎？畫不出來的話 [`push`](Self::push) 與 [`preview`](Self::preview) 永遠是空的。
@@ -352,6 +363,14 @@ impl LiveDabs {
         if !self.active() || points.is_empty() {
             return out;
         }
+        let smoothed: Vec<InkPoint>;
+        let points = match self.smoother.as_mut() {
+            Some(tracker) => {
+                smoothed = points.iter().map(|&p| tracker.feed(p)).collect();
+                &smoothed[..]
+            }
+            None => points,
+        };
         let mut rest = points;
         if self.stroke.is_none() {
             let first = points[0];
@@ -388,7 +407,13 @@ impl LiveDabs {
         };
         let mut stroke = live.clone();
         let line = self.line.clone();
-        for &p in predicted {
+        // 預測點也走同一個平滑（用複本，不改變狀態）。
+        let mut tracker = self.smoother.clone();
+        let predicted: Vec<InkPoint> = predicted
+            .iter()
+            .map(|&p| tracker.as_mut().map_or(p, |t| t.feed(p)))
+            .collect();
+        for &p in &predicted {
             let a = stroke.last_point;
             let emitter = &mut stroke.emitter;
             stroke
@@ -1720,6 +1745,31 @@ mod streaming_tests {
                     );
                 }
             }
+        }
+    }
+
+    /// 書寫中就平滑：逐批送點的結果，與「先把整筆平滑好再送進去」完全相同 ——
+    /// 畫面上的形狀就是抬筆後存檔的形狀（抬筆時不再重新變形）。
+    #[test]
+    fn live_streamline_matches_offline_streamline() {
+        let curve = crate::streamline::PressureCurve {
+            min_threshold: 0.02,
+            max_threshold: 0.98,
+            gamma: 1.0,
+        };
+        let stroke = &golden_strokes()[3];
+        // 離線平滑的最後一點會被 `finish` 拉回真實離筆位置；即時的那一點還沒到，比到倒數第二點為止。
+        let offline = crate::streamline::apply_streamline(stroke, 0.35, curve);
+        let offline = &offline[..offline.len() - 1];
+        for tool in CUSTOM {
+            let mut smoothed_live =
+                LiveDabs::new(tool, 7.0, LineType::Solid).with_streamline(0.35, curve);
+            let mut got = Vec::new();
+            for part in stroke[..stroke.len() - 1].chunks(4) {
+                got.extend(smoothed_live.push(part));
+            }
+            let want = LiveDabs::new(tool, 7.0, LineType::Solid).push(offline);
+            assert_eq!(got, want, "{tool:?} 即時平滑與離線平滑的筆點不同");
         }
     }
 

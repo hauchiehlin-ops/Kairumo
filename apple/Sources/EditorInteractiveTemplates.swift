@@ -431,6 +431,71 @@ extension NotebookEditorView {
     /// - Parameter tapToWrite: 文字模式「隨點即書」。文字從點的地方開始；橫線紙上基準線坐在格線上，
     ///   一行一行對著格線寫；沒有框線、透明底，方塊會跟著內容長高。
     ///   `false` 是工具列「新增文字方塊」那一顆：有框線的獨立方塊。
+    /// 工具列「新增文字方塊」放在哪裡：這一頁現有內容（筆跡、文字、圖片）的下方，避開既有內容。
+    /// 以前一律放在 (200, 200)，常常直接蓋在畫好的圖上（實測）。內容已經到頁尾、放不下時退回原位。
+    /// 與 Android `EditorCanvasContext.freeTextBoxOrigin` 同一條規則。
+    func freeTextBoxOrigin() -> CGPoint {
+        let fallback = CGPoint(x: 200, y: 200)
+        var bottom: CGFloat = 0
+        if let layer = (canvasView as? AdaptiveCanvasView)?.proLayer {
+            for stroke in layer.allStrokes where !stroke.points.isEmpty { bottom = max(bottom, stroke.bounds.maxY) }
+        }
+        let drawing = canvasView?.drawing ?? currentDrawing
+        if !drawing.strokes.isEmpty { bottom = max(bottom, drawing.bounds.maxY) }
+        for t in notebook.textAttachments ?? [] where t.pageIndex == currentPageIndex { bottom = max(bottom, t.y + t.height) }
+        for a in notebook.attachments ?? [] where a.pageIndex == currentPageIndex { bottom = max(bottom, a.y + a.height) }
+        // 紙上的引導線（空白地圖的輪廓）也算內容：圖例要放在地圖下面，不是壓在地圖上（實測）。
+        // 整頁都有框線的紙（康乃爾等）放不下，就只看使用者自己的內容 —— 與原本相同。
+        let guides = paperFillOutlines(
+            paperId: notebook.paperId(forPage: currentPageIndex),
+            width: Float(PageGeometry.width), height: Float(PageGeometry.height))
+        let guideBottom = guides.flatMap(\.points).map { CGFloat($0.y) }.max() ?? 0
+        let withGuides = max(fallback.y, max(bottom, guideBottom) + Self.freeTextGap)
+        if guideBottom > 0, withGuides + Self.freeTextMinHeight <= PageGeometry.height {
+            return CGPoint(x: fallback.x, y: withGuides)
+        }
+        guard bottom > 0 else { return fallback }
+        let y = max(fallback.y, bottom + Self.freeTextGap)
+        return y + Self.freeTextMinHeight <= PageGeometry.height ? CGPoint(x: fallback.x, y: y) : fallback
+    }
+
+    /// 插入一個圖例：標題＋三行「■ 說明」，色塊顏色與 UTF-16 位置由核心 `legendBox` 決定（兩端同一份）。
+    /// 放在 `freeTextBoxOrigin()`，不蓋住已畫好的地圖；插入後直接進入編輯，讓使用者改說明文字。
+    @discardableResult
+    func insertLegend() -> NoteTextAttachment {
+        var draft = insertTextBox(at: freeTextBoxOrigin())
+        let item = localizationManager.localized("legend_item")
+        let built = legendBox(
+            title: localizationManager.localized("legend_title"),
+            labels: [item, item, item],
+            colors: legendDefaultColors(),
+            fontSize: Float(draft.fontSize))
+        draft.text = built.text
+        draft.width = min(draft.width, 220)
+        draft.height = CGFloat(built.height)
+        draft.runs = built.runs.map { run in
+            TextStyleRun(
+                start: Int(run.start), length: Int(run.length),
+                style: TextCharStyle(
+                    bold: run.bold ? true : nil,
+                    textColorHex: run.colorHex.isEmpty ? nil : run.colorHex))
+        }
+        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == draft.id }) {
+            notebook.textAttachments?[idx] = draft
+            commitNotebook()
+            PageThumbnailRenderer.invalidateAll()
+            if let data = try? JSONEncoder().encode(draft),
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+            }
+        }
+        return draft
+    }
+
+    /// 新文字方塊與上方內容的間距、以及至少要留的高度（頁面單位）。與 Android 相同。
+    static var freeTextGap: CGFloat { 24 }
+    static var freeTextMinHeight: CGFloat { 60 }
+
     func insertTextBox(
         at location: CGPoint, page: Int? = nil, openStudio: Bool = false, tapToWrite: Bool = false
     ) -> NoteTextAttachment {

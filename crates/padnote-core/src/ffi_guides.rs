@@ -929,6 +929,17 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             s.header("guide_trap_rule", M, rule_top + 0.015, R - M);
             s.rows(M, R, rule_top + 0.075, BOT, 2, FfiGuideTone::Hairline);
         }
+        // 空白地圖：標題列＋地圖輪廓（頁面上半），下半留給圖例與筆記。
+        id if crate::guides_maps::map_for(id).is_some() => {
+            let map = crate::guides_maps::map_for(id).expect("checked above");
+            title_row(&mut s, "guide_topic");
+            let top = TOP + 0.05;
+            for (x1, y1, x2, y2) in
+                crate::guides_maps::map_segments(map, width, height, M, R, top, 0.62)
+            {
+                s.line(x1, y1, x2, y2, FfiGuideTone::Accent, 1.2);
+            }
+        }
         // blank / grid / lined / dot_grid_fine / isometric：只有底紋，沒有結構。
         _ => {}
     }
@@ -1050,6 +1061,9 @@ mod tests {
             "assignment_tracker",
             "chore_roster",
             "challenge_21",
+            "map_world",
+            "map_russia_central_asia",
+            "map_taiwan",
         ] {
             assert!(guides(id).len() > 3, "{id} 幾乎沒有版面");
         }

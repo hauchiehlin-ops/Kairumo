@@ -97,6 +97,123 @@ pub fn streamline_smooth_points(
     smoothed.into_iter().map(from_ink).collect()
 }
 
+/// 工具列粗細滑桿的數字 → 這支筆的基準筆寬。**兩個平台都查這裡**：同一個數字畫出一樣粗。
+///
+/// 以前 iPad 依筆種乘上一個係數（螢光筆 ×3.8），Android 直接拿滑桿數字當筆寬 ——
+/// 同樣設 6，iPad 的螢光筆比 Android 粗好幾倍（實測）。係數沿用 iPad 原本的那一組（使用者已經習慣的手感）。
+#[uniffi::export]
+pub fn tool_base_width(tool: ToolKind, size: f32) -> f32 {
+    let w = size.max(1.0);
+    let factor = match tool {
+        ToolKind::FountainPen => 1.1,
+        ToolKind::BallPoint => 0.65,
+        ToolKind::Fineliner => 0.85,
+        ToolKind::Pencil => 1.3,
+        ToolKind::Calligraphy => 1.4,
+        ToolKind::Charcoal | ToolKind::Crayon | ToolKind::OilPaint => 1.6,
+        ToolKind::Brush => 2.0,
+        ToolKind::Watercolor => 2.4,
+        ToolKind::Airbrush => 2.5,
+        ToolKind::Marker => 2.8,
+        ToolKind::Highlighter => 3.8,
+    };
+    w * factor
+}
+
+/// 填色麥克筆畫出來離中心線最遠的距離（× 基準筆寬）。Android 線段算繪水平走筆約 1.43 倍。
+const FILL_MARKER_REACH: f32 = 1.5;
+/// 填色掃描線的間距（× 基準筆寬）。iPad 筆點陣畫出來最薄（實測 1.3 倍時掃描線之間露白縫），
+/// 取 0.6 讓相鄰兩條在兩個平台上都確實重疊。
+const FILL_MARKER_STEP: f32 = 0.6;
+
+/// 區域填色用的一條既有筆畫（只要形狀與粗細）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiFillOutline {
+    pub points: Vec<crate::ffi_shapes::FfiPoint>,
+    pub width: f32,
+}
+
+/// 封閉區域填色（兩個平台共用）：在 `(seed_x, seed_y)` 找出由 `outlines` 圍成的封閉區域
+/// （容許手繪沒有完全接上的小縫，見 `padnote_ink::smart_fill`），回傳把它掃滿的筆畫路徑。
+///
+/// 平台把每條路徑當成一筆麥克筆（目前的顏色、`brush_width`）加進這一頁、整組一次復原。
+/// 點在筆畫上、或區域沒有封閉（會漏到整張紙）時回傳空陣列，平台提示「找不到封閉區域」。
+#[uniffi::export]
+pub fn fill_region_paths(
+    seed_x: f32,
+    seed_y: f32,
+    outlines: Vec<FfiFillOutline>,
+    brush_width: f32,
+) -> Vec<Vec<crate::ffi_shapes::FfiPoint>> {
+    let strokes: Vec<padnote_ink::Stroke> = outlines
+        .into_iter()
+        .filter(|o| !o.points.is_empty())
+        .map(|o| padnote_ink::Stroke {
+            id: padnote_doc::Uuid::now_v7(),
+            started_at: padnote_doc::NotebookTime(0),
+            tool: Tool::Fineliner,
+            color_rgba8: [0, 0, 0, 255],
+            base_width: o.width.max(0.5),
+            points: o
+                .points
+                .iter()
+                .map(|p| InkPoint::new(p.x, p.y, 0.5, 8_000))
+                .collect(),
+            layer: 0,
+            line_type: 0,
+        })
+        .collect();
+    let Some(fill) = padnote_ink::smart_fill(
+        seed_x,
+        seed_y,
+        &strokes,
+        padnote_ink::FillOptions::default(),
+    ) else {
+        return Vec::new();
+    };
+    // `brush_width` 是麥克筆的基準筆寬；畫出來比它寬，而且兩個平台不一樣寬：
+    // iPad 走筆點陣（橢圓，半徑 1.1 × 基準、扁度 0.55），Android 走線段（約 2.6 × 斜角係數 × 基準）。
+    // 內縮取兩者最遠的那一個（不出界），間距取兩者最薄的那一個（不留縫）。
+    let reach = brush_width * FILL_MARKER_REACH;
+    let step = brush_width * FILL_MARKER_STEP;
+    padnote_ink::fill_scan_paths(&fill.polygon, reach, step)
+        .into_iter()
+        .map(|path| path.into_iter().map(Into::into).collect())
+        .collect()
+}
+
+/// 紙上的引導線（地圖輪廓、表格框線）當成填色邊界。
+///
+/// 空白地圖的國界是紙張引導線、不是筆跡；只拿筆跡當邊界的話，在國家裡點一下會漏到整張紙。
+/// 平台把這裡回傳的輪廓與這一頁的筆跡一起交給 [`fill_region_paths`]。只取直線與空心矩形 ——
+/// 文字、勾選框、圓點不是邊界。
+#[uniffi::export]
+pub fn paper_fill_outlines(paper_id: String, width: f32, height: f32) -> Vec<FfiFillOutline> {
+    use crate::ffi_guides::FfiGuideKind;
+    use crate::ffi_shapes::FfiPoint;
+    let p = |x: f32, y: f32| FfiPoint { x, y };
+    crate::ffi_guides::page_guides(paper_id, width, height)
+        .into_iter()
+        .filter_map(|g| {
+            let points = match g.kind {
+                FfiGuideKind::Line => vec![p(g.x, g.y), p(g.x + g.w, g.y + g.h)],
+                FfiGuideKind::Rect => vec![
+                    p(g.x, g.y),
+                    p(g.x + g.w, g.y),
+                    p(g.x + g.w, g.y + g.h),
+                    p(g.x, g.y + g.h),
+                    p(g.x, g.y),
+                ],
+                _ => return None,
+            };
+            Some(FfiFillOutline {
+                points,
+                width: g.weight.max(1.0),
+            })
+        })
+        .collect()
+}
+
 /// 這支筆是不是由自繪引擎算繪（要呼叫 `brush_dabs`）。
 #[uniffi::export]
 pub fn brush_is_custom(tool: ToolKind) -> bool {
@@ -147,6 +264,33 @@ impl LiveBrushStroke {
                 base_width,
                 padnote_ink::LineType::from_id(line_type),
             )),
+        }
+    }
+
+    /// 書寫中就套用流線防抖（`streamline` 與 `gamma` 傳抬筆後 `streamline_smooth_points` 用的同一組）：
+    /// 畫面上的形狀就是存檔的形狀，抬筆時不再重新變形。製圖線不平滑，請用 [`Self::new`]。
+    #[uniffi::constructor]
+    pub fn new_smoothed(
+        tool: ToolKind,
+        base_width: f32,
+        line_type: u8,
+        streamline: f32,
+        gamma: f32,
+    ) -> Self {
+        let curve = padnote_ink::PressureCurve {
+            min_threshold: 0.02,
+            max_threshold: 0.98,
+            gamma: if gamma > 0.01 { gamma } else { 1.0 },
+        };
+        Self {
+            inner: Mutex::new(
+                padnote_ink::LiveDabs::new(
+                    Tool::from(tool),
+                    base_width,
+                    padnote_ink::LineType::from_id(line_type),
+                )
+                .with_streamline(streamline, curve),
+            ),
         }
     }
 
@@ -1005,6 +1149,68 @@ mod tests {
                 assert!(d.y > -10.0 && d.y < 34.0, "{t:?} 預覽超出上下：{d:?}");
             }
         }
+    }
+
+    #[test]
+    fn a_blank_map_bounds_the_fill_without_any_ink() {
+        // 台灣地圖紙：在島內點一下要填得到（邊界是紙上的輪廓），在頁面下半的空白處點則不行。
+        let (w, h) = (800.0, 1132.0);
+        let outlines = paper_fill_outlines("map_taiwan".into(), w, h);
+        assert!(outlines.len() > 10);
+        // 島的中心：取輪廓所有端點的平均，落在島內。
+        let pts: Vec<_> = outlines.iter().flat_map(|o| o.points.iter()).collect();
+        let cx = pts.iter().map(|p| p.x).sum::<f32>() / pts.len() as f32;
+        let cy = pts.iter().map(|p| p.y).sum::<f32>() / pts.len() as f32;
+        assert!(!fill_region_paths(cx, cy, outlines.clone(), 10.0).is_empty());
+        assert!(fill_region_paths(w * 0.5, h * 0.95, outlines, 10.0).is_empty());
+        // 純底紋的紙沒有邊界。
+        assert!(paper_fill_outlines("blank".into(), w, h).is_empty());
+    }
+
+    #[test]
+    fn fill_region_paths_fills_a_closed_box_only() {
+        use crate::ffi_shapes::FfiPoint;
+        let box_pts: Vec<FfiPoint> = [
+            (100.0, 100.0),
+            (300.0, 100.0),
+            (300.0, 250.0),
+            (100.0, 250.0),
+            (100.0, 100.0),
+        ]
+        .iter()
+        .flat_map(|&(x, y): &(f32, f32)| std::iter::once(FfiPoint { x, y }))
+        .collect();
+        // 把每條邊細分，讓輪廓是密的筆點（像手畫的一樣）。
+        let mut dense = Vec::new();
+        for w in box_pts.windows(2) {
+            for k in 0..40 {
+                let t = k as f32 / 40.0;
+                dense.push(FfiPoint {
+                    x: w[0].x + (w[1].x - w[0].x) * t,
+                    y: w[0].y + (w[1].y - w[0].y) * t,
+                });
+            }
+        }
+        let outlines = vec![super::FfiFillOutline {
+            points: dense,
+            width: 2.0,
+        }];
+        let inside = super::fill_region_paths(200.0, 175.0, outlines.clone(), 8.0);
+        assert!(
+            inside.len() > 5,
+            "封閉方框裡應該掃出好幾條：{}",
+            inside.len()
+        );
+        for path in &inside[1..] {
+            for p in path {
+                assert!(
+                    p.x > 90.0 && p.x < 310.0 && p.y > 90.0 && p.y < 260.0,
+                    "填到框外：{p:?}"
+                );
+            }
+        }
+        let outside = super::fill_region_paths(700.0, 700.0, outlines, 8.0);
+        assert!(outside.is_empty(), "框外沒有封閉區域，不該填");
     }
 
     #[test]

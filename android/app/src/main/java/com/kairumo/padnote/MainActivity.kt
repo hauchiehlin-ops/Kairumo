@@ -658,7 +658,8 @@ private fun InkScreen(
         onOpenProColors = { ctx.showProColors = true },
         onOpenColorWheel = { ctx.showProColorWheel = true },
         onAddTextBox = {
-            val box = ctx.textStore.createBoxed(200f, 200f, ctx.textStore.pageRules(ctx.meta.paperId(ctx.pageIndex)), ctx.snapToGrid)
+            val (freeX, freeY) = ctx.freeTextBoxOrigin()
+            val box = ctx.textStore.createBoxed(freeX, freeY, ctx.textStore.pageRules(ctx.meta.paperId(ctx.pageIndex)), ctx.snapToGrid)
             ctx.textStore.persist(box)
             ctx.editingText = box
             ctx.selectText(box.id)
@@ -688,6 +689,7 @@ private fun InkScreen(
             pageIndex = pageIndex,
             pageCount = pageCount,
             pageDisplayMode = pageDisplayMode,
+            spreadPages = isSpreadActive,
             // 原本沒傳：工具列永遠顯示預設的「A4」與退回字樣，選了別的規格／色彩也看不出來。
             currentFormat = meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() },
             currentPalette = meta.paletteId().ifEmpty { uniffi.padnote_core.guidePalettes().first().id },
@@ -769,6 +771,17 @@ private fun InkScreen(
                 ProfileContext.prefs(activity, "kairumo_editor")
                     .edit().putString("pageDisplayMode", pageDisplayMode.wire).apply()
             },
+            onToggleSpreadPages = {
+                // 從單頁模式選「兩頁並排」會一併切到連續模式（與 Apple 相同）。
+                val turningOn = !spreadPages
+                if (turningOn && pageDisplayMode != PageDisplayMode.CONTINUOUS) {
+                    pageDisplayMode = PageDisplayMode.CONTINUOUS
+                }
+                spreadPages = turningOn
+                ProfileContext.prefs(activity, "kairumo_editor").edit()
+                    .putString("pageDisplayMode", pageDisplayMode.wire)
+                    .putBoolean("spreadPages", spreadPages).apply()
+            },
             onOpenCollaboration = { showCollaboration = true },
             onExport = { fmt -> exportNow(fmt) },
             onPrint = { notebook?.first?.let { printNow(it) } },
@@ -829,8 +842,17 @@ private fun InkScreen(
             },
             onToggleSnapToGrid = { snapToGrid = !snapToGrid },
             onAddTextBox = {
-                val box = textStore.createBoxed(200f, 200f, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
+                val (freeX, freeY) = freeTextBoxOrigin()
+                val box = textStore.createBoxed(freeX, freeY, textStore.pageRules(meta.paperId(pageIndex)), snapToGrid)
                 textStore.persist(box)
+                editingText = box
+                selectText(box.id)
+                editorMode = EditorMode.TYPE
+                textRevision++
+                stackRevision++
+            },
+            onInsertLegend = {
+                val box = insertLegend()
                 editingText = box
                 selectText(box.id)
                 editorMode = EditorMode.TYPE

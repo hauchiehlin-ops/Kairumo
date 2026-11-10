@@ -124,6 +124,15 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
 
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
         // 那一段綁著存檔、物件層、掌拒與模式切換，是最沒本錢壞掉的地方。
+        // 區域填色的提示與結果（單頁、連續模式共用）。
+        LaunchedEffect(com.kairumo.padnote.ink.FillPickState.active) {
+            if (com.kairumo.padnote.ink.FillPickState.active) message = l10n("fill_region_hint")
+        }
+        LaunchedEffect(com.kairumo.padnote.ink.FillPickState.outcome) {
+            com.kairumo.padnote.ink.FillPickState.outcome?.let { (filled, _) ->
+                message = l10n(if (filled) "fill_region_done" else "fill_region_not_closed")
+            }
+        }
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
             val sideToolbar = effectiveToolbarMode == EditorMode.DRAW &&
                 (toolbarPlacement == uniffi.padnote_core.FfiPlacement.LEFT ||
@@ -178,6 +187,7 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         session = notebook?.first,
                         meta = meta,
                         pageCount = pageCount,
+                        spread = isSpreadActive,
                         focusIndex = pageIndex,
                         // 焦點頁就是外層的 pageIndex，所以選單裡的插入動作
                         // 自然落在使用者正在看的那一頁。
@@ -186,7 +196,8 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                         ink = InkSettings(
                             tool = inkTool.kind ?: uniffi.padnote_core.ToolKind.FOUNTAIN_PEN,
                             colorRgba = hexToRgba(inkColorHex),
-                            baseWidth = inkWidth,
+                            // 與單頁模式相同：滑桿數字經核心係數表換成這支筆的筆寬（兩平台一樣粗）。
+                            baseWidth = inkTool.kind?.let { uniffi.padnote_core.toolBaseWidth(it, inkWidth) } ?: inkWidth,
                             isErasing = inkTool.isEraser,
                             penOnly = penOnly,
                             isMaskingTape = inkTool.isMaskingTape,
@@ -1690,6 +1701,36 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                 )
             }
 
+            // 區域填色：蓋一層接點按的透明層（與「點選位置貼上」同一種做法），點到哪個封閉區域就填哪個。
+            if (com.kairumo.padnote.ink.FillPickState.active) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(9_500f)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f))
+                        .testTag("editor.fill.target_layer")
+                        .pointerInput(pageIndex) {
+                            detectTapGestures { offset ->
+                                val width = uniffi.padnote_core.toolBaseWidth(
+                                    uniffi.padnote_core.ToolKind.MARKER, com.kairumo.padnote.ink.FillPickState.BRUSH_SIZE)
+                                val added = engine.fillRegion(
+                                    offset.x / canvasDensity, offset.y / canvasDensity, hexToRgba(inkColorHex), width,
+                                    com.kairumo.padnote.ink.FillPickState.paperOutlines(meta.paperId(pageIndex)))
+                                com.kairumo.padnote.ink.FillPickState.finish(added > 0)
+                                revision++
+                                clearToken++
+                            }
+                        }
+                ) {
+                    Text(
+                        l10n("fill_region_hint"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp)
+                    )
+                }
+            }
+
             if (showRefineBar) {
                 // 讀一下 revision，按鈕的 enabled 才會跟著美化結果更新。
                 @Suppress("UNUSED_EXPRESSION") refineRevision
@@ -1741,14 +1782,11 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
                             width = inkWidth,
                             languageTag = deviceLanguageTag(),
                             onToolChange = { picked -> applyInkTool(picked) },
-                            onColorChange = { hex ->
-                                inkColorHex = hex
-                                engine.colorRgba = hexToRgba(hex)
-                            },
-                            onWidthChange = { value ->
-                                inkWidth = value
-                                engine.baseWidth = value
-                            },
+                            // 只改狀態：引擎的顏色與筆寬一律由 EditorCanvasContext 那個 LaunchedEffect 依工具係數
+                            // （核心 toolBaseWidth）推算。這裡直接寫 `engine.baseWidth = value` 會讓筆寬先變成
+                            // 「沒乘係數」的數字，換顏色時才被正規路徑改回來 —— 看起來就是「換顏色筆粗會變」。
+                            onColorChange = { hex -> inkColorHex = hex },
+                            onWidthChange = { value -> inkWidth = value },
                             onOpenProColors = { showProColors = true },
                             onOpenColorWheel = { showProColorWheel = true }
                         )
@@ -1903,11 +1941,14 @@ internal fun ColumnScope.EditorCanvasContainer(ctx: EditorCanvasContext) = with(
             }
             // 物件剪貼簿與選取的浮動工具丸（支援手繪／打字兩種模式與跨頁貼上／點選位置貼上）。
             val activeSingleObjectIds = currentSelectedObjectIds()
+            // 只選了一個文字方塊：它自己的操作列（編輯／圖層／剪下／複製／刪除）已經在方塊旁邊，
+            // 這條就不再顯示剪下／複製／刪除 —— 以前兩排同時出現、互相重疊（實測）。與連續頁模式相同。
+            val textOwnsActions = activeSingleObjectIds.size == 1 && activeSingleObjectIds.first() == selectedTextId
             // 只放筆跡（框選帶來的）的放置模式也要顯示「點一下貼上／取消」那條提示。
             val placingInkOnly = isPlacingPasteObject && hasPlaceableClipboard
-            if (activeSingleObjectIds.isNotEmpty() || objectClipboard.isNotEmpty() || placingInkOnly) {
+            if ((activeSingleObjectIds.isNotEmpty() && !textOwnsActions) || objectClipboard.isNotEmpty() || placingInkOnly) {
                 com.kairumo.padnote.canvas.ObjectPastePill(
-                    hasSelection = activeSingleObjectIds.isNotEmpty(),
+                    hasSelection = activeSingleObjectIds.isNotEmpty() && !textOwnsActions,
                     hasClipboard = objectClipboard.isNotEmpty() || placingInkOnly,
                     isPlacingPaste = isPlacingPasteObject,
                     l = { key -> l10n(key) },

@@ -30,6 +30,29 @@ public enum PageDisplayMode: String, CaseIterable {
     case continuous
 }
 
+/// 連續模式的頁面容器：一欄（往下捲）或兩欄（兩頁並排）。
+///
+/// 兩欄只是排列方式 —— 每頁照樣是自己的畫布、自己的存檔，與一欄完全相同的資料流。
+struct ContinuousPagesStack<Content: View>: View {
+    let spread: Bool
+    let spacing: CGFloat
+    let columnWidth: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if spread {
+            LazyVGrid(
+                columns: [
+                    GridItem(.fixed(columnWidth), spacing: spacing, alignment: .top),
+                    GridItem(.fixed(columnWidth), spacing: spacing, alignment: .top),
+                ],
+                alignment: .center, spacing: spacing, content: content)
+        } else {
+            LazyVStack(spacing: spacing, content: content)
+        }
+    }
+}
+
 /// 連續模式裡的一頁：自己的畫布 ＋ 自己的物件層。
 ///
 /// 筆跡各自載入與存檔。共用一份 `PKDrawing` 的話，在第 7 頁寫的筆畫會被
