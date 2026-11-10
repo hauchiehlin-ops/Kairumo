@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -42,6 +43,8 @@ object CloudRelayLinks {
 fun CloudRelaySetting(l: (String) -> String) {
     val context = LocalContext.current
     var draft by remember { mutableStateOf(CollaborationManager.customCloudRelay(context)) }
+    // 目前生效的（已儲存的）位址：決定上方顯示「試用中繼」還是「自己的中繼」。
+    var saved by remember { mutableStateOf(CollaborationManager.customCloudRelay(context)) }
     var message by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
     var showGuide by remember { mutableStateOf(false) }
@@ -55,6 +58,7 @@ fun CloudRelaySetting(l: (String) -> String) {
             return
         }
         draft = normalized
+        saved = normalized
         CollaborationManager.setCustomCloudRelay(context, normalized)
         message = l("cloud_relay_saved"); isError = false
     }
@@ -64,6 +68,24 @@ fun CloudRelaySetting(l: (String) -> String) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // 目前用哪個中繼。內建的是**試用**：所有使用者共用免費額度、保留 1 天、寄存較小 ——
+        // 把限制講清楚，常用的人才知道該架自己的。與 Apple `relayStatus` 相同。
+        if (CollaborationManager.isValidCloudRelay(saved)) {
+            Text(l("cloud_relay_status_own"), style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF34C759), modifier = Modifier.testTag("collab.cloud_relay.status_own"))
+        } else {
+            androidx.compose.material3.Surface(
+                color = Color(0xFFFF9500).copy(alpha = 0.10f),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth().testTag("collab.cloud_relay.status_trial")
+            ) {
+                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(l("cloud_relay_status_trial"), style = MaterialTheme.typography.labelMedium, color = Color(0xFFFF9500))
+                    Text(l("cloud_relay_trial_limits"), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         Text(l("cloud_relay_own_title"), style = MaterialTheme.typography.labelMedium)
         // 使用說明：為什麼要、怎麼做（三步），看不懂再開詳細步驟。
         Text(l("cloud_relay_own_usage"), style = MaterialTheme.typography.labelSmall,

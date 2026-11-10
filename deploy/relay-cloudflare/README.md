@@ -65,3 +65,5 @@ npx wrangler dev --port 8799
 
 - `MAX_PEERS`：每間房的人數上限（預設 50）。
 - `RETENTION_HOURS`：房間沒人之後保留多久（小時，預設 168）。
+- `STORE_PARTS_MAX`：寄存的整份狀態最多幾段（每段約 400 KB 內容，預設 256）。
+- **Kairumo 內建的試用中繼**用 `./deploy-public.sh` 部署（保留 1 天、寄存 160 段，約 64 MB）；自己部署的中繼用上面的預設值。

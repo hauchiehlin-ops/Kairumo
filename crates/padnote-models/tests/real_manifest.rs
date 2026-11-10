@@ -153,13 +153,16 @@ fn the_default_asr_model_is_the_one_with_a_clean_licence() {
         "預設模型要能做中文，否則中文使用者還是會被導去 Paraformer"
     );
 
-    // 授權有爭議的那兩個必須是選用的 —— 不是選用的話，
-    // 使用者第一次開錄音就會被要求下載它們。
-    for id in ["paraformer-zh", "ct-punct-zh"] {
-        let e = c.get(id).unwrap_or_else(|| panic!("{id} 不在清單裡"));
-        assert!(
-            e.optional,
-            "{id} 的授權有雙通路衝突（見 models/LICENSE-AUDIT.md），不能是預設要下載的"
-        );
-    }
+    // Paraformer 必須是選用的 —— 不是選用的話，使用者第一次開錄音就會被要求下載它。
+    let e = c.get("paraformer-zh").expect("paraformer-zh 不在清單裡");
+    assert!(
+        e.optional,
+        "paraformer-zh 不能是預設要下載的（見 models/LICENSE-AUDIT.md）"
+    );
+    // ct-punc 已定案不採用（FunASR 模型授權「僅供參考與學習」，不能用在上架的產品）：
+    // 不能再出現在清單上，免得哪天有人補了網址就被散布出去。
+    assert!(
+        c.get("ct-punct-zh").is_none(),
+        "ct-punct-zh 已定案不採用（models/LICENSE-AUDIT.md §2），不能放回清單"
+    );
 }

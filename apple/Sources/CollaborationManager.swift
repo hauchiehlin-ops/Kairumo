@@ -148,6 +148,10 @@ public class CollaborationManager: ObservableObject {
     public let stateSyncNeeded = PassthroughSubject<Void, Never>()
     /// 中繼的提醒（`relay_notice`）：已在地化的訊息，編輯器以畫布提示顯示。連線照常，不是錯誤。
     public let relayNotice = PassthroughSubject<String, Never>()
+    /// 這個房間已經顯示過的中繼提醒（每種提醒每個房間只顯示一次；寄存每兩分鐘一次，不擋會一直跳）。
+    private var shownRelayNotices: Set<String> = []
+    /// 中繼說「整本超過寄存上限」的房間：之後不再寄存（送了也存不下，只是白白消耗中繼的額度）。
+    private var depositBlockedRoom: String?
     /// 看過的最大中繼序號（同一個房間裡重連時從這裡補發）。
     private var lastSeq: UInt64 = 0
     /// 還在用舊協定的參與者（送的是整頁筆跡、整個物件、沒有時鐘）。混用會單向同步，要提示更新。
@@ -1161,7 +1165,7 @@ public class CollaborationManager: ObservableObject {
     /// 雲端加入者都先套用這份壞掉的寄存（帶較新的時戳，房主的回覆反而蓋不過），只剩第一頁。
     /// 協作者另外要等整份狀態完整收過一次才可寄存（見編輯器 `depositCollabState`）。
     public var shouldDepositState: Bool {
-        guard isOnCloudRelay, case .connected = status, stateDirty else { return false }
+        guard isOnCloudRelay, case .connected = status, stateDirty, depositBlockedRoom != currentRoomId else { return false }
         if let last = lastDepositAt, Date().timeIntervalSince(last) < Self.depositMinInterval { return false }
         if isHost { return true }
         if peers.contains(where: { $0.role == .owner }) { return false }
@@ -1752,6 +1756,8 @@ public class CollaborationManager: ObservableObject {
             case "store_too_large": key = "relay_notice_store_too_large"
             default: return
             }
+            if key == "relay_notice_store_too_large" { depositBlockedRoom = currentRoomId }
+            guard shownRelayNotices.insert("\(currentRoomId)|\(key)").inserted else { return }
             relayNotice.send(LocalizationManager.shared.localized(key))
 
         case "room_closed":

@@ -26,13 +26,15 @@ export interface Env {
   LOCATION_HINT?: string;
   /** 房間沒人之後保留多久（小時）。預設 168（7 天）。 */
   RETENTION_HOURS?: string;
+  /** 寄存的整份狀態最多幾段（每段約 400 KB 內容）。預設 256。Kairumo 內建的試用中繼設 160（見 deploy-public.sh）。 */
+  STORE_PARTS_MAX?: string;
 }
 
 const DEFAULT_RETENTION_HOURS = 168;
 /** 寄存的整份狀態一段的上限（字元）。SQLite 一列最多 2 MB；App 端每段約 400 KB。 */
 const STORE_PART_MAX = 1_800_000;
-/** 寄存的整份狀態最多幾段（≈ 256 × 400 KB ≈ 100 MB 內容）。 */
-const STORE_PARTS_MAX = 256;
+/** 寄存的整份狀態預設最多幾段（≈ 256 × 400 KB ≈ 100 MB 內容）。可用 `STORE_PARTS_MAX` 改。 */
+const DEFAULT_STORE_PARTS_MAX = 256;
 /** 預設每間房的人數上限（`MAX_PEERS` 沒設時）。 */
 const DEFAULT_MAX_PEERS = 50;
 /** 用到上限的幾成時先提出警告（暫存與寄存共用）。 */
@@ -299,7 +301,8 @@ export class RelayRoom implements DurableObject {
     const seq = Number(msg.seq ?? 0) || 0;
     if (!/^[A-Za-z0-9-]{8,64}$/.test(snap) || !Number.isInteger(part) || !Number.isInteger(parts)) return;
     if (parts < 1 || part < 0 || part >= parts) return;
-    if (parts > STORE_PARTS_MAX) {
+    const maxParts = this.storePartsMax();
+    if (parts > maxParts) {
       // 整本超過寄存上限：存不下。只在第一段告訴寄存者一次（不是每段都通知）。
       // 原本寄存的那一份照舊留著（比什麼都沒有好）。
       if (part === 0) this.notice(ws, "store_too_large");
@@ -309,7 +312,7 @@ export class RelayRoom implements DurableObject {
       // 新的一份開始寄存：之前沒寄完就放棄的殘段（不是目前用的那一份）清掉，不讓它們一直佔空間。
       const current = this.meta("snap");
       this.sql.exec("DELETE FROM snap WHERE snap != ? AND snap != ?", snap, current ?? "");
-      if (parts >= Math.ceil(STORE_PARTS_MAX * NEAR_LIMIT_RATIO)) this.notice(ws, "store_near_limit");
+      if (parts >= Math.ceil(maxParts * NEAR_LIMIT_RATIO)) this.notice(ws, "store_near_limit");
     }
     const text = JSON.stringify({
       type: "peer_oplog",
@@ -513,6 +516,11 @@ export class RelayRoom implements DurableObject {
     for (const s of this.joinedSockets()) {
       if (this.attachment(s).peer?.user_id !== fromUser) this.sendRaw(s, text);
     }
+  }
+
+  private storePartsMax(): number {
+    const n = Number(this.env.STORE_PARTS_MAX ?? DEFAULT_STORE_PARTS_MAX);
+    return Number.isInteger(n) && n > 0 ? n : DEFAULT_STORE_PARTS_MAX;
   }
 
   /** 中繼給客戶端的提醒（不是錯誤：連線照常）。舊版 App 不認得這個類型，直接略過。 */

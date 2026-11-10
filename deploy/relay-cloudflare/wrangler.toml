@@ -15,7 +15,10 @@ new_sqlite_classes = ["RelayRoom"]
 [vars]
 # 每間房的人數上限。
 MAX_PEERS = "50"
-# 房間沒人之後（含房主結束協同）保留多久再整個刪除（小時）。App 介面寫的是 7 天。
+# 房間沒人之後（含房主結束協同）保留多久再整個刪除（小時）。自己部署的中繼預設 7 天。
+# Kairumo 內建的試用中繼用 deploy-public.sh 部署，改成 1 天（24）。
 RETENTION_HOURS = "168"
+# 寄存的整份狀態最多幾段（每段約 400 KB 內容）。內建試用中繼用 160（約 64 MB）。
+STORE_PARTS_MAX = "256"
 # 房間物件建立的區域（Durable Objects location hint），預設不指定（建在第一位使用者的機房附近）。
 # 例：LOCATION_HINT = "apac"

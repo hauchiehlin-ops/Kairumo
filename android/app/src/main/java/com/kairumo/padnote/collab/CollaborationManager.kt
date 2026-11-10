@@ -116,6 +116,12 @@ class CollaborationManager(private val context: Context) {
     /** 中繼的提醒（`relay_notice`，已在地化）。任何執行緒都可送出；編輯器收集後以 Toast 顯示。 */
     val relayNotices = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
 
+    /** 這個房間已經顯示過的中繼提醒（每種每房只顯示一次）。與 Apple 相同。 */
+    private val shownRelayNotices = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /** 中繼說「整本超過寄存上限」的房間：之後不再寄存（送了也存不下，只是消耗中繼額度）。 */
+    @Volatile private var depositBlockedRoom: String? = null
+
     var roomReloadRequests by mutableIntStateOf(0)
         private set
 
@@ -753,7 +759,7 @@ class CollaborationManager(private val context: Context) {
      */
     val shouldDepositState: Boolean
         get() {
-            if (!isOnCloudRelay || status !is Status.Connected || !stateDirty) return false
+            if (!isOnCloudRelay || status !is Status.Connected || !stateDirty || depositBlockedRoom == roomId) return false
             if (lastDepositAtMs != 0L && System.currentTimeMillis() - lastDepositAtMs < DEPOSIT_MIN_INTERVAL_MS) return false
             // 房主在線就只由房主寄存：剛加入、只同步到一半的協作者寄存的半份狀態會蓋掉房主的完整版本，
             // 之後每個雲端加入者都只拿到半份（只剩第一頁）。與 Apple 相同。
@@ -1311,6 +1317,8 @@ class CollaborationManager(private val context: Context) {
                     "store_too_large" -> "relay_notice_store_too_large"
                     else -> return
                 }
+                if (key == "relay_notice_store_too_large") depositBlockedRoom = roomId
+                if (!shownRelayNotices.add("$roomId|$key")) return
                 relayNotices.tryEmit(L10n.t(key))
             }
         }
