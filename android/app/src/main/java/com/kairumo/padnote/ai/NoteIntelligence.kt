@@ -60,7 +60,18 @@ object NoteIntelligence {
 
         /** 有模型但現在不能用（還在下載、或被關掉了）。 */
         NOT_READY,
+
+        /** 還沒下載模型：在摘要視窗裡按下載即可（[MODEL_ID]，約 1.6 GB）。 */
+        NEEDS_DOWNLOAD,
     }
+
+    /**
+     * 模型清單（`models/manifest.json`）裡給 Android 摘要用的模型：Qwen2.5-1.5B-Instruct（Apache-2.0）
+     * 的 MediaPipe 格式。以前 App 不會下載任何模型，只找使用者手動放的 `llm/model.task`，
+     * 實際上每個 Android 使用者看到的都是「沒有可用的模型」。下載走與 Whisper 同一套
+     * （斷點續傳、驗過 SHA-256 才換成正式檔名），所以檔案在就代表完整。
+     */
+    const val MODEL_ID = "qwen2.5-1.5b-instruct-task"
 
     /** App 私有目錄裡的模型路徑。 */
     private const val MODEL_RELATIVE_PATH = "llm/model.task"
@@ -72,8 +83,11 @@ object NoteIntelligence {
      * 模型放進去。快取的話，他照做之後回到 App 仍然看到「沒有可用的模型」。
      */
     private fun modelFile(context: Context): File? =
-        // profile-scope: device 語言模型是整台裝置共用
-        File(context.filesDir, MODEL_RELATIVE_PATH).takeIf { it.isFile && it.length() > 0 }
+        // 先用 App 下載的模型；沒有再看舊的手動放置位置（已經自己放好的使用者照常可用）。
+        File(com.kairumo.padnote.models.ModelDownloadManager.modelPath(context, MODEL_ID))
+            .takeIf { it.isFile && it.length() > 0 }
+            // profile-scope: device 語言模型是整台裝置共用
+            ?: File(context.filesDir, MODEL_RELATIVE_PATH).takeIf { it.isFile && it.length() > 0 }
 
     /**
      * 目前的可用狀態。
@@ -82,7 +96,19 @@ object NoteIntelligence {
      * 使用者按下去才看到失敗。模型放進去之後**不必重開 App**就會變成可用。
      */
     fun availability(context: Context): Availability =
-        if (modelFile(context) != null) Availability.AVAILABLE else Availability.UNSUPPORTED
+        if (modelFile(context) != null) Availability.AVAILABLE else Availability.NEEDS_DOWNLOAD
+
+    /** 下載（或續傳）摘要模型。**會阻塞，要在背景執行緒呼叫。** `onProgress` 收到 0–1。 */
+    fun downloadModel(context: Context, onProgress: (Float) -> Unit): String? {
+        val total = com.kairumo.padnote.models.ModelDownloadManager.catalog(context)
+            .firstOrNull { it.id == MODEL_ID }?.sizeBytes?.toLong() ?: 0L
+        val result = runCatching {
+            com.kairumo.padnote.models.ModelDownloadManager.download(context, MODEL_ID) { got ->
+                if (total > 0) onProgress((got.toFloat() / total).coerceIn(0f, 1f))
+            }
+        }
+        return result.fold({ if (it.ok) null else it.error.ifEmpty { "error" } }, { it.message ?: it.javaClass.simpleName })
+    }
 
     /**
      * 產生文字的後端。

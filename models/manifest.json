@@ -70,6 +70,18 @@
       "notes": "2026-11-10 實測：主站與 hf-mirror 的 x-linked-size 與 x-linked-etag（LFS oid＝SHA-256）一致，如上。原本的 Qwen/Qwen3-4B-Instruct-GGUF 不存在（401），改用官方 Qwen3-4B 的 Q4_K_M。只有桌機（llama.cpp）會用到：Apple 用系統內建的 Foundation Models，Android 用 MediaPipe（llm/model.task），兩者都不下載這個檔。",
       "mirror_url": "https://hf-mirror.com/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf",
       "optional": true
+    },
+    {
+      "id": "qwen2.5-1.5b-instruct-task",
+      "url": "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task",
+      "sha256": "82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3",
+      "size_bytes": 1598556720,
+      "license": "Apache-2.0（litert-community/Qwen2.5-1.5B-Instruct，未設存取限制）",
+      "required_for": [
+        "llm.summary.android"
+      ],
+      "optional": true,
+      "notes": "2026-11-10 實測：x-linked-size 與 x-linked-etag（LFS oid＝SHA-256）如上。Android 的 AI 摘要（MediaPipe LLM Inference）用它；Apple 用系統內建的 Foundation Models，不下載。q8、上下文 4096：摘要較長的錄音逐字稿夠用。使用者在 AI 摘要視窗按下載才會下載。"
     }
   ]
 }

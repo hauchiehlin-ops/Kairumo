@@ -255,6 +255,30 @@ extension LocalizationManager {
             .ko: "요점",
             .th: "ประเด็นสำคัญ"
         ],
+        "ai_model_download": [
+            .zhHant: "下載 AI 摘要模型（約 1.6 GB）",
+            .en: "Download AI summary model (about 1.6 GB)",
+            .zhHans: "下载 AI 摘要模型（约 1.6 GB）",
+            .ja: "AI 要約モデルをダウンロード（約 1.6 GB）",
+            .ko: "AI 요약 모델 다운로드(약 1.6GB)",
+            .th: "ดาวน์โหลดโมเดลสรุป AI (ประมาณ 1.6 GB)"
+        ],
+        "ai_model_download_hint": [
+            .zhHant: "AI 摘要要先下載一個裝置端模型（Qwen2.5-1.5B，約 1.6 GB，只需下載一次，建議連 Wi‑Fi）。下載後完全在本機執行，不會把你的筆記傳出去。",
+            .en: "AI summary needs an on-device model first (Qwen2.5-1.5B, about 1.6 GB, downloaded once; Wi‑Fi recommended). After that it runs entirely on this device and never sends your notes anywhere.",
+            .zhHans: "AI 摘要要先下载一个设备端模型（Qwen2.5-1.5B，约 1.6 GB，只需下载一次，建议连 Wi‑Fi）。下载后完全在本机执行，不会把你的笔记传出去。",
+            .ja: "AI 要約には、まず端末内モデル（Qwen2.5-1.5B、約 1.6 GB、ダウンロードは 1 回だけ。Wi‑Fi 推奨）が必要です。その後は端末内だけで動作し、ノートを外部に送信することはありません。",
+            .ko: "AI 요약을 쓰려면 먼저 온디바이스 모델(Qwen2.5-1.5B, 약 1.6GB, 한 번만 다운로드, Wi‑Fi 권장)이 필요합니다. 그 뒤로는 전부 기기 안에서 동작하며 노트를 외부로 보내지 않습니다.",
+            .th: "การสรุปด้วย AI ต้องดาวน์โหลดโมเดลบนเครื่องก่อน (Qwen2.5-1.5B ประมาณ 1.6 GB ดาวน์โหลดครั้งเดียว แนะนำให้ใช้ Wi‑Fi) หลังจากนั้นจะทำงานบนเครื่องทั้งหมดและไม่ส่งโน้ตของคุณออกไป"
+        ],
+        "ai_model_downloading": [
+            .zhHant: "正在下載 AI 摘要模型…（可以先關掉這個視窗，中斷了下次會接著下載）",
+            .en: "Downloading the AI summary model… (you can close this window; an interrupted download resumes next time)",
+            .zhHans: "正在下载 AI 摘要模型…（可以先关掉这个窗口，中断了下次会接着下载）",
+            .ja: "AI 要約モデルをダウンロード中…（このウィンドウを閉じても大丈夫です。中断しても次回続きから再開します）",
+            .ko: "AI 요약 모델을 다운로드하는 중…(이 창을 닫아도 됩니다. 중단되면 다음에 이어서 받습니다)",
+            .th: "กำลังดาวน์โหลดโมเดลสรุป AI… (ปิดหน้าต่างนี้ได้ หากขาดตอนจะดาวน์โหลดต่อในครั้งถัดไป)"
+        ],
         "ai_no_todos": [
             .zhHant: "這則筆記裡沒有待辦事項。",
             .en: "No to-dos in this note.",

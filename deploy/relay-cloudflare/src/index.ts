@@ -46,6 +46,53 @@ const BATCH_MAX = 900_000;
 const RECENT_MAX_COUNT = 2000;
 const RECENT_MAX_BYTES = 32 * 1024 * 1024;
 
+// ---- 濫用防護 ----
+//
+// 這個中繼沒有帳號、任何人都能連（內建中繼由所有使用者共用一份免費額度），所以要擋住
+// 「有人寫腳本狂灌訊息、塞儲存空間」。Cloudflare 是**收到訊息就計額度**，擋不掉已經到的那幾則，
+// 能做的是**盡早切斷**：超過上限的連線直接關掉，並暫時封鎖那個 IP。
+// 上限都遠高於正常使用（一條連線最忙時：即時筆跡 20、游標 30、語音 10 則／秒，
+// 回覆整份狀態時短暫約 33 則／秒），不會誤擋真正在協作的人。
+// 計數放在記憶體：物件休眠或換機房會歸零 —— 這是盡力而為的防護，不是精確計費。
+
+/** 每條連線：每 10 秒最多幾則訊息（平均 150 則／秒，約正常最忙時的兩倍）。 */
+const RATE_WINDOW_MS = 10_000;
+const RATE_MAX_MESSAGES = 1_500;
+/** 每條連線：每小時最多寫進補發暫存多少字元（插很多張圖的正常使用也遠低於此）。 */
+const STORED_WINDOW_MS = 3_600_000;
+const STORED_MAX_CHARS = 100 * 1024 * 1024;
+/** 單則訊息上限（字元）。Cloudflare 一則 WebSocket 訊息最多 32 MiB，留一點餘裕。 */
+const MESSAGE_MAX_CHARS = 24 * 1024 * 1024;
+/** 違規的 IP 封鎖多久。 */
+const BAN_MS = 10 * 60_000;
+/** 同一個 IP：每分鐘最多開幾條新連線（入口處，以 Worker 執行個體為單位估算）。 */
+const CONNECT_WINDOW_MS = 60_000;
+const CONNECT_MAX_PER_IP = 60;
+/** 關閉違規連線用的代碼（4000–4999 是應用程式自訂範圍）。 */
+const CLOSE_ABUSE = 4008;
+
+/** 入口處每個 IP 最近的連線次數（每個 Worker 執行個體各一份，近似值）。 */
+const connectsByIp = new Map<string, { start: number; count: number }>();
+
+function clientIp(request: Request): string {
+  return request.headers.get("CF-Connecting-IP") ?? "";
+}
+
+/** 這個 IP 這一分鐘的連線次數是否還在上限內（順手清掉過期的紀錄，避免表一直長）。 */
+function allowConnect(ip: string, now: number): boolean {
+  if (!ip) return true;
+  if (connectsByIp.size > 10_000) {
+    for (const [k, v] of connectsByIp) if (now - v.start > CONNECT_WINDOW_MS) connectsByIp.delete(k);
+  }
+  const entry = connectsByIp.get(ip);
+  if (!entry || now - entry.start > CONNECT_WINDOW_MS) {
+    connectsByIp.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= CONNECT_MAX_PER_IP;
+}
+
 /** 只轉送、不暫存（見 Rust `is_transient_kind`）。 */
 function isTransientKind(kind: string): boolean {
   return kind.startsWith("state_") || kind.startsWith("live_");
@@ -64,6 +111,8 @@ interface Attachment {
   room: string;
   peer?: PeerInfo;
   replaced?: boolean;
+  /** 連線來源 IP（濫用時封鎖用）。 */
+  ip?: string;
 }
 
 export default {
@@ -71,6 +120,10 @@ export default {
     const url = new URL(request.url);
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       return new Response("Kairumo relay\n", { status: 200 });
+    }
+    // 同一個 IP 短時間內開太多連線（腳本狂連、狂開房間）：直接擋在入口，不叫醒房間物件。
+    if (!allowConnect(clientIp(request), Date.now())) {
+      return new Response("too many connections", { status: 429 });
     }
     const room = url.searchParams.get("room")?.trim() ?? "";
     // 房號只在這裡決定房間；限制長度與字元，避免任意字串建出大量物件。
@@ -99,6 +152,11 @@ export class RelayRoom implements DurableObject {
   private bytes = 0;
   private nextSeq = 1;
 
+  /** 每條連線的用量（濫用防護）。只在記憶體：休眠醒來歸零，盡力而為。 */
+  private readonly usage = new Map<WebSocket, { start: number; count: number; storedStart: number; stored: number }>();
+  /** 這個房間封鎖中的 IP → 解除時間。 */
+  private readonly banned = new Map<string, number>();
+
   constructor(private readonly ctx: DurableObjectState, private readonly env: Env) {
     this.sql = ctx.storage.sql;
     this.ensureTables();
@@ -121,16 +179,24 @@ export class RelayRoom implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const room = new URL(request.url).searchParams.get("room") ?? "";
+    const ip = clientIp(request);
+    const until = this.banned.get(ip);
+    if (ip && until !== undefined) {
+      if (until > Date.now()) return new Response("temporarily blocked", { status: 429 });
+      this.banned.delete(ip);
+    }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ joined: false, room } satisfies Attachment);
+    server.serializeAttachment({ joined: false, room, ip } satisfies Attachment);
     return new Response(null, { status: 101, webSocket: client });
   }
 
   // ---- 連線事件 ----
 
   async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
+    const size = typeof data === "string" ? data.length : data.byteLength;
+    if (!this.withinRate(ws, size)) return;
     const text = typeof data === "string" ? data : new TextDecoder().decode(data);
     let msg: any;
     try {
@@ -183,10 +249,12 @@ export class RelayRoom implements DurableObject {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
+    this.usage.delete(ws);
     this.disconnected(ws);
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
+    this.usage.delete(ws);
     this.disconnected(ws);
   }
 
@@ -250,7 +318,7 @@ export class RelayRoom implements DurableObject {
     if (sameUser.length === 0) {
       this.broadcast(userId, { type: "peer_joined", room_id: roomId, peer });
     }
-    ws.serializeAttachment({ joined: true, room: roomId, peer } satisfies Attachment);
+    ws.serializeAttachment({ joined: true, room: roomId, peer, ip: me.ip } satisfies Attachment);
     // 有人回來了：取消「沒人之後刪除」的鬧鐘。
     void this.ctx.storage.deleteAlarm();
     this.send(ws, {
@@ -282,6 +350,7 @@ export class RelayRoom implements DurableObject {
       this.nextSeq += 1;
       out.seq = seq;
       const text = JSON.stringify(out);
+      if (!this.withinStored(ws, text.length)) return;
       this.remember(me.room, seq, lamport, text);
       this.broadcastRaw(me.peer!.user_id, text);
       return;
@@ -433,7 +502,7 @@ export class RelayRoom implements DurableObject {
   }
 
   private leave(ws: WebSocket, me: Attachment): void {
-    ws.serializeAttachment({ joined: false, room: me.room } satisfies Attachment);
+    ws.serializeAttachment({ joined: false, room: me.room, ip: me.ip } satisfies Attachment);
     this.broadcast(me.peer!.user_id, { type: "peer_left", room_id: me.room, user_id: me.peer!.user_id });
     this.cleanupIfEmpty();
   }
@@ -450,7 +519,7 @@ export class RelayRoom implements DurableObject {
     });
     for (const s of this.ctx.getWebSockets()) {
       if (s !== ws) this.sendRaw(s, notice);
-      s.serializeAttachment({ joined: false, room: me.room } satisfies Attachment);
+      s.serializeAttachment({ joined: false, room: me.room, ip: this.attachment(s).ip } satisfies Attachment);
     }
     // 不立刻刪：離線中的協作者在保存期限內回來，還能補到最終版本（見 `scheduleExpiry`）。
     this.setMeta("closed", String(Date.now()));
@@ -460,7 +529,7 @@ export class RelayRoom implements DurableObject {
   private disconnected(ws: WebSocket): void {
     const me = this.attachment(ws);
     if (me.joined && me.peer && !me.replaced) {
-      ws.serializeAttachment({ joined: false, room: me.room } satisfies Attachment);
+      ws.serializeAttachment({ joined: false, room: me.room, ip: me.ip } satisfies Attachment);
       this.broadcast(me.peer.user_id, { type: "peer_left", room_id: me.room, user_id: me.peer.user_id });
     }
     this.cleanupIfEmpty(ws);
@@ -521,6 +590,59 @@ export class RelayRoom implements DurableObject {
   private storePartsMax(): number {
     const n = Number(this.env.STORE_PARTS_MAX ?? DEFAULT_STORE_PARTS_MAX);
     return Number.isInteger(n) && n > 0 ? n : DEFAULT_STORE_PARTS_MAX;
+  }
+
+  // ---- 濫用防護（見檔頭常數） ----
+
+  /** 這則訊息是否在這條連線的速率與大小上限內；超過就切斷連線並封鎖來源 IP。 */
+  private withinRate(ws: WebSocket, size: number): boolean {
+    if (size > MESSAGE_MAX_CHARS) {
+      this.punish(ws);
+      return false;
+    }
+    const now = Date.now();
+    let u = this.usage.get(ws);
+    if (!u) {
+      u = { start: now, count: 0, storedStart: now, stored: 0 };
+      this.usage.set(ws, u);
+    }
+    if (now - u.start > RATE_WINDOW_MS) {
+      u.start = now;
+      u.count = 0;
+    }
+    u.count += 1;
+    if (u.count > RATE_MAX_MESSAGES) {
+      this.punish(ws);
+      return false;
+    }
+    return true;
+  }
+
+  /** 寫進補發暫存的量是否在這條連線每小時的上限內（擋住「塞爆儲存空間」）。 */
+  private withinStored(ws: WebSocket, chars: number): boolean {
+    const now = Date.now();
+    const u = this.usage.get(ws);
+    if (!u) return true;
+    if (now - u.storedStart > STORED_WINDOW_MS) {
+      u.storedStart = now;
+      u.stored = 0;
+    }
+    u.stored += chars;
+    if (u.stored > STORED_MAX_CHARS) {
+      this.punish(ws);
+      return false;
+    }
+    return true;
+  }
+
+  /** 切斷違規的連線，並封鎖它的 IP 一段時間（封鎖期間連進這個房間會被拒）。 */
+  private punish(ws: WebSocket): void {
+    const ip = this.attachment(ws).ip;
+    if (ip) this.banned.set(ip, Date.now() + BAN_MS);
+    this.usage.delete(ws);
+    try {
+      ws.close(CLOSE_ABUSE, "rate limited");
+    } catch {}
   }
 
   /** 中繼給客戶端的提醒（不是錯誤：連線照常）。舊版 App 不認得這個類型，直接略過。 */
