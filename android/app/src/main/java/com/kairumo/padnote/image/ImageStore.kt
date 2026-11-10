@@ -1,6 +1,8 @@
 package com.kairumo.padnote.image
 
 import android.graphics.BitmapFactory
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import uniffi.padnote_core.PadnoteSession
@@ -17,6 +19,15 @@ class ImageStore(
     private val pageId: String?
 ) {
     private val images = LinkedHashMap<String, NoteImage>()
+    companion object {
+        /**
+         * 有圖檔後來才到（協同分塊送來的大圖）：加一，每個畫布（含連續模式的每一頁）重新解碼
+         * 還沒有點陣圖的圖。只在主執行緒動。
+         */
+        // profile-scope: device 只是重畫訊號，不含任何資料
+        var blobRevision by androidx.compose.runtime.mutableIntStateOf(0)
+    }
+
     /** 解碼後的點陣圖快取。每次重繪都解一次的話，捲動會卡到不能用。 */
     private val bitmaps = HashMap<String, ImageBitmap>()
     private val rawBitmaps = HashMap<String, android.graphics.Bitmap>()

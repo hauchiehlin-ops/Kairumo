@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.kairumo.padnote.L10n
 import com.kairumo.padnote.account.AccountManager
 import java.util.UUID
 import okhttp3.OkHttpClient
@@ -112,6 +113,9 @@ class CollaborationManager(private val context: Context) {
      * 編輯器看到它變了，就以目前內容為基準重新向房間要整份狀態 —— 房主回覆的內容補回缺的筆畫與物件，
      * 房間裡已擦掉的筆畫（回覆附的墓碑）也從這台拿掉。與 Apple `reloadCollabRoomContent` 相同。只在主執行緒動。
      */
+    /** 中繼的提醒（`relay_notice`，已在地化）。任何執行緒都可送出；編輯器收集後以 Toast 顯示。 */
+    val relayNotices = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
+
     var roomReloadRequests by mutableIntStateOf(0)
         private set
 
@@ -238,6 +242,9 @@ class CollaborationManager(private val context: Context) {
         .socketFactory(NoDelaySocketFactory)
         .build()
     private var socket: WebSocket? = null
+
+    /** 送出佇列裡還沒送出的位元組數（分塊送大圖時用來節流）。任何執行緒都可讀。 */
+    fun outgoingQueueBytes(): Long = socket?.queueSize() ?: 0L
     private var relay: RelayServer? = null
     private var reconnectAttempt = 0
     private var userInitiatedDisconnect = false
@@ -634,7 +641,7 @@ class CollaborationManager(private val context: Context) {
         val connected = status as? Status.Connected ?: return
         lastCursor = x to y
         val now = System.currentTimeMillis()
-        if (now - lastPresenceSentAtMs < tuning.presenceThrottleMs.toLong()) return
+        if (now - lastPresenceSentAtMs < tuning.presenceThrottleMs.toLong() * crowdFactor(peers.size)) return
         lastPresenceSentAtMs = now
 
         val msg = JSONObject()
@@ -1200,6 +1207,14 @@ class CollaborationManager(private val context: Context) {
                     .put("last_lamport", 0).put("last_seq", lastSeq))
             }
             "error" -> {
+                if (json.optString("code") == "ROOM_FULL") {
+                    // 會議室人數已滿：明確告訴使用者，不換中繼、不重連（與 Apple 相同）。
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        disconnect()
+                        lastError = L10n.t("collab_err_room_full").replace("%@", MAX_PEERS_PER_ROOM.toString())
+                    }
+                    return
+                }
                 val msg = json.optString("message", json.optString("code", "collab_err_connect"))
                 android.util.Log.e("Collab", "Relay returned error: $msg")
                 if (candidateServers.isNotEmpty()) {
@@ -1288,6 +1303,16 @@ class CollaborationManager(private val context: Context) {
                 onRoomClosed?.invoke()
             }
             "pong" -> Unit
+            "relay_notice" -> {
+                // 中繼的提醒（連線照常，不是錯誤）：已在地化的訊息交給編輯器顯示。與 Apple 相同。
+                val key = when (json.optString("code")) {
+                    "recent_near_limit" -> "relay_notice_recent_near_limit"
+                    "store_near_limit" -> "relay_notice_store_near_limit"
+                    "store_too_large" -> "relay_notice_store_too_large"
+                    else -> return
+                }
+                relayNotices.tryEmit(L10n.t(key))
+            }
         }
     }
 
@@ -1440,6 +1465,14 @@ class CollaborationManager(private val context: Context) {
     }
 
     companion object {
+        /** 每間房的人數上限（與 Rust `IN_APP_MAX_PEERS`、Apple `LocalRelayServer.maxPeersPerRoom`、雲端預設 `MAX_PEERS` 相同）。 */
+        const val MAX_PEERS_PER_ROOM = 50
+
+        /**
+         * 人多時把游標與書寫中預覽放慢的倍數（與 Apple `crowdFactor` 相同）：這兩種訊息每個人都轉給
+         * 其他所有人，總量隨人數平方成長。8 人以內照舊；9–20 人放慢一倍；再多放慢三倍。正式筆畫不受影響。
+         */
+        fun crowdFactor(peerCount: Int): Long = if (peerCount <= 8) 1L else if (peerCount <= 20) 2L else 4L
         /** 多久檢查一次要不要寄存。與 Apple `depositCheckInterval` 相同。 */
         const val DEPOSIT_CHECK_INTERVAL_MS = 30_000L
         /** 兩次寄存的最短間隔。與 Apple `depositMinInterval` 相同。 */

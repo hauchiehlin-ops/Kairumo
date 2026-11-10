@@ -286,6 +286,8 @@ public struct NotebookEditorView: View {
     @State var collabTextHub = CollabTextHub()
     /// 加入房間、補發不完整時的整份狀態往來（設計 §7）。
     @State var collabStateSync = CollabStateSync()
+    /// 分塊送來的大圖（`state_blob`）收到一半的進度。
+    @State var collabBlobAssembler = CollabBlobAssembler()
     /// 畫布還沒掛上視窗時的備用（正常情況下用畫布的 `undoManager`）。
     @State var fallbackUndoManager = UndoManager()
     @ObservedObject var watchdog = InteractionWatchdog.shared

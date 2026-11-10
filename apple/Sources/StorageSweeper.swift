@@ -25,6 +25,7 @@
 //  文件庫裡的東西一律不碰（那是 `StorageJanitor` 的事，規則更嚴）。
 
 import Foundation
+import UIKit
 
 enum StorageSweeper {
 
@@ -157,6 +158,53 @@ enum StorageSweeper {
                 "log_sweep_apple", report.tempFiles, report.partialFiles, mb, report.trashPurged)
         }
         return report
+    }
+
+    // MARK: 自動清理（啟動與前景定期）
+
+    /// App 一直開著時多久清一次可丟棄的暫存。與 Android `PERIODIC_INTERVAL_MS` 相同。
+    static let periodicInterval: TimeInterval = 6 * 3600
+    // profile-scope: device 只是上次清理的時間
+    @MainActor private static var lastAutomaticSweep: Date?
+    // profile-scope: device App 生命週期的通知訂閱
+    @MainActor private static var activeObserver: NSObjectProtocol?
+
+    /// 開始自動清理：每次回到前景時，距上次超過 `periodicInterval` 就清一次（啟動時也算一次）。
+    ///
+    /// 以前只有「儲存空間」面板的手動按鈕會清（說明寫的「啟動時」其實沒接上）；Android 每次啟動都清。
+    /// 這裡只清**可丟棄的**：`tmp`、放棄的模型下載殘檔、協同沒收齊的大圖暫存檔。
+    /// 回收桶期滿、筆跡帳本整理這些動到資料的，照舊由同步流程與手動按鈕處理，行為不變。
+    @MainActor
+    static func startAutomatic() {
+        guard activeObserver == nil else { return }
+        activeObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { _ in
+            Task { @MainActor in runAutomaticIfDue() }
+        }
+        runAutomaticIfDue()
+    }
+
+    @MainActor
+    private static func runAutomaticIfDue() {
+        let now = Date()
+        if let last = lastAutomaticSweep, now.timeIntervalSince(last) < periodicInterval { return }
+        lastAutomaticSweep = now
+        let modelsRoot = ModelDownloadManager.shared.modelsRoot
+        let attachments = NotebookStore.shared.attachmentsDirectory
+        Task.detached(priority: .background) {
+            var report = sweepDisposables(modelsRoot: modelsRoot)
+            let partial = execute(plan(in: attachments, minAge: tempMinAge) {
+                $0.hasPrefix(".collab-") && $0.hasSuffix(".partial")
+            })
+            report.tempFiles += partial.count
+            report.tempBytes += partial.bytes
+            guard report.totalBytes > 0 else { return }
+            let mb = String(format: "%.1f", Double(report.totalBytes) / 1_048_576)
+            await MainActor.run {
+                StartupLogger.logKey("log_sweep_apple", report.tempFiles, report.partialFiles, mb, 0)
+            }
+        }
     }
 
     // MARK: 用量（給診斷面板）

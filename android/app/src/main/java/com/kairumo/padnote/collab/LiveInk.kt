@@ -91,7 +91,7 @@ class LiveInkSender(
                 page?.let { manager.renewLocalPageEdit(it) }
                 add(x, y)
                 val now = SystemClock.uptimeMillis()
-                if (now - lastSentAt >= INTERVAL_MS) flush(end = false)
+                if (now - lastSentAt >= INTERVAL_MS * CollaborationManager.crowdFactor(manager.peers.size)) flush(end = false)
             }
             else -> {
                 if (erasingPointer == id) {

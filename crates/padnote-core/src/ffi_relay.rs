@@ -108,7 +108,14 @@ impl RelayServer {
         let (tx, rx) = tokio::sync::oneshot::channel();
         runtime.spawn(async move {
             match tokio::net::TcpListener::from_std(std_listener) {
-                Ok(listener) => padnote_relay::serve(listener, RoomHub::new(), rx).await,
+                // 每間房最多 50 人（與雲端中繼相同）：再多，房主一台要轉送的量撐不住。
+                Ok(listener) => {
+                    let hub = RoomHub::with_limits(padnote_relay::RelayLimits {
+                        max_peers_per_room: padnote_relay::IN_APP_MAX_PEERS,
+                        ..Default::default()
+                    });
+                    padnote_relay::serve(listener, hub, rx).await
+                }
                 Err(e) => eprintln!("⚠️ 中繼無法接手 listener：{e}"),
             }
         });

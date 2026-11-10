@@ -24,6 +24,8 @@ public final class LocalRelayServer {
     /// 暫存上限（與 Rust 版 `RECENT_MAX_COUNT`／`RECENT_MAX_BYTES` 相同）。
     static let recentMaxCount = 2000
     static let recentMaxBytes = 32 * 1024 * 1024
+    /// 每間房的人數上限（與 Rust 版 `IN_APP_MAX_PEERS`、雲端中繼的預設 `MAX_PEERS` 相同）。
+    static let maxPeersPerRoom = 50
 
     // profile-scope: profile 每個設定檔各有一份狀態，切換時必須重設
     public static let shared = LocalRelayServer()
@@ -379,6 +381,12 @@ public final class LocalRelayServer {
             // 房間不存在時，第一位加入者自動成為房主（與 Rust 版一致）
             room = Room(id: roomId, ownerId: userId)
             rooms[roomId] = room
+        }
+
+        // 人數已滿（同一個人重連不算新增）：回專用代碼，App 顯示在地化的「房間已滿」。
+        if room.peers[userId] == nil, room.peers.count >= Self.maxPeersPerRoom {
+            send(["type": "error", "code": "ROOM_FULL", "message": "這個房間的人數已達上限"], to: peer.connection)
+            return
         }
 
         let actualRole = (room.ownerId == userId) ? "owner" : ((json["role"] as? String) ?? "editor")

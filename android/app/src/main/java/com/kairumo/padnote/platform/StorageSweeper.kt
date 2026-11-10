@@ -18,6 +18,7 @@ import com.kairumo.padnote.profile.ProfileContext
  *
  * 文件庫（筆記、錄音）一律不碰。
  */
+// profile-scope: device 只記上次清理的時間；清的是整台裝置的暫存
 object StorageSweeper {
 
     const val TEMP_MIN_AGE_MS = 60L * 60 * 1000
@@ -105,8 +106,26 @@ object StorageSweeper {
         return report
     }
 
+    /** App 一直開著時多久清一次可丟棄的暫存。與 Apple `periodicInterval` 相同。 */
+    const val PERIODIC_INTERVAL_MS = 6L * 60 * 60 * 1000
+
+    // profile-scope: device 只是上次清理的時間
+    @Volatile private var lastSweepAtMs = 0L
+
+    /**
+     * 回到前景時呼叫：距上次清理超過 [PERIODIC_INTERVAL_MS] 就在背景清一次可丟棄的暫存
+     * （啟動時的完整清理也算一次）。以前只在啟動時清，App 一直開著（只切前景背景）的人永遠不會清。
+     */
+    fun sweepIfDue(context: Context) {
+        val now = System.currentTimeMillis()
+        if (now - lastSweepAtMs < PERIODIC_INTERVAL_MS) return
+        lastSweepAtMs = now
+        Thread { runCatching { sweepDisposables(context) } }.start()
+    }
+
     /** 啟動時的完整清理：可丟棄的 + 回收桶期滿 + 筆記本儲存空間最佳化。 */
     fun sweepAtLaunch(context: Context): Report {
+        lastSweepAtMs = System.currentTimeMillis()
         val report = sweepDisposables(context)
         report.trashPurged = runCatching { NotebookTrash.purgeExpired(context) }.getOrDefault(0)
         runCatching { StorageJanitor.optimizeAllNotebooks(context, deepClean = false) }

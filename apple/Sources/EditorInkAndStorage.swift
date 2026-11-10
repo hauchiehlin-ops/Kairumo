@@ -307,6 +307,9 @@ extension NotebookEditorView {
                 // 中繼補不回漏掉的那一段：向其他成員要整份狀態（剛要過就不重複）。
                 if Date().timeIntervalSince(collabStateSync.lastRequest) > 5 { requestCollabState() }
             }
+            .onReceive(collaborationManager.relayNotice) { message in
+                showCanvasNotice(message)
+            }
             .onChange(of: collaborationManager.outdatedPeerIds) { ids in
                 guard !ids.isEmpty else { return }
                 showCanvasNotice(localizationManager.localized("collab_peer_outdated"))
@@ -575,14 +578,24 @@ extension NotebookEditorView {
         collabInkLedger.reset()
         collabTextHub.reset()
         collabStateSync.reset()
+        collabBlobAssembler.reset()
         // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次，
         // 而對方（尤其是 Android，筆畫 id 不同）會多出一份。
-        for (index, id) in (notebook.pageIds ?? []).enumerated() {
-            collabInkLedger.known[id] = Set(CollabInk.ids(of: drawingForCollab(page: index)))
-        }
-        // 這台的檔案可能比房間裡的舊：向房間裡的人要整份狀態（設計 §7）。只有自己就不必。
-        if !collaborationManager.currentRoomId.isEmpty, !collaborationManager.peers.isEmpty {
-            requestCollabState()
+        //
+        // 逐頁讀檔，每讀幾頁讓出主執行緒一次：上千頁的筆記本進會議室時，以前一口氣讀完、畫面卡住好幾秒。
+        // 讀完才要整份狀態（與以前同一個順序）。
+        let pageIds = notebook.pageIds ?? []
+        let room = collaborationManager.currentRoomId
+        Task { @MainActor in
+            for (index, id) in pageIds.enumerated() {
+                guard collaborationManager.currentRoomId == room else { return }
+                collabInkLedger.known[id] = Set(CollabInk.ids(of: drawingForCollab(page: index)))
+                if index % 8 == 7 { await Task.yield() }
+            }
+            // 這台的檔案可能比房間裡的舊：向房間裡的人要整份狀態（設計 §7）。只有自己就不必。
+            if !collaborationManager.currentRoomId.isEmpty, !collaborationManager.peers.isEmpty {
+                requestCollabState()
+            }
         }
     }
 
@@ -641,8 +654,14 @@ extension NotebookEditorView {
         collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         ProInkStore.flushPendingWrites()
         Task { @MainActor in
-            let items = await collectCollabState(blobs: blobs)
+            let (items, big) = await collectCollabState(blobs: blobs, inlineMax: CollabBlobStream.inlineMax)
             sendCollabStateParts(items, req: req, to: to)
+            // 大圖在整份狀態之後一塊一塊送（見 `CollabBlobStream`）。
+            CollabBlobStream.stream(big, req: req, to: to, proto: Self.collabProto) { payload in
+                guard isCollaborating else { return false }
+                collaborationManager.broadcastOplog(kind: "state_blob", payload: payload)
+                return true
+            }
         }
     }
 
@@ -657,30 +676,55 @@ extension NotebookEditorView {
         ensureCollabPageIds()
         collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         ProInkStore.flushPendingWrites()
-        let items = await collectCollabState(blobs: [])
+        // 大圖不夾進寄存（雲端中繼一段放不下，夾了那一段被拒、整份就收不齊）；之後由在線的人回覆時補。
+        let (items, _) = await collectCollabState(blobs: [], inlineMax: CollabBlobStream.depositInlineMax)
         guard isCollaborating else { return }
         let snap = UUID().uuidString.lowercased()
         let seq = collaborationManager.relaySeq
-        sendCollabStateParts(items, req: "store", to: "*", kind: "state_store") { index, count in
+        sendCollabStateParts(items, req: "store", to: "*", kind: "state_store",
+                             maxParts: CollabBlobStream.storePartsMax) { index, count in
             ["snap": snap, "part": index, "parts": count, "seq": seq]
         }
     }
 
     /// 整份狀態的內容：物件（含我方要補給對方的圖檔）與每一頁的全部筆畫。逐頁讀檔在背景做。
-    private func collectCollabState(blobs: Set<String>) async -> [(ink: Bool, json: [String: Any])] {
+    ///
+    /// 圖檔：不超過 `inlineMax` 的夾在裡面（base64），更大的只列進第二個回傳值、之後分塊送。
+    /// 讀圖檔與筆跡都在背景（以前圖檔在主執行緒整張讀，圖一大畫面就卡住）。
+    private func collectCollabState(blobs: Set<String>, inlineMax: Int)
+        async -> ([(ink: Bool, json: [String: Any])], [CollabBlobStream.Pending]) {
         ensureCollabPageIds()
         collabSync.refreshShadow(from: notebook, keepMissingPages: true)
         var items: [(ink: Bool, json: [String: Any])] = []
+        var images: [(index: Int, name: String, hash: String)] = []
         for entry in collabSync.snapshot() {
-            var json = entry.json
             if entry.type == "image",
                let hash = entry.groups.lazy.compactMap({ $0.fields["blob"] as? String }).first, !blobs.contains(hash),
-               let fileName = collabSync.shadow[entry.key]?["a.image.fileName"] as? String, !fileName.isEmpty,
-               let data = try? Data(contentsOf: store.attachmentsDirectory.appending(path: fileName)) {
-                json["b64"] = data.base64EncodedString()
+               let fileName = collabSync.shadow[entry.key]?["a.image.fileName"] as? String, !fileName.isEmpty {
+                images.append((items.count, fileName, hash))
             }
-            items.append((false, json))
+            items.append((false, entry.json))
         }
+        let attachments = store.attachmentsDirectory
+        nonisolated(unsafe) let plain = items
+        let withImages = Task.detached(priority: .userInitiated) { () -> ([(ink: Bool, json: [String: Any])], [CollabBlobStream.Pending]) in
+            var all = plain
+            var big: [CollabBlobStream.Pending] = []
+            for image in images {
+                let url = attachments.appending(path: image.name)
+                let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
+                guard size > 0 else { continue }
+                if size > inlineMax {
+                    big.append(.init(name: image.name, hash: image.hash, url: url))
+                } else if let data = try? Data(contentsOf: url) {
+                    all[image.index].json["b64"] = data.base64EncodedString()
+                }
+            }
+            return (all, big)
+        }
+        nonisolated(unsafe) let collected = await withImages.value
+        items = collected.0
+        let bigBlobs = collected.1
         // 筆跡：**每一頁的全部自繪筆畫**（自己的與別台的）都帶上，加上這次協同期間擦掉的。
         // 收到的一方以筆畫 id 去重，已經有的不會多出一份。逐頁讀檔在背景做。
         let pageIds = NotebookPackageBridge.resolvedPageIds(for: notebook, packagesDirectory: store.syncPackagesDirectory)
@@ -708,12 +752,13 @@ extension NotebookEditorView {
             return all
         }
         nonisolated(unsafe) let ready = await task.value
-        return ready
+        return (ready, bigBlobs)
     }
 
     /// 把整份狀態切段送出（每段約 `CollabStateSync.partBytes`）。
     private func sendCollabStateParts(
         _ items: [(ink: Bool, json: [String: Any])], req: String, to: String, kind: String = "state_snapshot",
+        maxParts: Int? = nil,
         envelope: (Int, Int) -> [String: Any] = { _, _ in [:] }
     ) {
         guard isCollaborating else { return }
@@ -728,6 +773,15 @@ extension NotebookEditorView {
             }
             if item.ink { parts[parts.count - 1].ink.append(item.json) } else { parts[parts.count - 1].objects.append(item.json) }
             bytes += length
+        }
+        if let maxParts, parts.count > maxParts {
+            // 寄存：整本超過雲端中繼的上限，送了也存不下。每個房間只提醒一次；原本寄存的那一份照舊留著。
+            let room = collaborationManager.currentRoomId
+            if !CollabBlobStream.warnedTooLarge.contains(room) {
+                CollabBlobStream.warnedTooLarge.insert(room)
+                showCanvasNotice(localizationManager.localized("relay_notice_store_too_large"))
+            }
+            return
         }
         for (index, part) in parts.enumerated() {
             let delay = Double(index) * 0.03
@@ -946,6 +1000,20 @@ extension NotebookEditorView {
 
         case "state_snapshot":
             applyCollabStateSnapshot(event.payload, from: event.userId)
+
+        case "state_blob":
+            // 分塊送來的大圖（見 `CollabBlobStream`）：只收給我的、我要過的那一份。
+            let to = (event.payload["to"] as? String) ?? ""
+            let req = (event.payload["req"] as? String) ?? ""
+            guard to == "*" || to.caseInsensitiveCompare(collaborationManager.currentUserId) == .orderedSame,
+                  req == collabStateSync.pendingRequest || collabStateSync.wasRequested(req) else { return }
+            collabBlobAssembler.accept(event.payload, directory: store.attachmentsDirectory) { name, hash in
+                CollabCanonical.rememberBlob(fileName: name, hash: hash)
+                _ = store.loadAttachmentImage(fileName: name)
+                // 圖檔到了：畫面與縮圖重畫一次（物件早就在，只是之前沒有圖）。
+                continuousReloadGeneration += 1
+                refreshAllThumbnails()
+            }
 
         case "state_store":
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。

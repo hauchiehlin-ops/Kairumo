@@ -86,6 +86,12 @@ impl Room {
     }
 }
 
+/// 房間人數已滿時 [`RoomHub::join`] 回的錯誤。連線層看到它就回 `ROOM_FULL` 代碼（App 依代碼顯示在地化提示）。
+pub const ROOM_FULL_ERROR: &str = "這個房間的人數已達上限";
+
+/// App 內建的本機中繼每間房的人數上限（與 Cloudflare 版的預設 `MAX_PEERS` 相同）。
+pub const IN_APP_MAX_PEERS: usize = 50;
+
 /// 公開中繼的防護設定。App 內建的本機中繼用 [`RelayLimits::default`]（不設上限，行為與以前相同）；
 /// 放在公開網路上的中繼由 `main.rs` 依環境變數設定。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -149,7 +155,7 @@ impl RoomHub {
             && !room.peers.contains_key(&user_id)
             && room.peers.len() >= self.limits.max_peers_per_room
         {
-            return Err("這個房間的人數已達上限".to_string());
+            return Err(ROOM_FULL_ERROR.to_string());
         }
 
         // 密碼檢查（若有設置）
@@ -435,8 +441,13 @@ impl RoomHub {
                         // 沒加入成功：這條連線不屬於任何房間。
                         *current_room = None;
                         *current_user = None;
+                        let code = if err == ROOM_FULL_ERROR {
+                            "ROOM_FULL"
+                        } else {
+                            "JOIN_FAILED"
+                        };
                         Some(ServerMessage::Error {
-                            code: "JOIN_FAILED".to_string(),
+                            code: code.to_string(),
                             message: err,
                         })
                     }
