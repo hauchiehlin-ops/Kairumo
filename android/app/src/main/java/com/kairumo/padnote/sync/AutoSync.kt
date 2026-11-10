@@ -74,6 +74,10 @@ object AutoSync {
     private val _syncCompletedRevision = MutableStateFlow(0)
     val syncCompletedRevision: StateFlow<Int> = _syncCompletedRevision
 
+    /** 每跑完一輪（不論成功、暫時失敗或被跳過）就遞增。首頁據此重讀清單 —— 同步途中讀的那一份可能不完整。 */
+    private val _roundFinishedRevision = MutableStateFlow(0)
+    val roundFinishedRevision: StateFlow<Int> = _roundFinishedRevision
+
     private var started = false
 
     private var appContext: Context? = null
@@ -230,6 +234,7 @@ object AutoSync {
                     runOneRound(context)
                 } finally {
                     _isSyncing.value = false
+                    _roundFinishedRevision.value += 1
                 }
                 scheduler.finishRound(outcome, roundChanged, nowMs())
                 _needsSignIn.value = scheduler.isBlockedOnAuth()

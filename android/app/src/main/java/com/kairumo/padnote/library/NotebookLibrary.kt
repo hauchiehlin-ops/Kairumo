@@ -90,7 +90,10 @@ object NotebookLibrary {
         // 列舉失敗（null）不是「0 本」：同步搬動套件、儲存空間暫時不可讀時都可能拿到 null。
         // 當成空清單的話，首頁整份閃成 0 本、資料夾全是 (0)，過一輪又回來。保留上一份。
         val listed = directory(context).listFiles()
-            ?: return lastKnownListing(context, sort, folderId) ?: emptyList()
+            ?: return (lastKnownListing(context, sort, folderId) ?: emptyList()).also {
+                if (folderId == ANY_FOLDER) lastListingIncomplete = true
+            }
+        val placeholdersBefore = placeholderCount.get()
         // 先清掉「已被還原」的刪除記號；剩下的（含讀取途中才按下刪除的）在最後一步過濾。
         releaseRestoredDeletes(context)
         val entries = listed
@@ -122,6 +125,7 @@ object NotebookLibrary {
             }
         if (folderId == ANY_FOLDER) {
             lastListing = ProfileContext.activeId(context) to entries
+            lastListingIncomplete = placeholderCount.get() != placeholdersBefore
         }
         return sorted(entries, sort)
     }
@@ -143,6 +147,16 @@ object NotebookLibrary {
     // profile-scope: 以 ProfileContext.activeId 為鍵，換設定檔時不會拿到別人的清單
     @Volatile
     private var lastListing: Pair<String, List<Entry>>? = null
+
+    /**
+     * 上一輪完整列出時有沒有「暫時讀不到、先以索引標題代替」的筆記本（或整個目錄讀不到）。
+     * 首頁據此稍後自動重讀，不必等使用者按「立即同步」。
+     */
+    // profile-scope: device 只是「上一輪讀取是否完整」的記憶體旗標，不含使用者資料
+    @Volatile
+    var lastListingIncomplete = false
+        private set
+    private val placeholderCount = java.util.concurrent.atomic.AtomicInteger(0)
 
     /**
      * 上一次完整列出的清單（目前設定檔），沒有就回 null。**不碰磁碟**，主執行緒可呼叫。
@@ -256,8 +270,21 @@ object NotebookLibrary {
 
         // 開不起來（同步正在寫這個套件、暫時讀不到）時沿用上一份，不要讓它從清單上消失 ——
         // 讀取失敗不等於這本不存在。
+        // 剛開 App（還沒有上一份）時這本又剛好被同步佔著：以同步索引的標題先列出來，不快取，
+        // 下一輪讀得到就換成真的。以前回 null —— 整本從清單消失，首頁顯示「全部筆記 (0)」，
+        // 要按「立即同步」讓首頁重讀才回來。
         val session = runCatching { PadnoteSession.openExisting(path.absolutePath, deviceId) }
-            .getOrNull() ?: return cached?.entry
+            .getOrNull() ?: return cached?.entry ?: run {
+                placeholderCount.incrementAndGet()
+                Entry(
+                    id = id,
+                    title = indexTitles[id.lowercase()] ?: id,
+                    pageCount = 0,
+                    path = path,
+                    modifiedAt = currentMtime,
+                    isSample = SeedNotebooks.isDeviceLocal(id)
+                )
+            }
         val entry = Entry(
             id = id,
             // **標題以同步索引為權威**，索引沒有（或是空白）才用套件裡的。

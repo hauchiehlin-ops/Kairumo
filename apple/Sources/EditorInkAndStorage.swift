@@ -751,7 +751,7 @@ extension NotebookEditorView {
     ///
     /// `stored`：中繼寄存的那一份（`state_store`，補發時給剛進房的人）。不是回覆我的請求，
     /// 以它自己的 `snap` 計段；套用規則相同（房間的內容優先於自己可能過期的起點）。
-    func applyCollabStateSnapshot(_ payload: [String: Any], stored: Bool = false) {
+    func applyCollabStateSnapshot(_ payload: [String: Any], from sender: String = "", stored: Bool = false) {
         guard let part = (payload["part"] as? NSNumber)?.intValue else { return }
         // 房間裡有人在線：以他們回覆的整份狀態為準，不套用寄存的那一份。寄存的可能是舊版或半份
         // （過去的協作者只同步到一半時寄存的），而且帶較新的時戳 —— 套了之後，房主回覆的完整內容
@@ -767,7 +767,7 @@ extension NotebookEditorView {
             let toMe = to.isEmpty || to == "*" || to.caseInsensitiveCompare(collaborationManager.currentUserId) == .orderedSame
             guard (req == collabStateSync.pendingRequest || collabStateSync.wasRequested(req)),
                   toMe,
-                  collabStateSync.acceptPart(req: req, part: part) else { return }
+                  collabStateSync.acceptPart(req: req, part: part, from: sender) else { return }
         }
         let parts = (payload["parts"] as? NSNumber)?.intValue ?? 1
         ensureCollabPageIds()
@@ -913,19 +913,34 @@ extension NotebookEditorView {
 
         case "state_request":
             guard let req = event.payload["req"] as? String else { return }
-            // 排名：除了請求者以外，依使用者 id 排序。第一名立刻回，其餘的人依序多等一下。
-            let everyone = (collaborationManager.peers.map(\.userId) + [collaborationManager.currentUserId])
-                .filter { $0 != event.userId }.sorted()
-            let rank = everyone.firstIndex(of: collaborationManager.currentUserId) ?? 0
-            let blobs = Set((event.payload["blobs"] as? [String]) ?? [])
+            // 誰來回：**房主優先**。以前依使用者 id 排序、第一名先回 —— 第一名常是另一位協作者，
+            // 他自己可能也剛重連、只同步到一半；他一回，房主就不再回，重連的人拿到的是不完整的那一份
+            // （實機：協作者斷線再連，看不到其他人先前的修改，房主的畫面卻都對）。
+            // 房主在線時，協作者只在自己完整同步過、而且房主遲遲沒回時才補回。與 Android 相同。
             let requester = event.userId
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(rank) * CollabStateSync.answerStagger) {
+            let me = collaborationManager.currentUserId
+            let ownerOnline = collaborationManager.peers.contains { $0.role == .owner && $0.userId != requester }
+            let delay: Double
+            if collaborationManager.isHost {
+                delay = 0
+            } else if ownerOnline {
+                guard collabStateSync.syncedOnce else { return }
+                let others = collaborationManager.peers
+                    .filter { $0.role != .owner && $0.userId != requester }.map(\.userId) + [me]
+                let rank = others.sorted().firstIndex(of: me) ?? 0
+                delay = CollabStateSync.hostGrace + Double(rank) * CollabStateSync.answerStagger
+            } else {
+                let everyone = (collaborationManager.peers.map(\.userId) + [me]).filter { $0 != requester }.sorted()
+                delay = Double(everyone.firstIndex(of: me) ?? 0) * CollabStateSync.answerStagger
+            }
+            let blobs = Set((event.payload["blobs"] as? [String]) ?? [])
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 guard isCollaborating, !collabStateSync.wasAnswered(req) else { return }
                 answerCollabState(req: req, to: requester, blobs: blobs)
             }
 
         case "state_snapshot":
-            applyCollabStateSnapshot(event.payload)
+            applyCollabStateSnapshot(event.payload, from: event.userId)
 
         case "state_store":
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。

@@ -146,6 +146,7 @@ internal fun NotebookHome(
         mutableStateOf(NotebookLibrary.lastKnown(activity, sort) ?: emptyList<NotebookLibrary.Entry>())
     }
     var recordings by remember { mutableStateOf(emptyList<RecordingIndex.Recording>()) }
+    var incompleteRetries by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         seedGeneration = withContext(Dispatchers.IO) {
             SeedNotebooks.seedIfEmpty(activity, device, lang)
@@ -161,7 +162,19 @@ internal fun NotebookHome(
         // 讀取途中按下刪除的那一本，這一輪讀到的清單可能還有它：以現在的刪除記號再過濾一次。
         allEntries = loaded.first.filterNot { NotebookLibrary.isDeleting(it.id) }
         recordings = loaded.second
+        // 有幾本剛好被同步佔著、這一輪只列出索引標題：稍後自動再讀一次（最多幾次），
+        // 不必等使用者按「立即同步」。
+        if (NotebookLibrary.lastListingIncomplete && incompleteRetries < 5) {
+            incompleteRetries++
+            kotlinx.coroutines.delay(2_000L)
+            revision++
+        } else if (!NotebookLibrary.lastListingIncomplete) {
+            incompleteRetries = 0
+        }
     }
+    // 每一輪自動同步跑完（不論結果）都重讀：同步途中讀到的清單可能不完整。與 Apple 同步後重讀清單相同。
+    val autoSyncRound by com.kairumo.padnote.sync.AutoSync.roundFinishedRevision.collectAsState()
+    LaunchedEffect(autoSyncRound) { if (autoSyncRound > 0) revision++ }
     // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
     val treeVer = FolderTree.treeVersion
     val allFolders = remember(revision, treeVer) { FolderTree.all(activity) }
@@ -461,7 +474,7 @@ internal fun NotebookHome(
             recordings = recordings,
             cloud = com.kairumo.padnote.library.CloudSyncUiState(
                 signedIn = signedIn,
-                busy = cloudBusy,
+                busy = cloudBusy || autoSyncRunning,
                 message = cloudMessage,
                 // 哪一個帳號、上次什麼時候同步、自選資料夾在哪裡。
                 // 這三行是使用者判斷「同步到底有沒有在動」的唯一依據。
@@ -879,7 +892,7 @@ internal fun NotebookHome(
     if (showCloudSyncDialog) {
         CloudSyncDetailDialog(
             signedIn = signedIn,
-            busy = cloudBusy,
+            busy = cloudBusy || autoSyncRunning,
             message = cloudMessage,
             account = com.kairumo.padnote.library.SyncHistory.account(activity),
             lastSync = com.kairumo.padnote.library.SyncHistory.lastGoogleSync(activity, l("sync_never")),

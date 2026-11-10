@@ -1039,15 +1039,26 @@ final class CollabStateSync {
         sentRequests.contains(req)
     }
 
-    /// 收下某次請求的一段（同一段重複收到回 `false`）。
-    func acceptPart(req: String, part: Int) -> Bool {
-        partsByRequest[req, default: []].insert(part).inserted
+    /// 每一次請求採用的回覆者：只收第一位回覆者的段落。兩個人的回覆分段方式不同，
+    /// 混在一起會湊出「段數夠了、內容卻缺一塊」的整份狀態。
+    private var responderByRequest: [String: String] = [:]
+    /// 房主在線時，協作者多等這麼久才補回（房主的回覆通常已經到了）。
+    static let hostGrace = 3.0
+
+    /// 收下某次請求的一段（同一段重複收到、或不是這次採用的回覆者回 `false`）。
+    func acceptPart(req: String, part: Int, from sender: String = "") -> Bool {
+        if !sender.isEmpty {
+            if let chosen = responderByRequest[req], chosen != sender { return false }
+            responderByRequest[req] = sender
+        }
+        return partsByRequest[req, default: []].insert(part).inserted
     }
 
     /// 這次請求的段落是否收齊。收齊就記成「已完整同步過」。
     func completeIfReady(req: String, parts: Int) -> Bool {
         guard (partsByRequest[req]?.count ?? 0) >= parts else { return false }
         partsByRequest.removeValue(forKey: req)
+        responderByRequest.removeValue(forKey: req)
         if pendingRequest == req { pendingRequest = nil }
         syncedOnce = true
         return true
@@ -1078,6 +1089,7 @@ final class CollabStateSync {
     func reset() {
         pendingRequest = nil
         partsByRequest = [:]
+        responderByRequest = [:]
         roomKeys = []
         syncedOnce = false
         storedSnap = nil
