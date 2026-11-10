@@ -178,6 +178,11 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     case draftingSteps = "drafting_steps"
     case draftingTrap = "drafting_trap"
 
+    // ---- 地理：空白地圖（輪廓由核心 page_guides 供應）----
+    case mapWorld = "map_world"
+    case mapRussiaCentralAsia = "map_russia_central_asia"
+    case mapTaiwan = "map_taiwan"
+
     public var id: String { rawValue }
 
     /// 舊的十三個：中文 rawValue → 核心的英文 id。
