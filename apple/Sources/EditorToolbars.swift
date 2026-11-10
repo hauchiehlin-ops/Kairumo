@@ -55,6 +55,10 @@ extension NotebookEditorView {
     @ViewBuilder
     var insertMenuContent: some View {
         Section {
+            Button {
+                presentFromMenu { showAssetLibrarySheet = true }
+            } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                .accessibilityIdentifier("editor.insert.assets")
             // 文字方塊：手寫模式也從「插入」加得到（與 Android 工具列的「新增文字方塊」一致）。
             // 以前只有打字模式與工具列上一個沒有標籤的小圖示，實測時根本找不到。
             Button {
@@ -83,10 +87,6 @@ extension NotebookEditorView {
                 }
             } label: { Label(localizationManager.localized("insert_legend"), systemImage: "list.bullet.rectangle") }
                 .accessibilityIdentifier("editor.insert.legend")
-            Button {
-                presentFromMenu { showAssetLibrarySheet = true }
-            } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                .accessibilityIdentifier("editor.insert.assets")
             Button {
                 presentFromMenu { showStickerLibrary = true }
             } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
