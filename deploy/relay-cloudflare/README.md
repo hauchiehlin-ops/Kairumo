@@ -63,5 +63,5 @@ npx wrangler dev --port 8799
 
 `wrangler.toml` 的 `[vars]`：
 
-- `MAX_PEERS`：每間房的人數上限（預設 16）。
+- `MAX_PEERS`：每間房的人數上限（預設 50）。
 - `RETENTION_HOURS`：房間沒人之後保留多久（小時，預設 168）。

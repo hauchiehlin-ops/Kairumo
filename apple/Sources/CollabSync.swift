@@ -1139,3 +1139,123 @@ enum CollabImportHold {
         }
     }
 }
+
+// MARK: - 大圖分塊（整份狀態）
+
+/// 整份狀態裡的大圖改成分塊另外送（`state_blob`），與 Android `CollabBlobStream` 同一套。
+///
+/// 以前每張圖都整張轉成 base64 夾在整份狀態裡：
+/// - 整本的圖一次全讀進記憶體（數 GB 的筆記本有人加入，房主就被系統砍掉）；
+/// - 單張很大的圖超過中繼一則訊息的上限，那一段整個送不出去、加入的人什麼都拿不到。
+///
+/// 現在小圖照舊夾在整份狀態裡（舊版 App 照樣收得到）；超過 `inlineMax` 的圖只帶描述，
+/// 圖檔本身在整份狀態送完後一塊一塊送（每塊 `chunkBytes`、間隔 `chunkInterval`），
+/// 收的一方寫進暫存檔、收齊才換成正式的圖檔。逐塊讀檔、逐塊送，記憶體只放得下一塊。
+enum CollabBlobStream {
+    /// 夾在整份狀態裡的圖檔上限（原始位元組）。超過的改分塊送。
+    static let inlineMax = 4 * 1024 * 1024
+    /// 寄存（`state_store`）時夾帶的圖檔上限。雲端中繼一段最多 1.8 MB（加密、base64 之後），
+    /// 夾一張更大的圖，那一段被拒、整份寄存就收不齊；大圖之後由在線的人回覆時補。
+    static let depositInlineMax = 600 * 1024
+    /// 一塊的原始位元組（base64＋加密之後約 0.9 MB，遠低於中繼一則訊息的上限）。
+    static let chunkBytes = 512 * 1024
+    /// 兩塊之間的間隔：不一口氣塞滿連線（書寫、游標照常即時）。
+    static let chunkInterval: UInt64 = 120_000_000
+    /// 雲端中繼寄存一份整份狀態最多幾段（與 `deploy/relay-cloudflare` 的 `STORE_PARTS_MAX` 相同）。
+    /// 超過就不送（送了也存不下），只提醒一次。
+    static let storePartsMax = 256
+    /// 已經提醒過「整本超過寄存上限」的房間（每個房間只提醒一次）。
+    // profile-scope: device 只是提醒過的房號，不含任何內容
+    @MainActor static var warnedTooLarge: Set<String> = []
+
+    struct Pending: Sendable {
+        let name: String
+        let hash: String
+        let url: URL
+    }
+
+    /// 依序把每張大圖分塊送給 `to`。讀檔在背景，送出在主執行緒。
+    @MainActor
+    static func stream(_ blobs: [Pending], req: String, to: String, proto: Int,
+                       send: @escaping @MainActor ([String: Any]) -> Bool) {
+        guard !blobs.isEmpty else { return }
+        Task { @MainActor in
+            for blob in blobs {
+                let size = (try? FileManager.default.attributesOfItem(atPath: blob.url.path)[.size] as? NSNumber)?.intValue ?? 0
+                guard size > 0 else { continue }
+                let count = (size + chunkBytes - 1) / chunkBytes
+                for index in 0..<count {
+                    let url = blob.url
+                    let chunk = await Task.detached(priority: .utility) { () -> String? in
+                        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+                        defer { try? handle.close() }
+                        try? handle.seek(toOffset: UInt64(index * chunkBytes))
+                        return (try? handle.read(upToCount: chunkBytes))?.base64EncodedString()
+                    }.value
+                    guard let chunk else { break }
+                    let stillHere = send([
+                        "proto": proto, "req": req, "to": to, "hash": blob.hash, "name": blob.name,
+                        "index": index, "count": count, "size": size, "data": chunk,
+                    ])
+                    guard stillHere else { return }
+                    try? await Task.sleep(nanoseconds: chunkInterval)
+                }
+            }
+        }
+    }
+}
+
+/// 收 `state_blob`：每張圖寫進自己的暫存檔，收齊才搬成正式的圖檔。寫檔在背景序列佇列。
+@MainActor
+final class CollabBlobAssembler {
+    private struct Progress {
+        var received: Set<Int> = []
+        let count: Int
+        let name: String
+    }
+
+    private var inFlight: [String: Progress] = [:]
+    private let queue = DispatchQueue(label: "kairumo.collab.blob", qos: .utility)
+
+    /// 收一塊。全部到齊時在主執行緒呼叫 `done(檔名, hash)`。
+    func accept(_ payload: [String: Any], directory: URL, done: @escaping @MainActor (String, String) -> Void) {
+        guard let hash = payload["hash"] as? String, !hash.isEmpty, hash.allSatisfy({ $0.isLetter || $0.isNumber }),
+              let index = (payload["index"] as? NSNumber)?.intValue,
+              let count = (payload["count"] as? NSNumber)?.intValue,
+              count > 0, index >= 0, index < count,
+              let b64 = payload["data"] as? String else { return }
+        let rawName = (payload["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "\(hash).png"
+        // 只取檔名（不讓對方指定資料夾）。
+        let name = URL(fileURLWithPath: rawName).lastPathComponent
+        let target = directory.appending(path: name)
+        if FileManager.default.fileExists(atPath: target.path) { inFlight[hash] = nil; return }
+        var progress = inFlight[hash] ?? Progress(count: count, name: name)
+        guard progress.count == count, !progress.received.contains(index) else { return }
+        progress.received.insert(index)
+        inFlight[hash] = progress
+        let partial = directory.appending(path: ".collab-\(hash).partial")
+        let complete = progress.received.count == count
+        if complete { inFlight[hash] = nil }
+        let offset = UInt64(index * CollabBlobStream.chunkBytes)
+        queue.async {
+            guard let data = Data(base64Encoded: b64) else { return }
+            if !FileManager.default.fileExists(atPath: partial.path) {
+                FileManager.default.createFile(atPath: partial.path, contents: nil)
+            }
+            guard let handle = try? FileHandle(forWritingTo: partial) else { return }
+            try? handle.seek(toOffset: offset)
+            try? handle.write(contentsOf: data)
+            try? handle.close()
+            guard complete else { return }
+            if !FileManager.default.fileExists(atPath: target.path) {
+                try? FileManager.default.moveItem(at: partial, to: target)
+            } else {
+                try? FileManager.default.removeItem(at: partial)
+            }
+            DispatchQueue.main.async { done(name, hash) }
+        }
+    }
+
+    /// 換房間或離開：還沒收齊的丟掉（暫存檔由啟動時的清理收掉）。
+    func reset() { inFlight = [:] }
+}

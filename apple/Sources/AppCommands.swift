@@ -78,6 +78,8 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         Self.configureInstantToolTips()
+        // 自動清理可丟棄的暫存（背景執行；回到前景時距上次超過 6 小時再清一次）。
+        StorageSweeper.startAutomatic()
         return true
     }
 

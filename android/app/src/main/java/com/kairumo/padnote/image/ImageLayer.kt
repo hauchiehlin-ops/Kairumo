@@ -65,7 +65,7 @@ fun ImageLayer(
     var decodedTick by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     if (decodeOffMain) {
         val blobIds = images.map { it.blobId }.distinct()
-        androidx.compose.runtime.LaunchedEffect(store, blobIds) {
+        androidx.compose.runtime.LaunchedEffect(store, blobIds, ImageStore.blobRevision) {
             val missing = images.filter { store.cachedBitmap(it) == null }.map { it.blobId }.distinct()
             if (missing.isEmpty()) return@LaunchedEffect
             val decoded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

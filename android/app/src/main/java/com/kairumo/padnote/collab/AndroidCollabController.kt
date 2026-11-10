@@ -24,6 +24,12 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     private val textHub = CollabTextHub()
     private val ink = CollabInkLedger()
 
+    /** 分塊送來的大圖（`state_blob`）收到一半的進度。由編輯器設定（要知道暫存資料夾與核心）。 */
+    var blobAssembler: CollabBlobAssembler? = null
+
+    /** 已經提醒過「整本超過寄存上限」的房間（每個房間只提醒一次）。 */
+    private var warnedTooLarge: String? = null
+
     /** 這次送出的修改是不是正在套用別人的（是的話不再送出）。 */
     val isApplyingRemote: Boolean get() = sync.isApplyingRemote
 
@@ -87,6 +93,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         }
         storedSnap = null
         storedParts = HashSet()
+        blobAssembler?.reset()
         // 已有的筆畫算「大家都有」—— 否則第一次在某一頁下筆，整頁舊筆畫會被當成新的再送一次。
         for (page in canvas.pageIds) {
             val ids = runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList()).map { it.id }
@@ -286,6 +293,15 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 if (chosen != null && chosen != op.userId) return null
                 responderByRequest[req] = op.userId
                 applySnapshotPart(payload, session, meta, canvas, engineFor, req = req)
+            }
+            // 分塊送來的大圖（見 `CollabBlobStream`）：只收給我的、我要過的那一份。與 Apple 相同。
+            "state_blob" -> {
+                val req = payload.optString("req")
+                val to = payload.optString("to")
+                val toMe = to == "*" || to.equals(manager.currentUserId, ignoreCase = true)
+                if ((req != pendingRequest && req !in sentRequests) || !toMe) return null
+                blobAssembler?.accept(payload)
+                null
             }
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
             "state_store" -> {
@@ -578,13 +594,13 @@ class AndroidCollabController(private val manager: CollaborationManager) {
     private fun answerState(req: String, to: String, blobs: Set<String>, session: PadnoteSession, engineFor: (String) -> InkEngine?) {
         remember(req)
         val items = mutableListOf<Pair<String, JSONObject>>() // ("objects"|"ink", 內容)
+        // 圖檔之後在背景讀（以前在主執行緒逐張讀，圖一多畫面就卡、甚至 ANR）。
+        val images = mutableListOf<Pair<String, JSONObject>>()
         for (entry in sync.snapshot()) {
             val json = entry.toJson()
             if (entry.type == "image") {
                 val hash = entry.groups.values.firstNotNullOfOrNull { it["blob"] as? String }
-                if (hash != null && hash !in blobs) {
-                    runCatching { session.blobBytes(hash) }.getOrNull()?.let { json.put("b64", Base64.encodeToString(it, Base64.NO_WRAP)) }
-                }
+                if (hash != null && hash !in blobs) images += hash to json
             }
             items += "objects" to json
         }
@@ -614,6 +630,32 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             items += "ink" to JSONObject().put("page", page).put("strokes", strokes)
                 .put("removed", JSONArray((ink.sessionRemoved[page] ?: emptySet<String>()).toList()))
         }
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        Thread({
+            // 小圖夾在整份狀態裡；大圖之後分塊送（見 `CollabBlobStream`）。
+            val big = mutableListOf<String>()
+            for ((hash, json) in images) {
+                val bytes = runCatching { session.blobBytes(hash) }.getOrNull() ?: continue
+                if (bytes.size > CollabBlobStream.INLINE_MAX) big += hash
+                else json.put("b64", Base64.encodeToString(bytes, Base64.NO_WRAP))
+            }
+            main.post {
+                sendStateParts(items, req, to)
+                CollabBlobStream.stream(
+                    big, req, to, PROTO,
+                    read = { runCatching { session.blobBytes(it) }.getOrNull() },
+                    queued = { manager.outgoingQueueBytes() },
+                ) { payload ->
+                    if (manager.status !is CollaborationManager.Status.Connected) return@stream false
+                    main.post { manager.broadcastOplog("state_blob", payload) }
+                    true
+                }
+            }
+        }, "collab-answer").start()
+    }
+
+    /** 把回覆的整份狀態切段送出（每段約 [PART_BYTES]）。 */
+    private fun sendStateParts(items: List<Pair<String, JSONObject>>, req: String, to: String) {
         val parts = mutableListOf<Pair<JSONArray, JSONArray>>()
         var objects = JSONArray()
         var inkList = JSONArray()
@@ -658,10 +700,12 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             val json = entry.toJson()
             // 圖片連位元組一起寄存：新加入的人手上沒有任何圖檔。
             if (entry.type == "image") {
+                // 大圖不夾（雲端中繼一段放不下，夾了那一段被拒、整份寄存就收不齊）；之後由在線的人回覆時補。
                 entry.groups.values.firstNotNullOfOrNull { it["blob"] as? String }?.let { hash ->
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         runCatching { session.blobBytes(hash) }.getOrNull()
-                    }?.let { json.put("b64", Base64.encodeToString(it, Base64.NO_WRAP)) }
+                    }?.takeIf { it.size <= CollabBlobStream.DEPOSIT_INLINE_MAX }
+                        ?.let { json.put("b64", Base64.encodeToString(it, Base64.NO_WRAP)) }
                 }
             }
             objects += json
@@ -705,6 +749,14 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             size += length
         }
         parts += objPart to inkPart
+        if (parts.size > STORE_PARTS_MAX) {
+            // 整本超過雲端中繼的寄存上限，送了也存不下。每個房間只提醒一次；原本寄存的那一份照舊留著。與 Apple 相同。
+            if (warnedTooLarge != manager.roomId) {
+                warnedTooLarge = manager.roomId
+                manager.relayNotices.tryEmit(com.kairumo.padnote.L10n.t("relay_notice_store_too_large"))
+            }
+            return
+        }
         val snap = UUID.randomUUID().toString().lowercase()
         val seq = manager.relaySeq
         for ((index, part) in parts.withIndex()) {
@@ -825,6 +877,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     private companion object {
         const val PROTO = 4
+        /** 雲端中繼寄存一份整份狀態最多幾段（與 `deploy/relay-cloudflare` 的 `STORE_PARTS_MAX` 相同）。 */
+        const val STORE_PARTS_MAX = 256
         /** 新圖片的位元組（base64），只在建立時帶（與 Apple 端 `CollabObjectSync.blobField` 相同）。 */
         const val BLOB_FIELD = "#blob"
         /** 逐字格式的錨點（與 Apple 端 `CollabObjectSync.anchorField` 相同）。 */

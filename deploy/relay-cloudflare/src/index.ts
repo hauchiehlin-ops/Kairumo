@@ -31,8 +31,12 @@ export interface Env {
 const DEFAULT_RETENTION_HOURS = 168;
 /** 寄存的整份狀態一段的上限（字元）。SQLite 一列最多 2 MB；App 端每段約 400 KB。 */
 const STORE_PART_MAX = 1_800_000;
-/** 寄存的整份狀態最多幾段（≈ 64 × 400 KB）。 */
-const STORE_PARTS_MAX = 64;
+/** 寄存的整份狀態最多幾段（≈ 256 × 400 KB ≈ 100 MB 內容）。 */
+const STORE_PARTS_MAX = 256;
+/** 預設每間房的人數上限（`MAX_PEERS` 沒設時）。 */
+const DEFAULT_MAX_PEERS = 50;
+/** 用到上限的幾成時先提出警告（暫存與寄存共用）。 */
+const NEAR_LIMIT_RATIO = 0.8;
 
 /** 補發時一則 `oplog_batch` 的大約上限（字元）。WebSocket 一則訊息的上限遠大於此，留足餘裕。 */
 const BATCH_MAX = 900_000;
@@ -154,7 +158,7 @@ export class RelayRoom implements DurableObject {
         return;
       case "oplog":
         if (!bound(msg.room_id, msg.user_id)) return;
-        this.oplog(me, msg);
+        this.oplog(ws, me, msg);
         return;
       case "catchup":
         if (!me.joined || me.room !== msg.room_id) return;
@@ -195,9 +199,10 @@ export class RelayRoom implements DurableObject {
     }
     const others = this.joinedSockets().filter((s) => s !== ws);
     const sameUser = others.filter((s) => this.attachment(s).peer?.user_id === userId);
-    const maxPeers = Number(this.env.MAX_PEERS ?? "16") || 16;
+    const maxPeers = Number(this.env.MAX_PEERS ?? String(DEFAULT_MAX_PEERS)) || DEFAULT_MAX_PEERS;
     if (sameUser.length === 0 && others.length >= maxPeers) {
-      this.send(ws, { type: "error", code: "JOIN_FAILED", message: "這個房間的人數已達上限" });
+      // 專用代碼：App 依它顯示在地化的「房間已滿」（舊版 App 照舊顯示 message）。
+      this.send(ws, { type: "error", code: "ROOM_FULL", message: "這個房間的人數已達上限" });
       return;
     }
 
@@ -253,10 +258,10 @@ export class RelayRoom implements DurableObject {
     });
   }
 
-  private oplog(me: Attachment, msg: any): void {
+  private oplog(ws: WebSocket, me: Attachment, msg: any): void {
     const kind = String(msg.kind ?? "");
     if (kind === "state_store") {
-      this.storeState(me, msg);
+      this.storeState(ws, me, msg);
       return;
     }
     const lamport = Number(msg.lamport ?? 0) || 0;
@@ -275,7 +280,7 @@ export class RelayRoom implements DurableObject {
       this.nextSeq += 1;
       out.seq = seq;
       const text = JSON.stringify(out);
-      this.remember(seq, lamport, text);
+      this.remember(me.room, seq, lamport, text);
       this.broadcastRaw(me.peer!.user_id, text);
       return;
     }
@@ -287,13 +292,25 @@ export class RelayRoom implements DurableObject {
    * （寄存者已收到的最大序號）是明文；內容（`payload`）是端對端加密的，中繼看不到。
    * 收齊一份之後，序號不比現有的舊才換上，舊的刪掉。
    */
-  private storeState(me: Attachment, msg: any): void {
+  private storeState(ws: WebSocket, me: Attachment, msg: any): void {
     const snap = String(msg.snap ?? "");
     const part = Number(msg.part);
     const parts = Number(msg.parts);
     const seq = Number(msg.seq ?? 0) || 0;
     if (!/^[A-Za-z0-9-]{8,64}$/.test(snap) || !Number.isInteger(part) || !Number.isInteger(parts)) return;
-    if (parts < 1 || parts > STORE_PARTS_MAX || part < 0 || part >= parts) return;
+    if (parts < 1 || part < 0 || part >= parts) return;
+    if (parts > STORE_PARTS_MAX) {
+      // 整本超過寄存上限：存不下。只在第一段告訴寄存者一次（不是每段都通知）。
+      // 原本寄存的那一份照舊留著（比什麼都沒有好）。
+      if (part === 0) this.notice(ws, "store_too_large");
+      return;
+    }
+    if (part === 0) {
+      // 新的一份開始寄存：之前沒寄完就放棄的殘段（不是目前用的那一份）清掉，不讓它們一直佔空間。
+      const current = this.meta("snap");
+      this.sql.exec("DELETE FROM snap WHERE snap != ? AND snap != ?", snap, current ?? "");
+      if (parts >= Math.ceil(STORE_PARTS_MAX * NEAR_LIMIT_RATIO)) this.notice(ws, "store_near_limit");
+    }
     const text = JSON.stringify({
       type: "peer_oplog",
       room_id: me.room,
@@ -303,7 +320,10 @@ export class RelayRoom implements DurableObject {
       encrypted: msg.encrypted ?? null,
       payload: msg.payload ?? null,
     });
-    if (text.length > STORE_PART_MAX) return;
+    if (text.length > STORE_PART_MAX) {
+      this.notice(ws, "store_too_large");
+      return;
+    }
     this.sql.exec(
       "INSERT INTO snap (snap, part, parts, seq, msg) VALUES (?, ?, ?, ?, ?) ON CONFLICT(snap, part) DO UPDATE SET msg = excluded.msg",
       snap, part, parts, seq, text,
@@ -335,12 +355,20 @@ export class RelayRoom implements DurableObject {
   }
 
   /** 存進補發暫存，超過上限時從最舊的丟起（與 Rust `Room::remember` 相同）。每筆只寫一列。 */
-  private remember(seq: number, lamport: number, text: string): void {
+  private remember(roomId: string, seq: number, lamport: number, text: string): void {
     this.loadCounters();
     const size = text.length;
     this.sql.exec("INSERT INTO ops (seq, lamport, size, msg) VALUES (?, ?, ?, ?)", seq, lamport, size, text);
     this.count += 1;
     this.bytes += size;
+    // 快滿了：先告訴房裡的人一次（較舊的操作接下來會自動清除；斷線很久的人回來改要整份狀態）。
+    if (
+      (this.count >= RECENT_MAX_COUNT * NEAR_LIMIT_RATIO || this.bytes >= RECENT_MAX_BYTES * NEAR_LIMIT_RATIO) &&
+      this.meta("recent_warned") === null
+    ) {
+      this.setMeta("recent_warned", "1");
+      this.broadcast("", { type: "relay_notice", room_id: roomId, code: "recent_near_limit" });
+    }
     while (this.count > RECENT_MAX_COUNT || (this.bytes > RECENT_MAX_BYTES && this.count > 1)) {
       // 主鍵排序取最舊的一列：只讀一列（不是整表掃描）。
       const oldest = this.sql.exec("SELECT seq, size FROM ops ORDER BY seq ASC LIMIT 1").one();
@@ -485,6 +513,11 @@ export class RelayRoom implements DurableObject {
     for (const s of this.joinedSockets()) {
       if (this.attachment(s).peer?.user_id !== fromUser) this.sendRaw(s, text);
     }
+  }
+
+  /** 中繼給客戶端的提醒（不是錯誤：連線照常）。舊版 App 不認得這個類型，直接略過。 */
+  private notice(ws: WebSocket, code: string): void {
+    this.send(ws, { type: "relay_notice", room_id: this.attachment(ws).room, code });
   }
 
   private send(ws: WebSocket, message: unknown): void {

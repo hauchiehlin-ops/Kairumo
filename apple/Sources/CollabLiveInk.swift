@@ -96,7 +96,9 @@ final class LiveInkSender {
             }
             guard strokeId != nil else { return }
             append(points)
-            if CACurrentMediaTime() - lastSentAt >= CollaborationManager.liveInkInterval { flush(end: false) }
+            let interval = CollaborationManager.liveInkInterval
+                * CollaborationManager.crowdFactor(peerCount: CollaborationManager.shared.peers.count)
+            if CACurrentMediaTime() - lastSentAt >= interval { flush(end: false) }
         default:
             if let pid = pageId ?? erasingPageId {
                 CollaborationManager.shared.endLocalPageEdit(pageId: pid, immediate: false)

@@ -2884,6 +2884,16 @@ internal fun rememberEditorCanvasContext(
     // 與 Apple 端同一套線上格式：物件欄位合併（最後寫入者勝）、文字方塊的字元 CRDT、
     // 逐筆的筆跡、頁面的增刪搬。iPad 與 Android 在同一個房間裡互相看得到對方的每一個修改。
     val collab = remember(notebookId) { AndroidCollabController(collaboration) }
+    // 分塊送來的大圖：暫存檔放快取資料夾，收齊放進核心，再讓畫布重新解碼。
+    LaunchedEffect(collab, notebook?.first) {
+        val session = notebook?.first ?: return@LaunchedEffect
+        collab.blobAssembler = com.kairumo.padnote.collab.CollabBlobAssembler(
+            // profile-scope: device 只放還沒收齊的暫存塊（以內容雜湊命名），收齊即刪；殘留的由快取清理收掉
+            java.io.File(activity.cacheDir, "collab-blobs"),
+            store = { bytes -> session.putBlob(bytes) },
+            onArrived = { com.kairumo.padnote.image.ImageStore.blobRevision++ },
+        )
+    }
     val continuousCollab = remember { ContinuousCollabBridge() }
     val collabRoom = (collaboration.status as? CollaborationManager.Status.Connected)?.roomId
     /** 以哪一個房間為基準 reset 過。斷線重連回同一個房間不算新的起點 —— 那段期間的本機修改還要送出去。 */
@@ -2964,6 +2974,12 @@ internal fun rememberEditorCanvasContext(
                 collab.requestState()
                 collabLastStateRequest = now
             }
+        }
+    }
+    // 中繼的提醒（暫存或寄存快滿、整本超過寄存上限）：以 Toast 顯示，連線照常。
+    LaunchedEffect(collaboration) {
+        collaboration.relayNotices.collect { message ->
+            android.widget.Toast.makeText(activity, message, android.widget.Toast.LENGTH_LONG).show()
         }
     }
     // 「重新載入會議室內容」：以目前內容為基準重新要一次整份狀態（見 `CollaborationManager.requestRoomReload`）。

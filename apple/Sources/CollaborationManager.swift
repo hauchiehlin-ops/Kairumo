@@ -146,6 +146,8 @@ public class CollaborationManager: ObservableObject {
     @Published public private(set) var activePageEditLease: PageEditLease? = nil
     /// 中繼的暫存已經補不回漏掉的那一段（設計 §7）：編輯器向其他成員要整份狀態。
     public let stateSyncNeeded = PassthroughSubject<Void, Never>()
+    /// 中繼的提醒（`relay_notice`）：已在地化的訊息，編輯器以畫布提示顯示。連線照常，不是錯誤。
+    public let relayNotice = PassthroughSubject<String, Never>()
     /// 看過的最大中繼序號（同一個房間裡重連時從這裡補發）。
     private var lastSeq: UInt64 = 0
     /// 還在用舊協定的參與者（送的是整頁筆跡、整個物件、沒有時鐘）。混用會單向同步，要提示更新。
@@ -1029,7 +1031,7 @@ public class CollaborationManager: ObservableObject {
         }
 
         let now = Date().timeIntervalSince1970
-        guard now - lastPresenceSentTime >= presenceThrottleInterval else { return }
+        guard now - lastPresenceSentTime >= presenceThrottleInterval * Self.crowdFactor(peerCount: peers.count) else { return }
         lastPresenceSentTime = now
 
         var payload: [String: Any] = [
@@ -1186,6 +1188,14 @@ public class CollaborationManager: ObservableObject {
     /// 送出間隔：20 Hz（每 50 ms 一批點）。對方的預覽線照樣連續；公開中繼按收到的訊息數計額度，
     /// 30 Hz 多花一半額度卻看不出差別。與 Android `LiveInkSender.INTERVAL_MS` 相同。
     nonisolated static let liveInkInterval: CFTimeInterval = 1.0 / 20.0
+
+    /// 人多時把游標與書寫中預覽放慢的倍數（與 Android `crowdFactor` 相同）。
+    ///
+    /// 這兩種訊息每個人都轉給其他所有人，總量隨人數平方成長：8 人以內照舊；
+    /// 9–20 人放慢一倍；再多放慢三倍（預覽線 5 Hz，仍連續，只是較不平滑）。正式筆畫不受影響。
+    nonisolated static func crowdFactor(peerCount: Int) -> Double {
+        peerCount <= 8 ? 1 : (peerCount <= 20 ? 2 : 4)
+    }
 
     /// 連上房間、而且房間裡有別人：才值得記點送出。
     var isLiveInkReady: Bool {
@@ -1726,6 +1736,23 @@ public class CollaborationManager: ObservableObject {
                 }
             }
             if (json["truncated"] as? Bool) == true { stateSyncNeeded.send(()) }
+
+        case "error":
+            // 會議室人數已滿：明確告訴使用者，不再重連（以前完全沒有處理，畫面停在「連線中」）。
+            // 其他錯誤照舊不在這裡處理，行為不變。
+            guard (json["code"] as? String) == "ROOM_FULL" else { break }
+            disconnect(userInitiated: true)
+            lastErrorMessage = L10n.f("collab_err_room_full", LocalRelayServer.maxPeersPerRoom)
+
+        case "relay_notice":
+            let key: String
+            switch json["code"] as? String {
+            case "recent_near_limit": key = "relay_notice_recent_near_limit"
+            case "store_near_limit": key = "relay_notice_store_near_limit"
+            case "store_too_large": key = "relay_notice_store_too_large"
+            default: return
+            }
+            relayNotice.send(LocalizationManager.shared.localized(key))
 
         case "room_closed":
             // 先記下是哪一本：斷線之後房間與筆記本的關聯就不在了。

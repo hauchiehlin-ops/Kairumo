@@ -308,6 +308,8 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         com.kairumo.padnote.collab.CollabSessions.current?.onAppForeground()
+        // App 一直開著時，回到前景距上次清理超過 6 小時就再清一次可丟棄的暫存（背景執行）。
+        com.kairumo.padnote.platform.StorageSweeper.sweepIfDue(applicationContext)
     }
 
     override fun onStop() {
