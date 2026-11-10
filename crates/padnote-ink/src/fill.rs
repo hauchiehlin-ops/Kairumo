@@ -297,7 +297,8 @@ pub fn fill_scan_paths(polygon: &[(f32, f32)], reach: f32, step: f32) -> Vec<Vec
             }
         }
         xs.sort_by(|a, b| a.total_cmp(b));
-        xs.chunks_exact(2).map(|p| (p[0], p[1])).collect()
+        // 兩兩成對（進、出）。
+        xs.as_chunks::<2>().0.iter().map(|p| (p[0], p[1])).collect()
     };
     // 區段 (a, b) 與另一條線上「重疊最多的那一段」的交集。沒有重疊回 None。
     let clip = |(a, b): (f32, f32), other: &[(f32, f32)]| -> Option<(f32, f32)> {

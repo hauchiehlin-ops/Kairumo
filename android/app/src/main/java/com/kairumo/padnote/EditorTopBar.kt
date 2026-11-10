@@ -938,6 +938,23 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onOpenAssetLibrary() }
                 )
                 DropdownMenuItem(
+                    text = { Text(l10n("add_text_box")) },
+                    modifier = Modifier.testTag("editor.insert.text_box"),
+                    onClick = { showMenu = false; actions.onAddTextBox() }
+                )
+                // 區域填色：下一次點畫布，用目前的顏色填滿點到的封閉區域（與 Apple 相同）。
+                DropdownMenuItem(
+                    text = { Text(l10n("fill_region")) },
+                    modifier = Modifier.testTag("editor.insert.fill_region"),
+                    onClick = { showMenu = false; com.kairumo.padnote.ink.FillPickState.active = true }
+                )
+                // 圖例：著色後說明「哪個顏色代表什麼」（與 Apple「插入」選單同一項）。
+                DropdownMenuItem(
+                    text = { Text(l10n("insert_legend")) },
+                    modifier = Modifier.testTag("editor.insert.legend"),
+                    onClick = { showMenu = false; actions.onInsertLegend() }
+                )
+                DropdownMenuItem(
                     text = { Text(l10n("sticker_library")) },
                     modifier = Modifier.testTag("editor.insert.stickers"),
                     onClick = { showMenu = false; actions.onInsertStickers() }
@@ -1015,23 +1032,6 @@ internal fun EditorTopBar(
                     text = { Text(l10n("theme_tools")) },
                     modifier = Modifier.testTag("editor.insert.theme_tools"),
                     onClick = { showMenu = false; actions.onThemeTools() }
-                )
-                DropdownMenuItem(
-                    text = { Text(l10n("add_text_box")) },
-                    modifier = Modifier.testTag("editor.insert.text_box"),
-                    onClick = { showMenu = false; actions.onAddTextBox() }
-                )
-                // 區域填色：下一次點畫布，用目前的顏色填滿點到的封閉區域（與 Apple 相同）。
-                DropdownMenuItem(
-                    text = { Text(l10n("fill_region")) },
-                    modifier = Modifier.testTag("editor.insert.fill_region"),
-                    onClick = { showMenu = false; com.kairumo.padnote.ink.FillPickState.active = true }
-                )
-                // 圖例：著色後說明「哪個顏色代表什麼」（與 Apple「插入」選單同一項）。
-                DropdownMenuItem(
-                    text = { Text(l10n("insert_legend")) },
-                    modifier = Modifier.testTag("editor.insert.legend"),
-                    onClick = { showMenu = false; actions.onInsertLegend() }
                 )
 
                 HorizontalDivider()
