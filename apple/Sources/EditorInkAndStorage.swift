@@ -549,7 +549,8 @@ extension NotebookEditorView {
 
     /// 別人擦掉的筆畫：只移除這幾筆，別人同時畫的不受影響。
     func applyRemoteInkRemove(pageId: String, wires: [String]) {
-        guard let pageIdx = notebook.pageIds?.firstIndex(of: pageId), !wires.isEmpty else { return }
+        guard let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(pageId) == .orderedSame }),
+              !wires.isEmpty else { return }
         let base = drawingForCollab(page: pageIdx)
         let locals = Set(wires.map(collabInkLedger.localId(forWire:)))
         let merged = CollabInk.removing(locals, from: base)
@@ -907,6 +908,10 @@ extension NotebookEditorView {
                                          added: [], removedIds: Set(ids.map { $0.lowercased() }))
                 ThumbnailPipeline.shared.markDirty(notebookId: notebook.id, pageIndex: pageIdx)
                 thumbnailRevision += 1
+            } else {
+                // 這一頁還在等頁面結構補上：擦除先擱著，頁面到了再套（與 `ink_add`、Android 相同）。
+                // 以前直接丟掉 —— 那幾筆在這台永遠擦不掉。
+                holdCollabInkIfPending(page: pageId, added: [], removed: Set(ids.map { $0.lowercased() }))
             }
             // 舊版留在 PencilKit 圖層裡的筆畫照舊處理。
             applyRemoteInkRemove(pageId: pageId, wires: ids)

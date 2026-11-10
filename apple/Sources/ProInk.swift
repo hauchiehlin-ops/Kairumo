@@ -1196,11 +1196,12 @@ enum ProInkCollab {
     static func applyRemoteOnDisk(directory: URL, notebookId: String, page: Int,
                                   added: [ProStroke], removedIds: Set<String>) {
         var foreign = ProInkStore.load(in: directory, notebookId: notebookId, page: page, foreign: true)
-        let own = ProInkStore.load(in: directory, notebookId: notebookId, page: page)
+        var own = ProInkStore.load(in: directory, notebookId: notebookId, page: page)
         let blocked = ProInkCollab.blockedIds(directory: directory, notebookId: notebookId, page: page)
         let suppressed = ProInkStore.loadSuppressed(in: directory, notebookId: notebookId, page: page)
         var known = Set((foreign + own).map(\.packageId))
         var changed = false
+        var ownChanged = false
         if !removedIds.isEmpty {
             let before = foreign.count
             let gone = foreign.filter { removedIds.contains($0.packageId) }
@@ -1210,6 +1211,15 @@ enum ProInkCollab {
                                            in: directory, notebookId: notebookId, page: page)
             }
             changed = changed || foreign.count != before
+            // 別人擦掉的是**這台自己的**筆畫：也要拿掉（與畫面上的圖層 `applyRemote` 相同）。
+            // 以前這條路只刪「別台筆畫」：房主不在那一頁時，協作者擦掉房主畫的字，
+            // 其他協作者都消失了、房主這台卻留著（實機回報）。墓碑由擦掉的那台寫，這裡不再寫一次。
+            let ownBefore = own.count
+            own.removeAll { removedIds.contains($0.packageId) }
+            if own.count != ownBefore {
+                ProInkStore.saveDeferred(own, in: directory, notebookId: notebookId, page: page)
+                ownChanged = true
+            }
         }
         for stroke in added where !known.contains(stroke.packageId) && !blocked.contains(stroke.packageId)
             && !suppressed.contains(stroke.contentKey) {
@@ -1217,8 +1227,10 @@ enum ProInkCollab {
             known.insert(stroke.packageId)
             changed = true
         }
-        guard changed else { return }
-        ProInkStore.save(foreign, in: directory, notebookId: notebookId, page: page, foreign: true)
+        guard changed || ownChanged else { return }
+        if changed {
+            ProInkStore.save(foreign, in: directory, notebookId: notebookId, page: page, foreign: true)
+        }
         NotificationCenter.default.post(name: AppCommand.proInkDidChange, object: notebookId.lowercased())
     }
 

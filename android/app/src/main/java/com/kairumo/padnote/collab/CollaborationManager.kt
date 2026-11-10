@@ -106,6 +106,18 @@ class CollaborationManager(private val context: Context) {
         private set
     var isHost by mutableStateOf(false)
         private set
+
+    /**
+     * 「重新載入會議室內容」的請求次數（協作者在協作中按「一鍵恢復初始狀態」時改走這裡）。
+     * 編輯器看到它變了，就以目前內容為基準重新向房間要整份狀態 —— 房主回覆的內容補回缺的筆畫與物件，
+     * 房間裡已擦掉的筆畫（回覆附的墓碑）也從這台拿掉。與 Apple `reloadCollabRoomContent` 相同。只在主執行緒動。
+     */
+    var roomReloadRequests by mutableIntStateOf(0)
+        private set
+
+    fun requestRoomReload() {
+        roomReloadRequests++
+    }
     var roomKeyBase64 by mutableStateOf<String?>(null)
         private set
 
