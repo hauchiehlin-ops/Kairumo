@@ -1135,17 +1135,39 @@ public struct NotebookEditorView: View {
             .frame(width: 0, height: 0)
             .alert(localizationManager.localized("revert_to_initial_state"), isPresented: $showRevertConfirmAlert) {
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
-                Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
-                    // 丟掉還沒寫的筆跡，並等背景佇列裡已排的寫入做完 —— 不然它們在還原之後才落盤，
-                    // 把還原好的頁又蓋回編輯過的樣子。
-                    coreInkWork?.cancel()
-                    coreInkWork = nil
-                    activeInkStore.clearAllPendingCoreFlush()
-                    afterCoreInkWrites { revertToInitialState() }
+                if !isCollaborating {
+                    Button(localizationManager.localized("revert_confirm_action"), role: .destructive) {
+                        // 丟掉還沒寫的筆跡，並等背景佇列裡已排的寫入做完 —— 不然它們在還原之後才落盤，
+                        // 把還原好的頁又蓋回編輯過的樣子。
+                        coreInkWork?.cancel()
+                        coreInkWork = nil
+                        activeInkStore.clearAllPendingCoreFlush()
+                        afterCoreInkWrites { revertToInitialState() }
+                    }
+                } else if !collaborationManager.isHost {
+                    Button(localizationManager.localized("collab_reload_room")) { reloadCollabRoomContent() }
                 }
             } message: {
-                Text(localizationManager.localized("revert_to_initial_state_confirm"))
+                Text(localizationManager.localized(revertAlertMessageKey))
             }
+    }
+
+    /// 協作中不做「恢復初始狀態」（與 Android 相同）。
+    ///
+    /// 「初始狀態」是這台打開筆記（或剛進會議室）時的內容，還原只改這台、不產生任何協同操作：
+    /// 其他人的畫面不會變，這台卻退回舊內容、與房間分歧（實機回報）。若改成廣播，又會把所有人
+    /// 這段時間的編輯一起抹掉。所以協作中：協作者改為向房主重新載入會議室的最新內容；
+    /// 房主（會議室以他為準）請先結束協作再從快照恢復。
+    private var revertAlertMessageKey: String {
+        guard isCollaborating else { return "revert_to_initial_state_confirm" }
+        return collaborationManager.isHost ? "revert_in_collab_host" : "revert_in_collab_guest"
+    }
+
+    /// 以房間為基準重新要一次整份狀態：房主回覆的內容補回缺的筆畫與物件，
+    /// 房間裡已擦掉的筆畫（回覆附的墓碑）在這台也拿掉。
+    private func reloadCollabRoomContent() {
+        enterCollabRoomBaseline()
+        showCanvasNotice(localizationManager.localized("collab_reload_requested"))
     }
 
     /// 還原到剛打開這本筆記時的樣子（頁序、每一頁的內容與物件）。

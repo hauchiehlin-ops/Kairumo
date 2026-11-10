@@ -509,7 +509,29 @@ internal fun EditorFloatingPanels(ctx: EditorCanvasContext) = with(ctx) {
         )
     }
 
-    if (showRevertConfirm) {
+    // 協作中不做「恢復初始狀態」（與 Apple 相同）：「初始狀態」是這台打開筆記時的內容，還原只改這台、
+    // 不產生任何協同操作 —— 其他人的畫面不變，這台卻退回舊內容、與房間分歧（實機回報）；
+    // 改成廣播又會抹掉所有人這段時間的編輯。協作者改為向房主重新載入會議室內容；房主請先結束協作。
+    val inCollabRoom = collaboration.status !is CollaborationManager.Status.Disconnected || collaboration.roomId.isNotEmpty()
+    if (showRevertConfirm && inCollabRoom) {
+        AlertDialog(
+            onDismissRequest = { showRevertConfirm = false },
+            title = { Text(l10n("revert_to_initial_state")) },
+            text = { Text(l10n(if (collaboration.isHost) "revert_in_collab_host" else "revert_in_collab_guest")) },
+            confirmButton = {
+                if (!collaboration.isHost) {
+                    TextButton(onClick = {
+                        showRevertConfirm = false
+                        collaboration.requestRoomReload()
+                        android.widget.Toast.makeText(
+                            activity, l10n("collab_reload_requested"), android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }) { Text(l10n("collab_reload_room")) }
+                }
+            },
+            dismissButton = { TextButton(onClick = { showRevertConfirm = false }) { Text(l10n("cancel")) } }
+        )
+    } else if (showRevertConfirm) {
         AlertDialog(
             onDismissRequest = { showRevertConfirm = false },
             title = { Text(l10n("revert_to_initial_state")) },

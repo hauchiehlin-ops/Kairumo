@@ -2966,6 +2966,15 @@ internal fun rememberEditorCanvasContext(
             }
         }
     }
+    // 「重新載入會議室內容」：以目前內容為基準重新要一次整份狀態（見 `CollaborationManager.requestRoomReload`）。
+    LaunchedEffect(collab, collaboration.roomReloadRequests) {
+        if (collaboration.roomReloadRequests == 0) return@LaunchedEffect
+        if (liveCollabRoom() == null || collaboration.peers.isEmpty()) return@LaunchedEffect
+        val session = notebook?.first ?: return@LaunchedEffect
+        collabCanvas()?.let { collab.reset(it, session, preservePendingRequest = true) }
+        collab.requestState()
+        collabLastStateRequest = System.currentTimeMillis()
+    }
     // 整份狀態沒收齊就重新要：第一次的請求或回覆可能在連線剛建立、雙方還在整理的那一瞬間掉了
     // （中繼不暫存 `state_` 類訊息，掉了就沒有人會再補）。收齊一次就停；最多試 8 次。
     LaunchedEffect(collab, collabRoom) {
