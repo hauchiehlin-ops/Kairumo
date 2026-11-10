@@ -30,19 +30,7 @@
         "asr.zh"
       ],
       "optional": true,
-      "notes": "2026-09-21 實測 **HTTP 404** —— 原網址 csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en/resolve/main/model.onnx 不存在。size_bytes 也是估的整數。要用這個模型必須先找到真實網址並重新量測。可選，不影響主要功能。"
-    },
-    {
-      "id": "ct-punct-zh",
-      "url": "",
-      "sha256": "pending",
-      "size_bytes": 293601280,
-      "license": "apache-2.0（僅 HuggingFace model card 標籤，repo 內無授權原文）與 FunASR MODEL_LICENSE v1.1 衝突",
-      "required_for": [
-        "asr.zh"
-      ],
-      "optional": true,
-      "notes": "2026-09-21 實測 **HTTP 401**。授權本來就有疑慮（僅 model card 標籤、repo 內無原文，與 FunASR MODEL_LICENSE v1.1 衝突），在授權釐清之前不要補網址。可選。"
+      "notes": "2026-09-21 實測 HTTP 404（原網址 csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en 不存在）。2026-11-10 複查：官方 funasr/paraformer-zh-streaming 只有 PyTorch 權重（model.pt，Apache-2.0），沒有可直接用的 ONNX；要用必須自行匯出並自行託管（見 models/LICENSE-AUDIT.md 選項 C）。App 目前預設 Whisper，沒有任何程式下載它，所以維持無網址。可選。"
     },
     {
       "id": "whisper-large-v3-turbo-q5",
@@ -68,18 +56,32 @@
         "ocr",
         "hwr.fallback"
       ],
-      "notes": "2026-09-21 實測 **HTTP 401** —— 原網址 huggingface.co/example/rapidocr/... 的 `example` 是佔位字串，那個 repo 不存在。size_bytes 16777216 剛好是 16 MiB，也是估的。OCR 與手寫辨識備援要用它，得先找到真實來源。"
+      "notes": "2026-09-21 實測 HTTP 401（原網址的 example 是佔位字串）。2026-11-10 複查：PP-OCR 是偵測＋辨識＋字典多個檔案（例如 SWHL/RapidOCR，Apache-2.0），單一檔案的清單項目表達不了；App 目前的 OCR 與手寫辨識不走這個模型，沒有任何程式下載它，所以維持無網址。"
     },
     {
       "id": "qwen3-4b-instruct-q4",
-      "url": "",
-      "sha256": "pending",
-      "size_bytes": 2621440000,
-      "license": "Apache-2.0",
+      "url": "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf",
+      "sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+      "size_bytes": 2497280256,
+      "license": "Apache-2.0（Qwen 官方 repo Qwen/Qwen3-4B-GGUF，未設存取限制）",
       "required_for": [
         "llm.summary"
       ],
-      "notes": "2026-09-21 實測 **HTTP 401** —— Qwen/Qwen3-4B-Instruct-GGUF 取不到。size_bytes 2621440000 也是估的整數。另見 android/.../ai/NoteIntelligence.kt：讓使用者下載一個比整個 App 大幾十倍的檔案，這個取捨本身還沒有被接受。"
+      "notes": "2026-11-10 實測：主站與 hf-mirror 的 x-linked-size 與 x-linked-etag（LFS oid＝SHA-256）一致，如上。原本的 Qwen/Qwen3-4B-Instruct-GGUF 不存在（401），改用官方 Qwen3-4B 的 Q4_K_M。只有桌機（llama.cpp）會用到：Apple 用系統內建的 Foundation Models，Android 用 MediaPipe（llm/model.task），兩者都不下載這個檔。",
+      "mirror_url": "https://hf-mirror.com/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf",
+      "optional": true
+    },
+    {
+      "id": "qwen2.5-1.5b-instruct-task",
+      "url": "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task",
+      "sha256": "82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3",
+      "size_bytes": 1598556720,
+      "license": "Apache-2.0（litert-community/Qwen2.5-1.5B-Instruct，未設存取限制）",
+      "required_for": [
+        "llm.summary.android"
+      ],
+      "optional": true,
+      "notes": "2026-11-10 實測：x-linked-size 與 x-linked-etag（LFS oid＝SHA-256）如上。Android 的 AI 摘要（MediaPipe LLM Inference）用它；Apple 用系統內建的 Foundation Models，不下載。q8、上下文 4096：摘要較長的錄音逐字稿夠用。使用者在 AI 摘要視窗按下載才會下載。"
     }
   ]
 }

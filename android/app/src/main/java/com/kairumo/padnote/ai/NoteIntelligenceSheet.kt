@@ -71,6 +71,9 @@ fun NoteIntelligenceSheet(
     var todos by remember { mutableStateOf<List<FfiTodoItem>>(emptyList()) }
     var failure by remember { mutableStateOf<String?>(null) }
     var hasResult by remember { mutableStateOf(false) }
+    /** 模型下載進度（null＝沒在下載）；下載完重組時 [availability] 會變成 AVAILABLE。 */
+    var modelProgress by remember { mutableStateOf<Float?>(null) }
+    var modelError by remember { mutableStateOf<String?>(null) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     // 每次重組都重問一次：使用者可能在 App 開著的時候才把模型放進去，
@@ -97,6 +100,33 @@ fun NoteIntelligenceSheet(
                     when (availability) {
                         NoteIntelligence.Availability.UNSUPPORTED -> notice(l("ai_unsupported"))
                         NoteIntelligence.Availability.NOT_READY -> notice(l("ai_not_ready"))
+                        NoteIntelligence.Availability.NEEDS_DOWNLOAD -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            notice(l("ai_model_download_hint"))
+                            val progress = modelProgress
+                            if (progress != null) {
+                                Text(l("ai_model_downloading"), style = MaterialTheme.typography.bodySmall)
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    progress = { progress }, modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                Button(onClick = {
+                                    modelError = null
+                                    modelProgress = 0f
+                                    scope.launch {
+                                        // 下載很久（約 1.6 GB）而且會阻塞：一定在背景。進度交回主執行緒。
+                                        val error = withContext(Dispatchers.IO) {
+                                            NoteIntelligence.downloadModel(context) { p -> scope.launch { modelProgress = p } }
+                                        }
+                                        modelProgress = null
+                                        modelError = error
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text(l("ai_model_download")) }
+                            }
+                            modelError?.let {
+                                Text(l("hw_asr_download_failed").replace("%@", it),
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                         NoteIntelligence.Availability.AVAILABLE -> {
                             Button(
                                 onClick = {

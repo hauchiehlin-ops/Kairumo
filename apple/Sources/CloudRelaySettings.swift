@@ -24,8 +24,14 @@ struct CloudRelaySettingView: View {
     @State private var showGuide = false
     @Environment(\.openURL) private var openURL
 
+    /// 房主目前實際用的是不是自己的中繼（有效的自訂位址）。
+    private var usingOwnRelay: Bool {
+        CollaborationManager.isValidCloudRelay(collaborationManager.customCloudRelay)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            relayStatus
             HStack(spacing: 6) {
                 Image(systemName: "server.rack")
                     .font(.caption)
@@ -89,6 +95,34 @@ struct CloudRelaySettingView: View {
         }
         .onAppear { draft = collaborationManager.customCloudRelay }
         .sheet(isPresented: $showGuide) { CloudRelayGuideView() }
+    }
+
+    /// 目前用哪個中繼。內建的是**試用**：所有使用者共用免費額度、保留 1 天、寄存較小 ——
+    /// 把限制講清楚，常用的人才知道該架自己的（與 Android `CloudRelaySetting` 相同）。
+    @ViewBuilder
+    private var relayStatus: some View {
+        if usingOwnRelay {
+            Label(localizationManager.localized("cloud_relay_status_own"), systemImage: "checkmark.seal.fill")
+                .font(.caption2)
+                .foregroundColor(.green)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("collab.cloud_relay.status_own")
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(localizationManager.localized("cloud_relay_status_trial"), systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.orange)
+                Text(localizationManager.localized("cloud_relay_trial_limits"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+            .accessibilityIdentifier("collab.cloud_relay.status_trial")
+        }
     }
 
     private func save() {

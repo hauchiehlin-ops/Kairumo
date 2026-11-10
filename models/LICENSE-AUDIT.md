@@ -14,7 +14,7 @@
 | `ppocr-v5` | Apache-2.0 | ✅ 可用 |
 | `qwen3-4b-instruct` | Apache-2.0 | ✅ 可用 |
 | `paraformer-zh-streaming` | Apache-2.0（**repo 內含完整授權原文**） | ⚪ 選用（已自行匯出）—— 預設改為 Whisper，見 ADR-0013 |
-| `ct-punc`（中文標點） | Apache-2.0（**兩個平台的 model card 各自宣告，無授權原文**；見 §2.1） | ⚪ **已退出預設路徑**（2026-09-17，ADR-0013）—— Whisper 自己就會標點 |
+| `ct-punc`（中文標點） | Apache-2.0（**兩個平台的 model card 各自宣告，無授權原文**；見 §2.1） | ❌ **不採用**（2026-11-10 定案，已移出 `models/manifest.json`）—— Whisper 自己就會標點；FunASR 授權「僅供參考與學習」的疑義未解前不散布 |
 | `sensevoice-small` | ❌ FunASR Model License v1.1 | ❌ **不採用** |
 | speaker-diarization | 未確認 | ⏸️ 延後（P2） |
 

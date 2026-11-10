@@ -4,8 +4,9 @@
 > 決策 D6：**程式碼授權與模型權重授權不同，必須分別確認**。每次升級模型須重審本表。
 
 > 📋 **完整稽核與判讀見 [`LICENSE-AUDIT.md`](LICENSE-AUDIT.md)。**
-> 其中 Paraformer-zh / ct-punc 的雙通路授權衝突是目前唯一的阻擋項（D-07），
-> 且**影響 P0 功能 C5 中文標點還原**。
+> Paraformer-zh / ct-punc 的雙通路授權衝突（D-07）已處理：預設語音辨識改用 Whisper（MIT，自己會標點，
+> 涵蓋 C5 中文標點還原）；ct-punc 於 2026-11-10 定案**不採用**並移出 `manifest.json`；Paraformer 維持選用、無網址。
+> App 實際會下載的只有 Whisper 與 Silero VAD（皆 MIT，網址於 2026-11-10 複驗有效）。
 
 ## 稽核狀態圖例
 - ✅ 已確認可商用/可自由散布

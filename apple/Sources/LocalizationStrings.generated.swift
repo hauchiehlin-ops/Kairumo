@@ -255,6 +255,30 @@ extension LocalizationManager {
             .ko: "요점",
             .th: "ประเด็นสำคัญ"
         ],
+        "ai_model_download": [
+            .zhHant: "下載 AI 摘要模型（約 1.6 GB）",
+            .en: "Download AI summary model (about 1.6 GB)",
+            .zhHans: "下载 AI 摘要模型（约 1.6 GB）",
+            .ja: "AI 要約モデルをダウンロード（約 1.6 GB）",
+            .ko: "AI 요약 모델 다운로드(약 1.6GB)",
+            .th: "ดาวน์โหลดโมเดลสรุป AI (ประมาณ 1.6 GB)"
+        ],
+        "ai_model_download_hint": [
+            .zhHant: "AI 摘要要先下載一個裝置端模型（Qwen2.5-1.5B，約 1.6 GB，只需下載一次，建議連 Wi‑Fi）。下載後完全在本機執行，不會把你的筆記傳出去。",
+            .en: "AI summary needs an on-device model first (Qwen2.5-1.5B, about 1.6 GB, downloaded once; Wi‑Fi recommended). After that it runs entirely on this device and never sends your notes anywhere.",
+            .zhHans: "AI 摘要要先下载一个设备端模型（Qwen2.5-1.5B，约 1.6 GB，只需下载一次，建议连 Wi‑Fi）。下载后完全在本机执行，不会把你的笔记传出去。",
+            .ja: "AI 要約には、まず端末内モデル（Qwen2.5-1.5B、約 1.6 GB、ダウンロードは 1 回だけ。Wi‑Fi 推奨）が必要です。その後は端末内だけで動作し、ノートを外部に送信することはありません。",
+            .ko: "AI 요약을 쓰려면 먼저 온디바이스 모델(Qwen2.5-1.5B, 약 1.6GB, 한 번만 다운로드, Wi‑Fi 권장)이 필요합니다. 그 뒤로는 전부 기기 안에서 동작하며 노트를 외부로 보내지 않습니다.",
+            .th: "การสรุปด้วย AI ต้องดาวน์โหลดโมเดลบนเครื่องก่อน (Qwen2.5-1.5B ประมาณ 1.6 GB ดาวน์โหลดครั้งเดียว แนะนำให้ใช้ Wi‑Fi) หลังจากนั้นจะทำงานบนเครื่องทั้งหมดและไม่ส่งโน้ตของคุณออกไป"
+        ],
+        "ai_model_downloading": [
+            .zhHant: "正在下載 AI 摘要模型…（可以先關掉這個視窗，中斷了下次會接著下載）",
+            .en: "Downloading the AI summary model… (you can close this window; an interrupted download resumes next time)",
+            .zhHans: "正在下载 AI 摘要模型…（可以先关掉这个窗口，中断了下次会接着下载）",
+            .ja: "AI 要約モデルをダウンロード中…（このウィンドウを閉じても大丈夫です。中断しても次回続きから再開します）",
+            .ko: "AI 요약 모델을 다운로드하는 중…(이 창을 닫아도 됩니다. 중단되면 다음에 이어서 받습니다)",
+            .th: "กำลังดาวน์โหลดโมเดลสรุป AI… (ปิดหน้าต่างนี้ได้ หากขาดตอนจะดาวน์โหลดต่อในครั้งถัดไป)"
+        ],
         "ai_no_todos": [
             .zhHant: "這則筆記裡沒有待辦事項。",
             .en: "No to-dos in this note.",
@@ -4568,12 +4592,12 @@ extension LocalizationManager {
             .th: "%@ · หน้า %d"
         ],
         "cloud_collab_retention_hint": [
-            .zhHant: "房主不在線也能加入：內容會加密寄存在中繼上。大家都離開（或房主按「結束協同會議」）之後，中繼再保留 7 天，讓還沒同步的人回來拿最終版本，之後自動刪除。每個人的筆記都留在自己的裝置上。",
-            .en: "People can join even when the host is offline: the content is stored on the relay, encrypted. After everyone leaves (or the host taps End Collaboration), the relay keeps it for 7 more days so anyone who hasn't synced can come back for the final version, then deletes it automatically. Everyone keeps their own copy on their device.",
-            .zhHans: "房主不在线也能加入：内容会加密寄存在中继上。大家都离开（或房主按「结束协同会议」）之后，中继再保留 7 天，让还没同步的人回来拿最终版本，之后自动删除。每个人的笔记都留在自己的设备上。",
-            .ja: "ホストがオフラインでも参加できます。内容は暗号化されてリレーに保管されます。全員が退出した後（またはホストが「共同編集を終了」した後）もリレーは 7 日間保持し、まだ同期していない人が最終版を取りに戻れるようにしてから自動で削除します。各自のノートは自分の端末に残ります。",
-            .ko: "호스트가 오프라인이어도 참여할 수 있습니다. 내용은 암호화되어 릴레이에 보관됩니다. 모두 나간 뒤(또는 호스트가 '공동 작업 종료'를 누른 뒤)에도 릴레이는 7일 동안 보관해 아직 동기화하지 못한 사람이 최종본을 받아 갈 수 있게 한 다음 자동으로 삭제합니다. 각자의 노트는 자기 기기에 남습니다.",
-            .th: "เข้าร่วมได้แม้เจ้าของห้องออฟไลน์: เนื้อหาถูกเข้ารหัสและฝากไว้บนรีเลย์ หลังทุกคนออก (หรือเจ้าของห้องแตะ “สิ้นสุดการทำงานร่วมกัน”) รีเลย์จะเก็บไว้อีก 7 วันเพื่อให้คนที่ยังไม่ได้ซิงก์กลับมารับฉบับสุดท้าย แล้วลบอัตโนมัติ สมุดโน้ตของแต่ละคนยังอยู่บนอุปกรณ์ของตัวเอง"
+            .zhHant: "房主不在線也能加入：內容會加密寄存在中繼上。大家都離開（或房主按「結束協同會議」）之後，中繼再保留一段時間（內建試用中繼 1 天，自己的中繼預設 7 天），讓還沒同步的人回來拿最終版本，之後自動刪除。每個人的筆記都留在自己的裝置上。",
+            .en: "People can join even when the host is offline: the content is stored on the relay, encrypted. After everyone leaves (or the host taps End Collaboration), the relay keeps it for a while (1 day on the built-in trial relay, 7 days by default on your own relay) so anyone who hasn't synced can come back for the final version, then deletes it automatically. Everyone keeps their own copy on their device.",
+            .zhHans: "房主不在线也能加入：内容会加密寄存在中继上。大家都离开（或房主按「结束协同会议」）之后，中继再保留一段时间（内建试用中继 1 天，自己的中继默认 7 天），让还没同步的人回来拿最终版本，之后自动删除。每个人的笔记都留在自己的设备上。",
+            .ja: "ホストがオフラインでも参加できます。内容は暗号化されてリレーに保管されます。全員が退出した後（またはホストが「共同編集を終了」した後）もリレーはしばらく保持し（内蔵の試用中継は 1 日、自分の中継は既定で 7 日）、まだ同期していない人が最終版を取りに戻れるようにしてから自動で削除します。各自のノートは自分の端末に残ります。",
+            .ko: "호스트가 오프라인이어도 참여할 수 있습니다. 내용은 암호화되어 릴레이에 보관됩니다. 모두 나간 뒤(또는 호스트가 '공동 작업 종료'를 누른 뒤)에도 릴레이는 한동안(내장 체험 중계 1일, 내 중계 기본 7일) 보관해 아직 동기화하지 못한 사람이 최종본을 받아 갈 수 있게 한 다음 자동으로 삭제합니다. 각자의 노트는 자기 기기에 남습니다.",
+            .th: "เข้าร่วมได้แม้เจ้าของห้องออฟไลน์: เนื้อหาถูกเข้ารหัสและฝากไว้บนรีเลย์ หลังทุกคนออก (หรือเจ้าของห้องแตะ “สิ้นสุดการทำงานร่วมกัน”) รีเลย์จะเก็บไว้อีกระยะหนึ่ง (รีเลย์ทดลองในตัว 1 วัน รีเลย์ของคุณเองค่าเริ่มต้น 7 วัน) เพื่อให้คนที่ยังไม่ได้ซิงก์กลับมารับฉบับสุดท้าย แล้วลบอัตโนมัติ สมุดโน้ตของแต่ละคนยังอยู่บนอุปกรณ์ของตัวเอง"
         ],
         "cloud_collab_revoke": [
             .zhHant: "移除這位成員",
@@ -4704,12 +4728,12 @@ extension LocalizationManager {
             .th: "รับที่อยู่รีเลย์ของคุณเอง (ฟรี ไม่ต้องเขียนโปรแกรม)"
         ],
         "cloud_relay_hint": [
-            .zhHant: "雲端共享的即時房間開在這台中繼上。只有房主的設定有作用：邀請會帶上這個位址，協作者不必設定。留空＝使用 Kairumo 內建的中繼（所有使用者共用每日免費額度）。",
-            .en: "Cloud-shared live rooms run on this relay. Only the host's setting matters: invites carry this address, so collaborators don't need to set anything. Leave empty to use Kairumo's built-in relay (its free daily quota is shared by all users).",
-            .zhHans: "云端共享的实时房间开在这台中继上。只有房主的设置有作用：邀请会带上这个地址，协作者不必设置。留空＝使用 Kairumo 内建的中继（所有用户共用每日免费额度）。",
-            .ja: "クラウド共有のリアルタイムルームはこの中継サーバー上に作られます。有効なのはホストの設定だけです。招待にこのアドレスが含まれるので、共同編集者は設定不要です。空欄の場合は Kairumo 内蔵の中継を使います（1 日の無料枠は全ユーザーで共有）。",
-            .ko: "클라우드 공유 실시간 방은 이 중계 서버에서 열립니다. 호스트의 설정만 적용됩니다. 초대에 이 주소가 포함되므로 공동 작업자는 설정할 필요가 없습니다. 비워 두면 Kairumo 내장 중계를 사용합니다(하루 무료 한도를 모든 사용자가 공유).",
-            .th: "ห้องเรียลไทม์ที่แชร์ผ่านคลาวด์จะเปิดบนรีเลย์นี้ ใช้เฉพาะการตั้งค่าของเจ้าของห้อง: คำเชิญจะแนบที่อยู่นี้ไปด้วย ผู้ร่วมงานไม่ต้องตั้งค่า เว้นว่างไว้เพื่อใช้รีเลย์ในตัวของ Kairumo (โควตาฟรีรายวันใช้ร่วมกันทุกคน)"
+            .zhHant: "雲端共享的即時房間開在這台中繼上。只有房主的設定有作用：邀請會帶上這個位址，協作者不必設定。留空＝使用 Kairumo 內建的試用中繼。",
+            .en: "Cloud-shared live rooms run on this relay. Only the host's setting matters: invites carry this address, so collaborators don't need to set anything. Leave empty to use Kairumo's built-in trial relay.",
+            .zhHans: "云端共享的实时房间开在这台中继上。只有房主的设置有作用：邀请会带上这个地址，协作者不必设置。留空＝使用 Kairumo 内建的试用中继。",
+            .ja: "クラウド共有のリアルタイムルームはこの中継サーバー上に作られます。有効なのはホストの設定だけです。招待にこのアドレスが含まれるので、共同編集者は設定不要です。空欄の場合は Kairumo 内蔵の試用中継を使います。",
+            .ko: "클라우드 공유 실시간 방은 이 중계 서버에서 열립니다. 호스트의 설정만 적용됩니다. 초대에 이 주소가 포함되므로 공동 작업자는 설정할 필요가 없습니다. 비워 두면 Kairumo 내장 체험 중계를 사용합니다.",
+            .th: "ห้องเรียลไทม์ที่แชร์ผ่านคลาวด์จะเปิดบนรีเลย์นี้ ใช้เฉพาะการตั้งค่าของเจ้าของห้อง: คำเชิญจะแนบที่อยู่นี้ไปด้วย ผู้ร่วมงานไม่ต้องตั้งค่า เว้นว่างไว้เพื่อใช้รีเลย์ทดลองในตัวของ Kairumo"
         ],
         "cloud_relay_invalid": [
             .zhHant: "中繼位址必須以 wss:// 開頭（加密連線），例如 wss://kairumo-relay.你的名稱.workers.dev",
@@ -4736,12 +4760,12 @@ extension LocalizationManager {
             .th: "เปิดการติดตั้งในคลิกเดียวของ Cloudflare"
         ],
         "cloud_relay_own_title": [
-            .zhHant: "使用自己的中繼（選用）",
-            .en: "Use your own relay (optional)",
-            .zhHans: "使用自己的中继（可选）",
-            .ja: "自分の中継を使う（任意）",
-            .ko: "내 중계 사용(선택)",
-            .th: "ใช้รีเลย์ของตัวเอง (ไม่บังคับ)"
+            .zhHant: "使用自己的中繼（建議）",
+            .en: "Use your own relay (recommended)",
+            .zhHans: "使用自己的中继（建议）",
+            .ja: "自分の中継を使う（推奨）",
+            .ko: "내 중계 사용(권장)",
+            .th: "ใช้รีเลย์ของตัวเอง (แนะนำ)"
         ],
         "cloud_relay_own_usage": [
             .zhHant: "內建中繼由所有 Kairumo 使用者共用每日免費額度。常用雲端共享的話，可以免費架一台自己的：① 按「一鍵申請自己的中繼」，在 Cloudflare 完成部署（約 10 分鐘，全程在瀏覽器）；② 複製部署好的網址；③ 貼到下方欄位，按「儲存」。只有房主需要設定。看不懂就按「如何取得自己的中繼位址？」查看詳細步驟。",
@@ -4782,6 +4806,22 @@ extension LocalizationManager {
             .ja: "GitHub に登録",
             .ko: "GitHub 가입",
             .th: "สมัคร GitHub"
+        ],
+        "cloud_relay_status_own": [
+            .zhHant: "目前使用：你自己的中繼。每日額度只有你和你的協作者在用；會議室保留天數依你的設定（預設 7 天）。",
+            .en: "Currently using: your own relay. Its daily quota is used only by you and your collaborators; rooms are kept as long as you configured (7 days by default).",
+            .zhHans: "当前使用：你自己的中继。每日额度只有你和你的协作者在用；会议室保留天数按你的设置（默认 7 天）。",
+            .ja: "現在の中継：自分の中継。1 日の枠を使うのはあなたと共同編集者だけです。会議室の保持日数は設定どおり（既定 7 日）です。",
+            .ko: "현재 사용 중: 내 중계. 하루 한도는 나와 공동 작업자만 사용하며, 회의실 보관 기간은 설정한 대로입니다(기본 7일).",
+            .th: "กำลังใช้: รีเลย์ของคุณเอง โควตารายวันใช้เฉพาะคุณและผู้ร่วมงาน ห้องประชุมจะเก็บไว้ตามที่ตั้งค่า (ค่าเริ่มต้น 7 วัน)"
+        ],
+        "cloud_relay_status_trial": [
+            .zhHant: "目前使用：Kairumo 內建的試用中繼",
+            .en: "Currently using: Kairumo's built-in trial relay",
+            .zhHans: "当前使用：Kairumo 内建的试用中继",
+            .ja: "現在の中継：Kairumo 内蔵の試用中継",
+            .ko: "현재 사용 중: Kairumo 내장 체험 중계",
+            .th: "กำลังใช้: รีเลย์ทดลองในตัวของ Kairumo"
         ],
         "cloud_relay_step1": [
             .zhHant: "1. 註冊兩個免費帳號：Cloudflare（中繼放在這裡）與 GitHub（存放中繼程式的副本）。已經有的話直接跳過。",
@@ -4838,6 +4878,14 @@ extension LocalizationManager {
             .ja: "クラウド共有の中継（ネットワークをまたぐ）",
             .ko: "클라우드 공유 중계(다른 네트워크 간)",
             .th: "รีเลย์สำหรับแชร์ผ่านคลาวด์ (ข้ามเครือข่าย)"
+        ],
+        "cloud_relay_trial_limits": [
+            .zhHant: "試用中繼的限制：\n• 所有 Kairumo 使用者共用同一份每日免費額度，用完當天就連不上，台灣時間每天早上 8 點恢復\n• 大家都離開後，會議室只保留 1 天\n• 寄存內容上限約 64 MB：筆記較大時，房主不在線時加入的人可能拿不到完整內容\n經常使用雲端共享，建議架一台自己的中繼（免費，約 10 分鐘）。同一個 Wi‑Fi 的協作不經過中繼，不受這些限制。",
+            .en: "Limits of the trial relay:\n• The free daily quota is shared by all Kairumo users; once it runs out, cloud sharing stops working for the rest of the day (it resets daily at 00:00 UTC)\n• Rooms are kept for only 1 day after everyone leaves\n• Stored content is capped at about 64 MB: for larger notebooks, people who join while the host is offline may not get everything\nIf you use cloud sharing often, set up your own relay (free, about 10 minutes). Collaboration on the same Wi‑Fi doesn't use a relay and has none of these limits.",
+            .zhHans: "试用中继的限制：\n• 所有 Kairumo 用户共用同一份每日免费额度，用完当天就连不上，每天北京时间早上 8 点恢复\n• 大家都离开后，会议室只保留 1 天\n• 寄存内容上限约 64 MB：笔记较大时，房主不在线时加入的人可能拿不到完整内容\n经常使用云端共享，建议架一台自己的中继（免费，约 10 分钟）。同一个 Wi‑Fi 的协作不经过中继，不受这些限制。",
+            .ja: "試用中継の制限：\n• 1 日の無料枠を Kairumo の全ユーザーで共有しています。使い切るとその日はつながらなくなり、毎日 UTC 0 時（日本時間 9 時）にリセットされます\n• 全員が退出した後、会議室は 1 日間だけ保持されます\n• 保管できる内容は約 64 MB まで：ノートが大きいと、ホストがオフラインのときに参加した人は全内容を受け取れない場合があります\nクラウド共有をよく使う場合は、自分の中継を用意することをおすすめします（無料、約 10 分）。同じ Wi‑Fi での共同編集は中継を使わないため、これらの制限はありません。",
+            .ko: "체험 중계의 제한:\n• 하루 무료 한도를 모든 Kairumo 사용자가 함께 씁니다. 다 쓰면 그날은 연결되지 않으며, 매일 UTC 0시(한국 시간 오전 9시)에 초기화됩니다\n• 모두 나간 뒤 회의실은 1일만 보관됩니다\n• 보관 내용은 약 64MB까지: 노트가 크면 호스트가 오프라인일 때 참여한 사람은 전체 내용을 받지 못할 수 있습니다\n클라우드 공유를 자주 쓴다면 내 중계를 만드는 것을 권장합니다(무료, 약 10분). 같은 Wi‑Fi에서의 협업은 중계를 거치지 않아 이런 제한이 없습니다.",
+            .th: "ข้อจำกัดของรีเลย์ทดลอง:\n• ผู้ใช้ Kairumo ทุกคนใช้โควตาฟรีรายวันร่วมกัน เมื่อหมดแล้ววันนั้นจะเชื่อมต่อไม่ได้ และจะรีเซ็ตทุกวันเวลา 00:00 UTC (7 โมงเช้าเวลาไทย)\n• หลังทุกคนออก ห้องประชุมจะเก็บไว้เพียง 1 วัน\n• เนื้อหาที่ฝากได้สูงสุดประมาณ 64 MB: หากสมุดบันทึกใหญ่ ผู้ที่เข้าร่วมขณะโฮสต์ออฟไลน์อาจไม่ได้รับเนื้อหาทั้งหมด\nหากใช้การแชร์ผ่านคลาวด์บ่อย แนะนำให้ตั้งรีเลย์ของตัวเอง (ฟรี ประมาณ 10 นาที) การทำงานร่วมกันบน Wi‑Fi เดียวกันไม่ผ่านรีเลย์ จึงไม่มีข้อจำกัดเหล่านี้"
         ],
         "cloud_sync": [
             .zhHant: "雲端同步",
@@ -10928,12 +10976,12 @@ extension LocalizationManager {
             .th: "สิ้นสุดการทำงานร่วมกัน"
         ],
         "end_session_confirm": [
-            .zhHant: "確認結束多人協同會議？所有在線成員將被中斷連線。雲端共享的房間會在中繼上再保留 7 天，讓不在線的人回來拿最終版本，之後自動刪除。",
-            .en: "End collaborative session? All online participants will be disconnected. A cloud-shared room stays on the relay for 7 more days so offline people can fetch the final version, then it is deleted automatically.",
-            .zhHans: "确认结束多人协同会议？所有在线成员将被中断连接。云端共享的房间会在中继上再保留 7 天，让不在线的人回来拿最终版本，之后自动删除。",
-            .ja: "共同編集を終了しますか？オンラインの参加者はすべて切断されます。クラウド共有のルームはリレー上にさらに 7 日間残り、オフラインの人が最終版を取得できるようにしてから自動で削除されます。",
-            .ko: "공동 작업을 종료할까요? 온라인 참여자는 모두 연결이 끊깁니다. 클라우드 공유 방은 릴레이에 7일 더 남아 오프라인이던 사람이 최종본을 받을 수 있게 한 뒤 자동으로 삭제됩니다.",
-            .th: "สิ้นสุดการทำงานร่วมกันหรือไม่? ผู้เข้าร่วมที่ออนไลน์ทั้งหมดจะถูกตัดการเชื่อมต่อ ห้องที่แชร์ผ่านคลาวด์จะอยู่บนรีเลย์อีก 7 วันเพื่อให้คนที่ออฟไลน์กลับมารับฉบับสุดท้าย แล้วจะถูกลบอัตโนมัติ"
+            .zhHant: "確認結束多人協同會議？所有在線成員將被中斷連線。雲端共享的房間會在中繼上再保留一段時間（內建試用中繼 1 天，自己的中繼預設 7 天），讓不在線的人回來拿最終版本，之後自動刪除。",
+            .en: "End collaborative session? All online participants will be disconnected. A cloud-shared room stays on the relay for a while (1 day on the built-in trial relay, 7 days by default on your own relay) so offline people can fetch the final version, then it is deleted automatically.",
+            .zhHans: "确认结束多人协同会议？所有在线成员将被中断连接。云端共享的房间会在中继上再保留一段时间（内建试用中继 1 天，自己的中继默认 7 天），让不在线的人回来拿最终版本，之后自动删除。",
+            .ja: "共同編集を終了しますか？オンラインの参加者はすべて切断されます。クラウド共有のルームはリレー上にしばらく残り（内蔵の試用中継は 1 日、自分の中継は既定で 7 日）、オフラインの人が最終版を取得できるようにしてから自動で削除されます。",
+            .ko: "공동 작업을 종료할까요? 온라인 참여자는 모두 연결이 끊깁니다. 클라우드 공유 방은 릴레이에 한동안 남아(내장 체험 중계 1일, 내 중계 기본 7일) 오프라인이던 사람이 최종본을 받을 수 있게 한 뒤 자동으로 삭제됩니다.",
+            .th: "สิ้นสุดการทำงานร่วมกันหรือไม่? ผู้เข้าร่วมที่ออนไลน์ทั้งหมดจะถูกตัดการเชื่อมต่อ ห้องที่แชร์ผ่านคลาวด์จะอยู่บนรีเลย์อีกระยะหนึ่ง (รีเลย์ทดลองในตัว 1 วัน รีเลย์ของคุณเองค่าเริ่มต้น 7 วัน) เพื่อให้คนที่ออฟไลน์กลับมารับฉบับสุดท้าย แล้วจะถูกลบอัตโนมัติ"
         ],
         "engineering_dim_tip": [
             .zhHant: "點擊一鍵貼入畫布零件旁",
