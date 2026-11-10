@@ -43,6 +43,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
      * 房主還在等筆畫補上的頁被當成「只有自己有的空白頁」刪掉，加入者只剩第一頁。
      */
     private val partsByRequest = HashMap<String, HashSet<Int>>()
+    /** 每一次請求採用的回覆者（與 Apple `CollabStateSync.responderByRequest` 相同）。 */
+    private val responderByRequest = HashMap<String, String>()
     /** 這個房間收過的**任何一份**整份狀態（寄存的、每一次回覆的）裡出現過的鍵。換房間才清。 */
     private var roomKeys = HashSet<String>()
     // 中繼寄存的整份狀態（`state_store`）的計段，與自己發出的請求分開。
@@ -79,6 +81,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             pendingRequest = null
             sentRequests.clear()
             partsByRequest.clear()
+            responderByRequest.clear()
             roomKeys = HashSet()
             syncedOnce = false
         }
@@ -245,13 +248,29 @@ class AndroidCollabController(private val manager: CollaborationManager) {
             }
             "state_request" -> {
                 val req = payload.optString("req").ifEmpty { return null }
-                // 排名：除了請求者以外，依使用者 id 排序。第一名立刻回，其餘的人依序多等一下 ——
-                // 排在前面的人若是舊版（不會回），後面的人照樣會補上。
-                val everyone = (manager.peers.map { it.userId } + manager.currentUserId).filter { it != op.userId }.sorted()
-                val rank = everyone.indexOf(manager.currentUserId).coerceAtLeast(0)
+                // 誰來回：**房主優先**。以前依使用者 id 排序、第一名先回 —— 第一名常是另一位協作者，
+                // 他自己可能也剛重連、只同步到一半；他一回，房主就不再回，重連的人拿到不完整的那一份
+                // （實機：協作者斷線再連，看不到其他人先前的修改，房主的畫面卻都對）。
+                // 房主在線時，協作者只在自己完整同步過、而且房主遲遲沒回時才補回。與 Apple 相同。
+                val me = manager.currentUserId
+                val requester = op.userId
+                val ownerOnline = manager.peers.any { it.role == "owner" && it.userId != requester }
+                val delayMs = when {
+                    manager.isHost -> 0L
+                    ownerOnline -> {
+                        if (!syncedOnce) return null
+                        val others = (manager.peers.filter { it.role != "owner" && it.userId != requester }
+                            .map { it.userId } + me).sorted()
+                        HOST_GRACE_MS + others.indexOf(me).coerceAtLeast(0) * ANSWER_STAGGER_MS
+                    }
+                    else -> {
+                        val everyone = (manager.peers.map { it.userId } + me).filter { it != requester }.sorted()
+                        everyone.indexOf(me).coerceAtLeast(0) * ANSWER_STAGGER_MS
+                    }
+                }
                 val blobsArray = payload.optJSONArray("blobs")
                 val blobs = (0 until (blobsArray?.length() ?: 0)).map { blobsArray!!.optString(it) }.toSet()
-                later(rank * ANSWER_STAGGER_MS) {
+                later(delayMs) {
                     if (req !in answered) answerState(req, op.userId, blobs, session, engineFor)
                 }
                 null
@@ -262,6 +281,10 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 val to = payload.optString("to")
                 val toMe = to.isEmpty() || to == "*" || to.equals(manager.currentUserId, ignoreCase = true)
                 if ((req != pendingRequest && req !in sentRequests) || !toMe) return null
+                // 只收第一位回覆者的段落：兩個人的分段方式不同，混在一起會湊出缺一塊的整份狀態。與 Apple 相同。
+                val chosen = responderByRequest[req]
+                if (chosen != null && chosen != op.userId) return null
+                responderByRequest[req] = op.userId
                 applySnapshotPart(payload, session, meta, canvas, engineFor, req = req)
             }
             // 中繼寄存的整份狀態（只在補發時給剛進房的人；中繼不轉送）。以它自己的 `snap` 計段。
@@ -764,6 +787,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         if (received.size >= parts) {
             if (storedSnap == null) {
                 partsByRequest.remove(req)
+                responderByRequest.remove(req)
                 if (pendingRequest == req) pendingRequest = null
                 // 只有回覆這台請求的那一份算「完整同步過」：寄存的那一份可能比較舊。與 Apple 相同。
                 syncedOnce = true
@@ -809,5 +833,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         const val PART_BYTES = 400_000
         /** 回覆整份狀態時，排名每多一位多等的時間。 */
         const val ANSWER_STAGGER_MS = 700L
+        /** 房主在線時，協作者多等這麼久才補回（房主的回覆通常已經到了）。與 Apple `hostGrace` 相同。 */
+        const val HOST_GRACE_MS = 3_000L
     }
 }
