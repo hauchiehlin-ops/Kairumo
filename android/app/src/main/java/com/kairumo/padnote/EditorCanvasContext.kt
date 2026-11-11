@@ -2981,6 +2981,16 @@ internal fun rememberEditorCanvasContext(
             sessionRevision++
         }
     }
+    // 協同中這一本的檔案同步先擱著（見 `CollabImportHold`）；離開房間時放掉，欠著的那一輪立刻補。
+    DisposableEffect(notebookId, inRoom) {
+        val id = notebookId
+        if (id != null && inRoom) com.kairumo.padnote.collab.CollabImportHold.hold(id)
+        onDispose {
+            if (id != null && com.kairumo.padnote.collab.CollabImportHold.release(id)) {
+                com.kairumo.padnote.sync.FocusSync.afterCollaboration()
+            }
+        }
+    }
     LaunchedEffect(inRoom) {
         if (collabReloadGate.onCollaborationChanged(inRoom)) {
             while (engine.isDrawing || InkEngine.anyDrawing) kotlinx.coroutines.delay(50)

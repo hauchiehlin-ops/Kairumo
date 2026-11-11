@@ -180,9 +180,12 @@ class LanLink(
 
     override fun focusedNotebook(): String? = focused
 
-    override fun packagePath(notebookId: String): String? =
+    override fun packagePath(notebookId: String): String? {
+        // 正在即時協同的這一本：區網先不收也不送（見 `CollabImportHold`），離開房間再補。
+        if (com.kairumo.padnote.collab.CollabImportHold.deferIfHeld(notebookId)) return null
         // 沒有這本就回 null：區網不負責建立整本筆記，那是整庫同步的事。
-        findPackage(app, notebookId)?.absolutePath
+        return findPackage(app, notebookId)?.absolutePath
+    }
 
     override fun onReceived(notebookId: String, files: UInt) {
         FocusSync.lanReceived(notebookId)
