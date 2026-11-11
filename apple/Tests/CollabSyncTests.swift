@@ -547,6 +547,22 @@ final class CollabInkTombstoneTests: XCTestCase {
         XCTAssertTrue(ProInkStore.load(in: dir, notebookId: nid, page: 0, foreign: true).isEmpty)
     }
 
+    /// 第一頁擦不掉：剛打開筆記時建立、之後被捲出畫面的圖層記得的是舊內容。擦除交給它時，
+    /// 它手上沒有那幾筆 —— 以前什麼都沒刪、檔案也沒動。
+    func testRemoteEraseIgnoresStaleOffscreenLayer() {
+        let stale = ProInkLayerView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
+        stale.load(directory: dir, notebookId: nid, pageIndex: 0)   // 載入時這一頁還是空的
+        let mine = [line(10), line(30)]
+        ProInkStore.save(mine, in: dir, notebookId: nid, page: 0)    // 之後在別的畫布上寫進這一頁
+        let erased = Set(mine.map(\.packageId))
+
+        ProInkCollab.applyRemote(directory: dir, notebookId: nid, page: 0, added: [], removedIds: erased)
+
+        XCTAssertTrue(ProInkStore.load(in: dir, notebookId: nid, page: 0).isEmpty, "畫面外的舊圖層讓擦除落空")
+        XCTAssertTrue(stale.allStrokes.isEmpty, "畫面外的圖層要從檔案重讀")
+        withExtendedLifetime(stale) {}
+    }
+
     func testOtherStrokesStillArrive() {
         CollabInkTombstones.record(["gone-id"], page: page, directory: dir, notebookId: nid)
         let fresh = line(50)

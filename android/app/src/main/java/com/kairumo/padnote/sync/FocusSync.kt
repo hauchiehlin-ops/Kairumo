@@ -246,6 +246,12 @@ object FocusSync {
         ensureLan()
     }
 
+    /** 離開協同房間、欠著一輪同步：立刻問一次（見 `CollabImportHold`）。 */
+    fun afterCollaboration() {
+        lane.noteRemoteHint(nowMs())
+        reschedule()
+    }
+
     /** 回到前景：立刻問一次，並確保區網節點在。 */
     fun onForeground() {
         lane.noteRemoteHint(nowMs())
@@ -312,6 +318,8 @@ object FocusSync {
         val id = run.notebookId
         if (com.kairumo.padnote.library.SeedNotebooks.isDeviceLocal(id)) return FfiFocusOutcome.SUCCESS
         if (com.kairumo.padnote.library.SampleFork.hasSession(context, id)) return FfiFocusOutcome.SUCCESS
+        // 正在即時協同的這一本：先不同步，離開房間再補（見 `CollabImportHold`）。
+        if (com.kairumo.padnote.collab.CollabImportHold.deferIfHeld(id)) return FfiFocusOutcome.SUCCESS
         val lock = notebookLockTryEnter(id, "focus", nowMs())
         if (!lock.granted) return FfiFocusOutcome.BUSY
         try {

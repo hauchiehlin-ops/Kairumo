@@ -1187,12 +1187,32 @@ enum ProInkCollab {
         // 同一頁可能同時有好幾個圖層（單頁畫布＋連續模式快取著的畫布）。以前交給「第一個」——
         // 若那是畫面外的那一個，筆畫只進了檔案（縮圖看得到），畫面上的畫布卻沒有。
         // 交給畫面上的那一個，其餘的從磁碟重讀。
-        if let view = matching.first(where: { $0.window != nil }) ?? matching.first {
+        //
+        // **畫面外的圖層不能當依據**：它記得的是它最後一次載入時的內容，之後在別的畫布上寫進這一頁的
+        // 筆畫它都不知道（最常見的是剛打開筆記時建立、之後被捲出畫面的第一頁）。以前沒有畫面上的圖層時
+        // 交給它：要擦的筆畫它手上沒有 → 什麼都沒刪、檔案也沒動；它若有加入，還會把它那份舊的別台筆畫
+        // 整份寫回檔案 —— 已擦掉的又回來（實機：雲端協作時房主擦掉協作者的字，協作者那台第一頁永遠擦不掉、
+        // 斷線重連後舊筆跡累積出現，後面幾頁正常）。沒有畫面上的圖層時一律直接改檔案，再讓每個圖層重讀。
+        if let view = matching.first(where: { $0.window != nil }) {
             view.applyRemote(added: added, removedIds: removedIds)
+            // 畫面上的圖層照理有最新的內容；萬一檔案裡還留著要擦的筆畫（圖層與檔案不一致），也一併拿掉。
+            if !removedIds.isEmpty, stillOnDisk(removedIds, directory: directory, notebookId: notebookId, page: page) {
+                applyRemoteOnDisk(directory: directory, notebookId: notebookId, page: page, added: [], removedIds: removedIds)
+                view.reload()
+            }
             for other in matching where other !== view { other.reload() }
             return
         }
         applyRemoteOnDisk(directory: directory, notebookId: notebookId, page: page, added: added, removedIds: removedIds)
+        for view in matching { view.reload() }
+    }
+
+    /// 這幾筆是否還在這一頁的檔案裡（自己的或別台的）。讀的是記憶體快取或排隊中的那一份。
+    @MainActor
+    private static func stillOnDisk(_ ids: Set<String>, directory: URL, notebookId: String, page: Int) -> Bool {
+        ProInkStore.load(in: directory, notebookId: notebookId, page: page).contains { ids.contains($0.packageId) }
+            || ProInkStore.load(in: directory, notebookId: notebookId, page: page, foreign: true)
+                .contains { ids.contains($0.packageId) }
     }
 
     /// 直接改那一頁的「別台筆畫」檔（不經畫面上的圖層）。頁面結構調整中用：那時圖層的頁碼還是調整前的。
