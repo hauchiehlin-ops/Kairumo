@@ -1259,3 +1259,100 @@ final class CollabBlobAssembler {
     /// 換房間或離開：還沒收齊的丟掉（暫存檔由啟動時的清理收掉）。
     func reset() { inFlight = [:] }
 }
+
+// MARK: - 協同擦除的永久墓碑
+
+/// 協同中被擦掉的筆畫 id（每本筆記一份，以頁面 id 分），**永久保存**：任何舊資料都不得再把它們帶回來（I3）。
+///
+/// # 為什麼需要
+///
+/// 這台收到「別人擦掉了**我自己畫的**筆畫」時，以前只從畫面與筆畫檔拿掉，墓碑只記在畫布圖層的記憶體裡；
+/// 帳本裡別台筆畫的墓碑也會在匯出後清掉。之後只要遇到一份**較舊的**整份狀態 ——
+/// 雲端中繼上寄存的那一份、斷線重連時補發的操作、或擦除前就開始收集、擦除後才抵達的回覆 ——
+/// 那幾筆就被當成別台的筆畫重新放回來（實機：雲端協作時房主擦掉協作者的字，協作者那台有一頁擦不掉；
+/// 斷線重新加入後先前擦掉的筆跡又全部出現。同一個 Wi‑Fi 延遲小、沒有寄存，所以碰不到）。
+///
+/// 這裡記下每一次擦除（自己擦的、收到別人擦的、整份狀態附的 `removed`），所有放入筆畫的路徑都先查它；
+/// 回覆或寄存整份狀態時也把它附在 `removed` 裡，讓還留著舊筆畫的那一台一起拿掉。與 Android 以核心墓碑
+/// （`removedStrokeIds`）把關相同。復原擦除一律以新 id 寫入，不受影響。
+enum CollabInkTombstones {
+    /// 一本筆記最多記幾個（超過時丟掉最舊的頁的一部分；正常使用遠低於此）。
+    nonisolated static let maxPerNotebook = 50_000
+
+    private nonisolated static let lock = NSLock()
+    // profile-scope: profile 以完整檔案路徑為鍵（目錄屬於目前設定檔），不同設定檔不會共用同一項目
+    nonisolated(unsafe) private static var cache: [String: [String: Set<String>]] = [:]
+    private nonisolated static let writeQueue = DispatchQueue(label: "kairumo.collab.tombstones", qos: .utility)
+
+    private nonisolated static func url(_ directory: URL, _ notebookId: String) -> URL {
+        directory.appending(path: "\(notebookId.lowercased())_collab-ink-tombstones.json")
+    }
+
+    /// 呼叫端須持有 `lock`。
+    private nonisolated static func entry(_ directory: URL, _ notebookId: String) -> (key: String, value: [String: Set<String>]) {
+        let file = url(directory, notebookId)
+        let key = file.path
+        if let cached = cache[key] { return (key, cached) }
+        var loaded: [String: Set<String>] = [:]
+        if let data = try? Data(contentsOf: file),
+           let raw = try? JSONDecoder().decode([String: [String]].self, from: data) {
+            loaded = raw.mapValues { Set($0) }
+        }
+        cache[key] = loaded
+        return (key, loaded)
+    }
+
+    /// 這本筆記所有擦掉過的筆畫 id（線上 id ＝ 套件 id，跨頁唯一）。
+    nonisolated static func all(directory: URL, notebookId: String) -> Set<String> {
+        lock.lock(); defer { lock.unlock() }
+        return entry(directory, notebookId).value.values.reduce(into: Set<String>()) { $0.formUnion($1) }
+    }
+
+    /// 某一頁擦掉過的筆畫 id。
+    nonisolated static func ids(directory: URL, notebookId: String, page: String) -> Set<String> {
+        lock.lock(); defer { lock.unlock() }
+        return entry(directory, notebookId).value[CollabCanonical.canonicalPageId(page)] ?? []
+    }
+
+    /// 這一筆是否擦掉過（不分頁；不組出整份集合，抬筆的快徑也可以問）。
+    nonisolated static func contains(_ id: String, directory: URL, notebookId: String) -> Bool {
+        let id = id.lowercased()
+        lock.lock(); defer { lock.unlock() }
+        return entry(directory, notebookId).value.values.contains { $0.contains(id) }
+    }
+
+    /// 記下擦掉的筆畫。寫檔在背景做。
+    nonisolated static func record(_ ids: some Sequence<String>, page: String, directory: URL, notebookId: String) {
+        let incoming = Set(ids.map { $0.lowercased() }.filter { !$0.isEmpty })
+        guard !incoming.isEmpty else { return }
+        let pageKey = CollabCanonical.canonicalPageId(page)
+        lock.lock()
+        var (key, map) = entry(directory, notebookId)
+        let before = map[pageKey]?.count ?? 0
+        map[pageKey, default: []].formUnion(incoming)
+        guard (map[pageKey]?.count ?? 0) != before else {
+            lock.unlock()
+            return
+        }
+        var total = map.values.reduce(0) { $0 + $1.count }
+        if total > maxPerNotebook {
+            for page in map.keys.sorted() where page != pageKey && total > maxPerNotebook {
+                total -= map[page]?.count ?? 0
+                map.removeValue(forKey: page)
+            }
+        }
+        cache[key] = map
+        let snapshot = map.mapValues { Array($0).sorted() }
+        lock.unlock()
+        let file = url(directory, notebookId)
+        writeQueue.async {
+            guard let data = try? JSONEncoder().encode(snapshot) else { return }
+            try? data.write(to: file, options: .atomic)
+        }
+    }
+
+    /// 測試用：清掉記憶體快取（下一次從檔案重讀）。
+    nonisolated static func resetCacheForTesting() {
+        lock.lock(); cache = [:]; lock.unlock()
+    }
+}

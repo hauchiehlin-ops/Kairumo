@@ -1241,7 +1241,10 @@ enum ProInkCollab {
     /// 這一頁已經擦掉、不能再出現的套件 id（帳本裡的墓碑）。
     nonisolated static func blockedIds(directory: URL, notebookId: String, page: Int) -> Set<String> {
         let ledger = ProInkStore.loadLedger(in: directory, notebookId: notebookId, page: page)
+        // 加上協同擦除的永久墓碑：帳本裡的會在匯出後清掉，別人擦掉的「我的」筆畫帳本根本沒記
+        // （見 `CollabInkTombstones`）。
         return Set(ledger.retired.map(\.coreId) + ledger.foreignTombstones.map { $0.lowercased() })
+            .union(CollabInkTombstones.all(directory: directory, notebookId: notebookId))
     }
 }
 
@@ -1543,6 +1546,14 @@ final class ProInkLayerView: UIView {
     /// 復原只能撤銷這一輪的動作，所以記在記憶體裡就夠了。
     private var tombstonedIds: Set<String> = []
 
+    /// 這個套件 id 已經被擦掉過（這個圖層記得的，或協同擦除的永久墓碑）：再放回來要換新 id，
+    /// 否則別台以墓碑擋下，兩邊從此不一致（I3）。
+    private func isTombstoned(_ packageId: String) -> Bool {
+        if tombstonedIds.contains(packageId) { return true }
+        guard let directory else { return false }
+        return CollabInkTombstones.contains(packageId, directory: directory, notebookId: notebookId)
+    }
+
     private func persist() {
         invalidateAlignAnchors()
         guard let directory else { return }
@@ -1569,7 +1580,7 @@ final class ProInkLayerView: UIView {
         invalidateAlignAnchors()
         guard let directory else { return }
         var addedStroke = stroke
-        if tombstonedIds.contains(addedStroke.packageId), !ownStrokes.isEmpty {
+        if isTombstoned(addedStroke.packageId), !ownStrokes.isEmpty {
             let newCoreId = UUID().uuidString.lowercased()
             ownStrokes[ownStrokes.count - 1].coreId = newCoreId
             addedStroke = ownStrokes[ownStrokes.count - 1]
@@ -1595,12 +1606,12 @@ final class ProInkLayerView: UIView {
             if let old = before[stroke.id] {
                 guard old != stroke else { continue }
                 removed.append(old.packageId)
-                if stroke.packageId == old.packageId || tombstonedIds.contains(stroke.packageId) {
+                if stroke.packageId == old.packageId || isTombstoned(stroke.packageId) {
                     ownStrokes[i].coreId = UUID().uuidString.lowercased()
                 }
                 added.append(ownStrokes[i])
             } else {
-                if tombstonedIds.contains(stroke.packageId) {
+                if isTombstoned(stroke.packageId) {
                     ownStrokes[i].coreId = UUID().uuidString.lowercased()
                 }
                 added.append(ownStrokes[i])
@@ -2390,7 +2401,7 @@ final class ProInkLayerView: UIView {
             for stroke in strokes {
                 let cid = stroke.id.lowercased()
                 // 墓碑已經寫進套件（匯出過，或擦的當下就寫了）：撤不掉，改在自己名下放一筆新的。
-                if tombstonedIds.contains(cid)
+                if isTombstoned(cid)
                     || ledger.retired.firstIndex(where: { $0.coreId == cid }).map({ ledger.retired[$0].exported }) == true {
                     var copy = stroke
                     copy.id = UUID().uuidString

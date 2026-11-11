@@ -67,6 +67,37 @@ class AndroidCollabController(private val manager: CollaborationManager) {
      * 「被擦掉」廣播出去，房主那邊的筆跡跟著被擦光（墓碑不會復活，I3）。
      */
     private val engineSeen = HashMap<String, Pair<InkEngine, MutableSet<String>>>()
+
+    /**
+     * 每一頁擦掉過的筆畫 id（頁面 → 線上／核心 id）：核心的墓碑（`removedStrokeIds`，每頁讀一次）
+     * 加上這次連線送出、收到的擦除。所有放入筆畫的路徑都先查它，回覆與寄存整份狀態時也附上。
+     *
+     * 以前只靠「這次協同期間擦掉的」：較舊的整份狀態（雲端中繼寄存的那一份、斷線重連的補發、
+     * 擦除前就開始收集、擦除後才抵達的回覆）會把已擦掉的筆畫當成新的再放進引擎 —— 畫面上又出現，
+     * 核心卻以墓碑為準（I3），兩邊不一致（實機：雲端協作時房主擦掉協作者的字，協作者那台有一頁擦不掉；
+     * 斷線重新加入後擦掉的筆跡全部回來）。與 Apple `CollabInkTombstones` 相同。只在主執行緒動。
+     */
+    private val coreTombstones = HashMap<String, Set<String>>()
+    private val erasedHere = HashMap<String, MutableSet<String>>()
+
+    private fun tombstonesFor(page: String, session: PadnoteSession): Set<String> {
+        val key = AndroidCollabCanvas.canonicalPageId(page)
+        val core = coreTombstones.getOrPut(key) {
+            runCatching { session.removedStrokeIds(page) }.getOrDefault(emptyList())
+                .mapTo(HashSet()) { it.lowercase() }
+        }
+        val here = erasedHere[key] ?: return core
+        return core + here
+    }
+
+    private fun recordTombstones(page: String, ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        val set = erasedHere.getOrPut(AndroidCollabCanvas.canonicalPageId(page)) { HashSet() }
+        for (id in ids) {
+            set += id.lowercase()
+            set += ink.localId(id).lowercase()
+        }
+    }
     private val sentRequests = HashSet<String>()
 
     /** 這個房間的整份狀態已經完整收過一次。沒收到之前，編輯器會定時重新要（見 `EditorCanvasContext`）。 */
@@ -82,6 +113,8 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         textHub.reset()
         ink.reset()
         engineSeen.clear()
+        coreTombstones.clear()
+        erasedHere.clear()
         pendingInk.clear()
         if (!preservePendingRequest) {
             pendingRequest = null
@@ -206,6 +239,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         }
         if (removed.isNotEmpty()) {
             ink.removed(page, removed)
+            recordTombstones(page, removed)
             manager.broadcastOplog("ink_remove", JSONObject().put("proto", PROTO).put("page", page)
                 .put("ids", JSONArray(removed.toList())))
         }
@@ -353,10 +387,16 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         val now = System.currentTimeMillis()
         // （線上 id, 筆畫, 套件裡要用的 id）。用送出者的 id 寫進核心：同一筆在每一台的套件裡是同一個 id，
         // 檔案同步把送出者的筆畫檔帶過來時核心會去重（`materialize`），不會多出一份。
+        val erased = tombstonesFor(page, session)
         val decoded = (0 until list.length()).mapNotNull { i ->
             val j = list.optJSONObject(i) ?: return@mapNotNull null
             CollabStroke.decode(j, now)?.let { (wire, s) -> Triple(wire, s, CollabStroke.coreId(j)) }
         }.filter { it.first !in known }
+            // 擦掉過的筆畫永遠不放回來（I3）：較舊的整份狀態、補發的操作都可能還帶著它。
+            .filter { (wire, _, core) ->
+                wire.lowercase() !in erased && ink.localId(wire).lowercase() !in erased &&
+                    (core == null || core.lowercase() !in erased)
+            }
         if (decoded.isEmpty()) return false
 
         val currentSessionPages = sessionPageIds(session)
@@ -398,6 +438,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
 
     private fun removeStrokes(rawPage: String, wires: Set<String>, session: PadnoteSession, engineFor: (String) -> InkEngine?): Boolean {
         val page = AndroidCollabCanvas.canonicalPageId(rawPage)
+        recordTombstones(page, wires)
         val currentSessionPages = sessionPageIds(session)
         if (currentSessionPages.none { it.equals(page, ignoreCase = true) }) {
             if (sync.desiredPageOrder().any { it.equals(page, ignoreCase = true) }) {
@@ -627,8 +668,10 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                     strokes.put(CollabStroke.encode(wire, s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
                 }
             }
+            // 附上這一頁所有擦掉過的（這次協同的＋核心墓碑）：收到的一方若還留著其中幾筆，一併拿掉。
+            val removed = (ink.sessionRemoved[page] ?: emptySet<String>()) + tombstonesFor(page, session)
             items += "ink" to JSONObject().put("page", page).put("strokes", strokes)
-                .put("removed", JSONArray((ink.sessionRemoved[page] ?: emptySet<String>()).toList()))
+                .put("removed", JSONArray(removed.toList()))
         }
         val main = android.os.Handler(android.os.Looper.getMainLooper())
         Thread({
@@ -730,7 +773,7 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                     strokes.put(CollabStroke.encode(ink.wireId(s.id), s.tool, s.colorRgba, s.baseWidth, s.points, s.id))
                 }
             }
-            val removed = ink.sessionRemoved[page] ?: emptySet<String>()
+            val removed = (ink.sessionRemoved[page] ?: emptySet<String>()) + tombstonesFor(page, session)
             if (strokes.length() == 0 && removed.isEmpty()) continue
             inkItems += JSONObject().put("page", page).put("strokes", strokes).put("removed", JSONArray(removed.toList()))
         }
@@ -817,14 +860,16 @@ class AndroidCollabController(private val manager: CollaborationManager) {
                 val pageInk = inkList.optJSONObject(i) ?: continue
                 val page = pageInk.optString("page")
                 if (page.isEmpty()) continue
+                val removed = pageInk.optJSONArray("removed")
+                val wires = (0 until (removed?.length() ?: 0)).map { removed!!.optString(it) }.toSet()
+                // 先記墓碑再放筆畫：同一份狀態裡既有、又標成擦掉的那幾筆不會先被放回來。
+                recordTombstones(page, wires)
                 pageInk.optJSONArray("strokes")?.let {
                     if (addStrokes(page, it, session, engineFor)) {
                         com.kairumo.padnote.canvas.ThumbnailFreshness.markDirty(page)
                         inkChanged = true
                     }
                 }
-                val removed = pageInk.optJSONArray("removed")
-                val wires = (0 until (removed?.length() ?: 0)).map { removed!!.optString(it) }.toSet()
                 if (wires.isNotEmpty() && removeStrokes(page, wires, session, engineFor)) {
                     com.kairumo.padnote.canvas.ThumbnailFreshness.markDirty(page)
                     inkChanged = true
