@@ -142,15 +142,23 @@ extension NotebookEditorView {
         guard isCollaborating else { return }
         ensureCollabPageIds()
         guard let pageId = liveInkPageId(page) else { return }
+        let canonicalPage = CollabCanonical.canonicalPageId(pageId)
         if !added.isEmpty {
+            collabInkLedger.added(page: canonicalPage, wires: added.map(\.packageId))
             collaborationManager.broadcastOplog(kind: "ink_add", payload: [
                 "proto": Self.collabProto, "page": pageId,
                 "strokes": added.map(CollabStroke.encode(pro:)),
             ])
         }
         if !removedIds.isEmpty {
+            let wires = removedIds.map { $0.lowercased() }
+            // 這台擦掉的也要記進「這次協同擦掉的」與永久墓碑：以前只記收到的擦除，房主回覆或寄存的
+            // 整份狀態因此不帶房主自己擦掉的筆畫 —— 還留著那幾筆的協作者永遠收不到「該拿掉」。
+            collabInkLedger.removed(page: canonicalPage, wires: wires)
+            CollabInkTombstones.record(wires, page: canonicalPage,
+                                       directory: store.drawingsDirectory, notebookId: notebook.id)
             collaborationManager.broadcastOplog(kind: "ink_remove", payload: [
-                "proto": Self.collabProto, "page": pageId, "ids": removedIds.map { $0.lowercased() },
+                "proto": Self.collabProto, "page": pageId, "ids": wires,
             ])
         }
     }
@@ -748,7 +756,10 @@ extension NotebookEditorView {
                     let uncommitted = liveStrokes.filter { !knownIds.contains($0.packageId) }
                     strokes.append(contentsOf: uncommitted)
                 }
-                let removed = Array(removedByPage[canonicalPage] ?? removedByPage[page] ?? [])
+                // 附上這一頁所有擦掉過的（這次協同的＋永久墓碑）：收到的一方若還留著其中幾筆
+                // （較舊的寄存、在途的回覆讓它們復活過），一併拿掉。
+                let removed = Array((removedByPage[canonicalPage] ?? removedByPage[page] ?? [])
+                    .union(CollabInkTombstones.ids(directory: directory, notebookId: nid, page: canonicalPage)))
                 guard !strokes.isEmpty || !removed.isEmpty else { continue }
                 all.append((true, ["page": canonicalPage, "strokes": strokes.map(CollabStroke.encode(pro:)),
                                    "removed": removed]))
@@ -872,6 +883,9 @@ extension NotebookEditorView {
             let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(page) == .orderedSame })
             let strokes = ((pageInk["strokes"] as? [[String: Any]]) ?? []).compactMap(CollabStroke.decodePro)
             let removed = (pageInk["removed"] as? [String]) ?? []
+            if !removed.isEmpty {
+                CollabInkTombstones.record(removed, page: page, directory: store.drawingsDirectory, notebookId: notebook.id)
+            }
             guard let pageIdx else {
                 // 這一頁還在等頁面結構調整補上：筆畫先擱著（以前直接丟掉，第 2、3 頁一片空白）。
                 holdCollabInkIfPending(page: page, added: strokes, removed: Set(removed.map { $0.lowercased() }))
@@ -961,6 +975,8 @@ extension NotebookEditorView {
             guard let rawPageId = event.payload["page"] as? String,
                   let ids = event.payload["ids"] as? [String] else { return }
             let pageId = CollabCanonical.canonicalPageId(rawPageId)
+            // 先記永久墓碑：之後任何較舊的整份狀態、補發的操作都不能把這幾筆帶回來（I3）。
+            CollabInkTombstones.record(ids, page: pageId, directory: store.drawingsDirectory, notebookId: notebook.id)
             if let pageIdx = notebook.pageIds?.firstIndex(where: { $0.caseInsensitiveCompare(pageId) == .orderedSame }) {
                 ProInkCollab.applyRemote(directory: store.drawingsDirectory, notebookId: notebook.id, page: pageIdx,
                                          added: [], removedIds: Set(ids.map { $0.lowercased() }))

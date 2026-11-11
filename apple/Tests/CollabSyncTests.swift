@@ -491,3 +491,67 @@ final class CollabProtocolTests: XCTestCase {
         XCTAssertEqual(CollabStroke.tool(named: "oil_paint"), .oilPaint)
     }
 }
+
+/// 協同擦除的永久墓碑：別人擦掉的（包含這台自己畫的）筆畫，之後任何較舊的整份狀態都不能把它帶回來（I3）。
+/// 實機：雲端協作時房主擦掉協作者的字，協作者那台有一頁擦不掉；斷線重新加入後擦掉的筆跡全部回來。
+@MainActor
+final class CollabInkTombstoneTests: XCTestCase {
+    private var dir: URL!
+    private let nid = "TOMB-NOTE"
+    private let page = "1D3F0000-0000-4000-8000-0000000000AA"
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-tomb-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        CollabInkTombstones.resetCacheForTesting()
+    }
+
+    override func tearDownWithError() throws {
+        ProInkStore.flushPendingWrites()
+        try? FileManager.default.removeItem(at: dir)
+        CollabInkTombstones.resetCacheForTesting()
+    }
+
+    private func line(_ y: Float) -> ProStroke {
+        ProStroke(tool: "fineliner", colorRGBA: [0, 0, 0, 255], baseWidth: 4,
+                  points: (0 ..< 8).map { ProPoint(x: Float($0) * 10, y: y, pressure: 0.6, tilt: 0, azimuth: 0, dtUs: 8_000) })
+    }
+
+    func testRemotelyErasedOwnStrokesNeverComeBackFromStaleState() {
+        let mine = [line(10), line(30)]
+        ProInkStore.save(mine, in: dir, notebookId: nid, page: 0)
+        let erased = Set(mine.map(\.packageId))
+
+        // 房主擦掉了協作者（這台）自己畫的兩筆：編輯器先記墓碑，再套用擦除。
+        CollabInkTombstones.record(erased, page: page, directory: dir, notebookId: nid)
+        ProInkCollab.applyRemoteOnDisk(directory: dir, notebookId: nid, page: 0, added: [], removedIds: erased)
+        XCTAssertTrue(ProInkStore.load(in: dir, notebookId: nid, page: 0).isEmpty)
+
+        // 擦除之後才抵達、擦除之前收集的整份狀態（或雲端寄存的舊版本）又帶著這兩筆。
+        ProInkCollab.applyRemoteOnDisk(directory: dir, notebookId: nid, page: 0, added: mine, removedIds: [])
+        XCTAssertTrue(ProInkStore.load(in: dir, notebookId: nid, page: 0, foreign: true).isEmpty,
+                      "已擦掉的筆畫被舊的整份狀態以別台筆畫放回來了")
+
+        // 重開 App（記憶體快取沒了）之後照樣擋得住。
+        ProInkStore.flushPendingWrites()
+        CollabInkTombstones.resetCacheForTesting()
+        let deadline = Date().addingTimeInterval(2)
+        while CollabInkTombstones.all(directory: dir, notebookId: nid).isEmpty, Date() < deadline {
+            CollabInkTombstones.resetCacheForTesting()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        XCTAssertEqual(CollabInkTombstones.ids(directory: dir, notebookId: nid, page: page.lowercased()), erased)
+        XCTAssertTrue(ProInkCollab.blockedIds(directory: dir, notebookId: nid, page: 0).isSuperset(of: erased))
+        ProInkCollab.applyRemoteOnDisk(directory: dir, notebookId: nid, page: 0, added: mine, removedIds: [])
+        XCTAssertTrue(ProInkStore.load(in: dir, notebookId: nid, page: 0, foreign: true).isEmpty)
+    }
+
+    func testOtherStrokesStillArrive() {
+        CollabInkTombstones.record(["gone-id"], page: page, directory: dir, notebookId: nid)
+        let fresh = line(50)
+        ProInkCollab.applyRemoteOnDisk(directory: dir, notebookId: nid, page: 0, added: [fresh], removedIds: [])
+        XCTAssertEqual(ProInkStore.load(in: dir, notebookId: nid, page: 0, foreign: true).map(\.packageId), [fresh.packageId])
+        XCTAssertTrue(CollabInkTombstones.contains("GONE-ID", directory: dir, notebookId: nid))
+    }
+}
