@@ -17,7 +17,7 @@ env:
 jobs:
   changes:
     name: Detect changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       core: ${{ steps.filter.outputs.core }}
       android: ${{ steps.filter.outputs.android }}
@@ -60,7 +60,8 @@ jobs:
         # 四分鐘，而換到的資訊沒有人會拿來做決定。
         #
         # 留 ubuntu 的理由不同：Android 的核心就是在 Linux 上交叉編出來的。
-        os: [macos-latest, ubuntu-latest]
+        # 鎖定 ubuntu-24.04 LTS，避免 ubuntu-latest 漂移至 Ubuntu 26 試驗鏡像造成套件庫與 DNS 異常。
+        os: [macos-latest, ubuntu-24.04]
     steps:
       - name: 清理磁碟空間（Linux）
         if: runner.os == 'Linux'
@@ -83,7 +84,7 @@ jobs:
       # 這兩個系統相依是 cpal 進 workspace 之後才出現的，CI 沒裝就整排紅。
       - name: 系統相依（Linux）
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+        run: bash ./scripts/ci-install-linux-deps.sh libasound2-dev pkg-config
       - name: 系統相依（macOS）
         if: runner.os == 'macOS'
         run: brew install autoconf automake libtool
@@ -220,7 +221,7 @@ jobs:
     name: Android build
     needs: changes
     if: needs.changes.outputs.core == 'true' || needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 清理磁碟空間（Linux）
         run: |
@@ -253,7 +254,7 @@ jobs:
         # libopus-dev 是必要的：下一步的 relay 測試是**在 host 上**編譯的，
         # 而 padnote-audio 會連 -lopus。android/prebuilt/opus 只有 Android 的
         # 版本，host 用不到它 —— 少了這個就是 `unable to find library -lopus`。
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
+        run: bash ./scripts/ci-install-linux-deps.sh libasound2-dev libopus-dev pkg-config
       - name: 安裝 NDK 與 cargo-ndk
         run: |
           sdkmanager --install "ndk;28.2.13676358"
@@ -293,7 +294,7 @@ jobs:
     name: Android instrumented tests
     needs: [changes, android]
     if: needs.changes.outputs.core == 'true' || needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -479,13 +480,13 @@ jobs:
   # 「我沒想到要去試」的情境。它跑在一般的 Linux runner 上，幾十秒。
   model-check:
     name: Multi-device model check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: 系統相依（cpal → ALSA、audiopus → Opus）
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+        run: bash ./scripts/ci-install-linux-deps.sh libasound2-dev pkg-config
       - name: 隨機歷史與回歸種子
         run: cargo test -p padnote-core --no-default-features --test model_multi_device
       - name: 編輯器筆跡不變式模型檢查（架構審視 P0）
@@ -498,7 +499,7 @@ jobs:
 
   licenses:
     name: License audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
@@ -508,7 +509,7 @@ jobs:
   # J7：資料遺失零容忍。格式層的截斷與版本相容測試在此擋關。
   format-compat:
     name: Format compatibility
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -517,7 +518,7 @@ jobs:
         # libopus-dev 是必要的：下一步的 relay 測試是**在 host 上**編譯的，
         # 而 padnote-audio 會連 -lopus。android/prebuilt/opus 只有 Android 的
         # 版本，host 用不到它 —— 少了這個就是 `unable to find library -lopus`。
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
+        run: bash ./scripts/ci-install-linux-deps.sh libasound2-dev libopus-dev pkg-config
       - name: 編解碼往返、截斷偵測、版本拒絕
         run: cargo test -p padnote-ink -p padnote-core -- --nocapture
       # S-61：文件範本目錄是**產物**。有人改了 templates/src 卻沒重跑 build，
@@ -600,13 +601,13 @@ jobs:
   # 所以這個 job 今天是綠的，但**新增**的缺口一定會紅。
   screen-parity:
     name: Screen parity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: 系統相依（cpal → ALSA、audiopus → Opus）
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
+        run: bash ./scripts/ci-install-linux-deps.sh libasound2-dev libopus-dev pkg-config
       - name: 畫面規格自身的測試
         run: cargo test -p padnote-core --lib ffi_screens
       - name: 兩端控制項對照
