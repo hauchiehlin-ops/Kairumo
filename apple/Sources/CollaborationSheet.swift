@@ -189,6 +189,7 @@ public struct CollaborationSheet: View {
             } message: {
                 Text(restoreMessage ?? "")
             }
+            .paywallSubsystem()
         }
     }
 
@@ -681,7 +682,9 @@ public struct CollaborationSheet: View {
             // 只有存了自架的 wss:// 中繼時才連到那台，按鈕也照舊叫「開啟多人協同」。
             let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
             Button {
-                collaborationManager.createRoom(notebookId: notebookId, server: collaborationManager.localRoomServer)
+                EntitlementManager.shared.requirePro(.collabHost) {
+                    collaborationManager.createRoom(notebookId: notebookId, server: collaborationManager.localRoomServer)
+                }
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: customRemote ? "sparkles" : "wifi")

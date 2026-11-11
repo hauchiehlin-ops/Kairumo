@@ -40,17 +40,19 @@ extension NotebookEditorView {
                 PageThumbnailRenderer.invalidateAll()
             },
             onInsertTable: {
-                var table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
-                fitTableToPageRules(&table)
-                if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-                notebook.tableAttachments?.append(table)
-                activeSelectedObjectId = table.id
-                selectedObjectIds = [table.id]
-                commitNotebook()
-                PageThumbnailRenderer.invalidateAll()
-                if let data = try? JSONEncoder().encode(table),
-                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+                EntitlementManager.shared.requirePro(.studios) {
+                    var table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
+                    fitTableToPageRules(&table)
+                    if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                    notebook.tableAttachments?.append(table)
+                    activeSelectedObjectId = table.id
+                    selectedObjectIds = [table.id]
+                    commitNotebook()
+                    PageThumbnailRenderer.invalidateAll()
+                    if let data = try? JSONEncoder().encode(table),
+                       let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+                    }
                 }
             },
             onInsertImage: { showPhotoPicker = true },
@@ -79,6 +81,7 @@ extension NotebookEditorView {
     /// 飛梭的意義就在「不用把手移到工具列」：手在哪裡，工具盤就開在哪裡。
     /// 正在拖曳套索選取、打字或行內編輯時不攔，讓原本的操作繼續。
     func openRadialMenuFromPress(at windowPoint: CGPoint) -> Bool {
+        guard EntitlementManager.shared.isProUnlocked else { return false }
         guard isCanvasInkActive, editorMode == .draw, !showRadialMenu else { return false }
         if selectedTool == .lasso && (lasso.isDraggingSelection || lasso.hasSelection) { return false }
         if selectedTool == .maskingTape || selectedTool == .translationPen { return false }
@@ -238,9 +241,17 @@ extension NotebookEditorView {
             .safeAreaInset(edge: .top, spacing: 0) {
                 let isDraftingPaper = paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex))
                 if editorMode == .draw && (selectedTool == .drafting || isDraftingPaper) {
-                    DraftingBar(onOpenSolidStudio: { showSolidStudio = true },
-                                onOpenToolbox: { showDraftingToolbox = true },
-                                onMarkAngle: { markProtractorReading() })
+                    DraftingBar(
+                        onOpenSolidStudio: {
+                            EntitlementManager.shared.requirePro(.draftingAndSolid) { showSolidStudio = true }
+                        },
+                        onOpenToolbox: {
+                            EntitlementManager.shared.requirePro(.draftingAndSolid) { showDraftingToolbox = true }
+                        },
+                        onMarkAngle: {
+                            EntitlementManager.shared.requirePro(.draftingAndSolid) { markProtractorReading() }
+                        }
+                    )
                         .padding(.top, 8)
                         .padding(.bottom, 6)
                         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -525,10 +536,12 @@ extension NotebookEditorView {
                     }
                     .buttonStyle(.plain)
 
-                    // 徑向飛輪工具盤喚醒 (Radial Menu)
+                    // 飛梭工具盤喚醒 (Radial Menu)
                     Button {
-                        radialMenuAnchor = nil
-                        showRadialMenu = true
+                        EntitlementManager.shared.requirePro(.proInk) {
+                            radialMenuAnchor = nil
+                            showRadialMenu = true
+                        }
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: "circle.grid.cross")

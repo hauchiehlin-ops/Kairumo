@@ -165,9 +165,12 @@ struct KairumoApp: App {
                         AutoSyncController.shared.request(.foreground)
                     }
                 }
+                .paywallSubsystem()
                 .onOpenURL { url in
                     let ext = url.pathExtension.lowercased()
-                    if CollaborationManager.shared.offerInvite(url.absoluteString) {
+                    if EntitlementManager.shared.handleVIPUrl(url) {
+                        // 成功攔截並驗證 `kairumo://vip?gift=...` 開發者簽發之 Ed25519 VIP 禮遇通行證
+                    } else if CollaborationManager.shared.offerInvite(url.absoluteString) {
                         // 相機掃了協同 QR Code（同一 Wi‑Fi、Tailscale、雲端共享都是同一種邀請）：首頁（`HomeWorkbenchView`）會打開
                         // 那本筆記，編輯器再打開協同面板並加入房間。不在這裡發 openNotebook ——
                         // 冷啟動時首頁還沒開始聽，通知會掉在地上；`pendingInviteLink` 是持久狀態，

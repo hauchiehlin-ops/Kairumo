@@ -17911,6 +17911,182 @@ extension LocalizationManager {
             .ko: "녹음 일시정지",
             .th: "หยุดการบันทึกชั่วคราว"
         ],
+        "paywall_buy_button": [
+            .zhHant: "一次買斷永久解鎖 Kairumo Pro",
+            .en: "Unlock Kairumo Pro Forever",
+            .zhHans: "一次买断永久解锁 Kairumo Pro",
+            .ja: "Kairumo Pro を買い切りで解除",
+            .ko: "Kairumo Pro 평생 잠금 해제",
+            .th: "ปลดล็อก Kairumo Pro ตลอดชีพ"
+        ],
+        "paywall_context_prompt": [
+            .zhHant: "此功能為 Kairumo Pro 專屬進階工具",
+            .en: "Requires Kairumo Pro",
+            .zhHans: "此功能为 Kairumo Pro 专属进阶工具",
+            .ja: "Kairumo Pro 専用機能",
+            .ko: "Kairumo Pro 전용 기능",
+            .th: "ฟีเจอร์สำหรับ Kairumo Pro"
+        ],
+        "paywall_existing_data_safe": [
+            .zhHant: "您現有的所有筆記本、頁面、備份與匯出功能在免費版中依然 100% 完整可讀可用。",
+            .en: "All your existing notebooks, pages, backups, and exports remain 100% accessible on the Free plan.",
+            .zhHans: "您现有的所有笔记本、页面、备份与导出功能在免费版中依然 100% 完整可读可用。",
+            .ja: "既存のノート、ページ、バックアップ、書き出しは無料プランでも 100% そのまま閲覧・利用できます。",
+            .ko: "기존 노트, 페이지, 백업 및 내보내기는 무료 플랜에서도 100% 그대로 열람하고 사용할 수 있습니다.",
+            .th: "สมุดบันทึก หน้า ข้อมูลสำรอง และการส่งออกที่มีอยู่ทั้งหมดยังคงเปิดดูและใช้งานได้ 100% ในแผนฟรี"
+        ],
+        "paywall_feature_audio_transcribe_desc": [
+            .zhHant: "在裝置端離線將課堂與會議錄音轉為帶時間軸的可搜尋文字稿。",
+            .en: "Convert recorded lectures and meetings into searchable, time-synced transcripts right on your device.",
+            .zhHans: "在设备端离线将课堂与会议录音转为带时间轴的可搜索文字稿。",
+            .ja: "講義や会議の録音を端末内でそのままタイムスタンプ付きテキストに変換。",
+            .ko: "강의 및 회의 녹음을 기기 내에서 시간 동기화된 텍스트로 변환합니다.",
+            .th: "แปลงเสียงบันทึกการบรรยายและการประชุมเป็นข้อความพร้อมเวลาซิงค์บนอุปกรณ์ของคุณโดยตรง"
+        ],
+        "paywall_feature_audio_transcribe_title": [
+            .zhHant: "本機離線錄音轉逐字稿",
+            .en: "On-Device Audio-to-Text Transcription",
+            .zhHans: "本机离线录音转逐字稿",
+            .ja: "端末内音声文字起こし（オフライン）",
+            .ko: "온디바이스 음성 텍스트 변환(오프라인)",
+            .th: "ถอดเสียงเป็นข้อความในตัวเครื่อง (ออฟไลน์)"
+        ],
+        "paywall_feature_collab_host_desc": [
+            .zhHant: "作為房主開啟協同房間或跨網寄存；免費版夥伴掃描您的 QR Code 即可免費加入房間一起書寫。",
+            .en: "Host collaborative whiteboard sessions and invite anyone — guests on the Free plan can scan your QR code to join and write together for free.",
+            .zhHans: "作为房主开启协同房间或跨网寄存；免费版伙伴扫描您的 QR Code 即可免费加入房间一起书写。",
+            .ja: "共同編集ルームを開設して招待。無料プランの参加者も QR コードで無料参加して一緒に書き込めます。",
+            .ko: "공동 작업 방을 개설하고 초대하세요. 무료 플랜 사용자도 QR 코드로 무료로 참여하여 함께 필기할 수 있습니다.",
+            .th: "เป็นเจ้าของห้องไวท์บอร์ดร่วมกันและเชิญทุกคน — ผู้เข้าร่วมที่ใช้แผนฟรีสามารถสแกนคิวอาร์โค้ดเพื่อเข้าร่วมและเขียนด้วยกันได้ฟรี"
+        ],
+        "paywall_feature_collab_host_title": [
+            .zhHant: "發起多人即時協同房間與跨網中繼寄存",
+            .en: "Host Live Collaboration Rooms & Cloud Relay",
+            .zhHans: "发起多人即时协同房间与跨网中继寄存",
+            .ja: "共同編集ルームの主催＆クラウド中継共有",
+            .ko: "실시간 공동 작업 방 개설 및 클라우드 릴레이 공유",
+            .th: "เปิดห้องทำงานร่วมกันสดและแชร์ผ่านคลาวด์รีเลย์"
+        ],
+        "paywall_feature_drafting_desc": [
+            .zhHant: "尺寸標註、倒圓角、修剪延伸、陣列、三視圖投影與立體拉伸，以及空白地圖、圖例與描圖底圖。",
+            .en: "Precision dimensions, fillets, chamfers, trim/extend, arrays, orthographic projections, solid extrusion, blank maps, legends, and tracing underlays.",
+            .zhHans: "尺寸标注、倒圆角、修剪延伸、阵列、三视图投影与立体拉伸，以及空白地图、图例与描图底图。",
+            .ja: "寸法線・フィレット・トリム・延長・配列・三面図・立体押し出し、白地図・凡例・トレース下絵。",
+            .ko: "치수선, 필렛, 트림/연장, 배열, 삼각법 투영, 입체 돌출, 백지도, 범례 및 따라 그리기 밑그림.",
+            .th: "เส้นบอกขนาด มุมมน ตัด/ต่อเส้น อาร์เรย์ ภาพฉายสามด้าน ดึงทรงตัน แผนที่เปล่า คำอธิบายสัญลักษณ์ และภาพรองลอกลาย"
+        ],
+        "paywall_feature_drafting_title": [
+            .zhHant: "工程圖學筆組與三視圖立體拉伸",
+            .en: "Engineering Drafting & 2D-to-3D Extrusion",
+            .zhHans: "工程图学笔组与三视图立体拉伸",
+            .ja: "エンジニアリング製図ペン＆3D 押し出し",
+            .ko: "엔지니어링 제도 펜 및 3D 돌출",
+            .th: "ปากกาเขียนแบบวิศวกรรมและดึงรูปทรง 3D"
+        ],
+        "paywall_feature_pro_ink_desc": [
+            .zhHant: "書法筆、水彩、油畫、炭筆、噴槍、蠟筆，以及筆畫穩定器、對稱繪圖、飛梭工具盤與專業色相環。",
+            .en: "Calligraphy, watercolor, oil paint, charcoal, airbrush, crayon, stroke stabilizer, symmetry drawing, radial tool menu, and HSB color wheel.",
+            .zhHans: "书法笔、水彩、油画、炭笔、喷枪、蜡笔，以及笔画稳定器、对称绘图、飞梭工具盘与专业色相环。",
+            .ja: "カリグラフィー・水彩・油彩・木炭・エアブラシ・手ブレ補正・対称描画・クイックツールリング・色相環。",
+            .ko: "캘리그라피, 수채화, 유화, 목탄, 에어브러시, 손떨림 보정, 대칭 그리기, 원형 도구 모음 및 색상환.",
+            .th: "ปากกาคัดลายมือ สีน้ำ สีน้ำมัน ชาร์โคล แอร์บรัช ระบบกันสั่น วาดสมมาตร วงล้อเครื่องมือด่วน และวงล้อสี"
+        ],
+        "paywall_feature_pro_ink_title": [
+            .zhHant: "9 款藝術筆刷與專業筆觸控制",
+            .en: "Artistic Brushes & Pro Ink Controls",
+            .zhHans: "9 款艺术笔刷与专业笔触控制",
+            .ja: "9 種の芸術ブラシ＆プロ筆致コントロール",
+            .ko: "9종 예술 브러시 및 프로 필기 제어",
+            .th: "หัวแปรงศิลปะ 9 แบบและการควบคุมหมึกระดับโปร"
+        ],
+        "paywall_feature_studios_desc": [
+            .zhHant: "支援斜線表頭與合併儲存格的專業表格、統計圖表、數學算式計算機、3D 幾何立體模型與離線重點整理。",
+            .en: "Word-grade cell merge & diagonal split headers, statistical charts, LaTeX math calculator, interactive 3D solids, and offline note intelligence.",
+            .zhHans: "支持斜线表头与合并单元格的专业表格、统计图表、数学算式计算器、3D 几何立体模型与离线重点整理。",
+            .ja: "セル結合や斜線見出し対応の表作成、統計グラフ、数式計算、3D 立体モデル、オフライン要約。",
+            .ko: "셀 병합 및 대각선 분할 표, 통계 차트, 수식 계산기, 3D 입체 모델 및 오프라인 노트 요약.",
+            .th: "ตารางระดับเอกสารพร้อมเส้นทแยงมุม กราฟสถิติ เครื่องคิดเลขสมการ โมเดล 3D และสรุปบันทึกออฟไลน์"
+        ],
+        "paywall_feature_studios_title": [
+            .zhHant: "專業表格、圖表、數學算式、3D 幾何與智慧整理工作台",
+            .en: "Table, Chart, Math, 3D & Summary Studios",
+            .zhHans: "专业表格、图表、数学算式、3D 几何与智能整理工作台",
+            .ja: "表組・グラフ・数式・3D・要約スタジオ",
+            .ko: "표·차트·수식·3D·요약 스튜디오",
+            .th: "สตูดิโอตาราง กราฟ สมการ 3D และสรุปเนื้อหา"
+        ],
+        "paywall_feature_translation_pen_desc": [
+            .zhHant: "在 PDF 講義或手寫字跡上一筆劃過，本機即地辨識並翻譯外文段落。",
+            .en: "Stroke across foreign text on PDFs or handwritten notes to recognize and translate on-device in place.",
+            .zhHans: "在 PDF 讲义或手写字迹上一笔划过，本机即地识别并翻译外文段落。",
+            .ja: "PDF や手書き文字の上をなぞるだけで、端末内でその場認識・翻訳。",
+            .ko: "PDF나 필기 텍스트 위를 그어 기기 내에서 즉시 인식하고 번역합니다.",
+            .th: "ลากปากกาผ่านข้อความบน PDF หรือลายมือเพื่อรู้จำและแปลภาษาในตัวเครื่องทันที"
+        ],
+        "paywall_feature_translation_pen_title": [
+            .zhHant: "掃描翻譯筆（劃過即譯）",
+            .en: "Scan Translation Pen",
+            .zhHans: "扫描翻译笔（划过即译）",
+            .ja: "なぞり翻訳ペン",
+            .ko: "스캔 번역 펜",
+            .th: "ปากกาสแกนแปลภาษา"
+        ],
+        "paywall_lifetime_badge": [
+            .zhHant: "一次買斷 · 永久使用 · 絕無訂閱扣款",
+            .en: "ONE-TIME PURCHASE · NO SUBSCRIPTION",
+            .zhHans: "一次买断 · 永久使用 · 绝无订阅扣款",
+            .ja: "買い切り · サブスクリプションなし",
+            .ko: "일회성 구매 · 구독 없음",
+            .th: "ซื้อครั้งเดียว · ไม่ต้องสมัครรายเดือน"
+        ],
+        "paywall_redeem_button": [
+            .zhHant: "兌換 App Store 代碼",
+            .en: "Redeem App Store Code",
+            .zhHans: "兑换 App Store 代码",
+            .ja: "コードを使う",
+            .ko: "코드 교환",
+            .th: "แลกรหัส App Store"
+        ],
+        "paywall_restore_button": [
+            .zhHant: "恢復購買紀錄",
+            .en: "Restore Purchases",
+            .zhHans: "恢复购买记录",
+            .ja: "購入を復元",
+            .ko: "구매 복원",
+            .th: "กู้คืนการซื้อ"
+        ],
+        "paywall_restore_nothing": [
+            .zhHant: "未在此 Apple ID 找到已購買的 Pro 紀錄",
+            .en: "No previous Pro purchase was found for this Apple ID",
+            .zhHans: "未在此 Apple ID 找到已购买的 Pro 记录",
+            .ja: "この Apple ID で購入された Pro の履歴が見つかりませんでした",
+            .ko: "이 Apple ID로 구매한 Pro 내역을 찾을 수 없습니다",
+            .th: "ไม่พบประวัติการซื้อ Pro สำหรับ Apple ID นี้"
+        ],
+        "paywall_store_unavailable": [
+            .zhHant: "目前無法連線 App Store，請檢查網路後再試。",
+            .en: "App Store is currently unreachable. Please check your connection and try again.",
+            .zhHans: "目前无法连接 App Store，请检查网络后再试。",
+            .ja: "現在 App Store に接続できません。通信環境を確認してからもう一度お試しください。",
+            .ko: "현재 App Store에 연결할 수 없습니다. 네트워크 연결을 확인한 후 다시 시도해 주세요.",
+            .th: "ไม่สามารถเชื่อมต่อ App Store ได้ในขณะนี้ โปรดตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
+        ],
+        "paywall_subtitle": [
+            .zhHant: "基礎筆記永久免費且不限筆記本與頁數。一次買斷即可永久解鎖跨領域專業工作台、工程製圖筆組、掃描翻譯筆與多人協同開房。",
+            .en: "Core note-taking is free forever with unlimited notebooks and pages. Unlock cross-disciplinary studios, engineering drafting, scan translation, and live room hosting with a single one-time purchase.",
+            .zhHans: "基础笔记永久免费且不限笔记本与页数。一次买断即可永久解锁跨领域专业工作台、工程制图笔组、扫描翻译笔与多人协同开房。",
+            .ja: "基本ノート機能はノート数・ページ数無制限で永久無料。一度の買い切りで、専門スタジオ・製図ペン・なぞり翻訳・共同編集ルーム主催をすべて解放します。",
+            .ko: "기본 필기 기능은 노트와 페이지 수 제한 없이 평생 무료입니다. 한 번의 구매로 전문 스튜디오, 제도 펜, 스캔 번역 펜, 실시간 공동 작업 방 개설을 모두 잠금 해제하세요.",
+            .th: "ฟีเจอร์จดบันทึกพื้นฐานใช้ฟรีตลอดไปโดยไม่จำกัดจำนวนสมุดและหน้า ซื้อขาดครั้งเดียวเพื่อปลดล็อกสตูดิโอเฉพาะทาง ปากกาเขียนแบบ ปากกาแปลภาษา และการจัดตั้งห้องทำงานร่วมกัน"
+        ],
+        "paywall_title": [
+            .zhHant: "Kairumo Pro 專業買斷版",
+            .en: "Kairumo Pro Lifetime Unlock",
+            .zhHans: "Kairumo Pro 专业买断版",
+            .ja: "Kairumo Pro 買い切りアップグレード",
+            .ko: "Kairumo Pro 평생 소장판 업그레이드",
+            .th: "อัปเกรด Kairumo Pro แบบซื้อขาดตลอดชีพ"
+        ],
         "pdf_choose_page": [
             .zhHant: "要插入第幾頁？",
             .en: "Which page?",
@@ -18255,6 +18431,14 @@ extension LocalizationManager {
             .ko: "계정도 서버도 추적도 없음",
             .th: "ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่มีการติดตาม"
         ],
+        "pro_badge": [
+            .zhHant: "PRO",
+            .en: "PRO",
+            .zhHans: "PRO",
+            .ja: "PRO",
+            .ko: "PRO",
+            .th: "PRO"
+        ],
         "pro_color": [
             .zhHant: "進階調色",
             .en: "Advanced Color Studio",
@@ -18262,6 +18446,62 @@ extension LocalizationManager {
             .ja: "高度な調色",
             .ko: "고급 색상 조색",
             .th: "สตูดิโอสีขั้นสูง"
+        ],
+        "pro_status_free": [
+            .zhHant: "免費基礎版",
+            .en: "Free Plan",
+            .zhHans: "免费基础版",
+            .ja: "無料プラン",
+            .ko: "무료 플랜",
+            .th: "แผนฟรี"
+        ],
+        "pro_status_unlocked": [
+            .zhHant: "Kairumo Pro 已解鎖",
+            .en: "Kairumo Pro Unlocked",
+            .zhHans: "Kairumo Pro 已解锁",
+            .ja: "Kairumo Pro ロック解除済み",
+            .ko: "Kairumo Pro 잠금 해제됨",
+            .th: "ปลดล็อก Kairumo Pro แล้ว"
+        ],
+        "pro_status_vip_unlocked": [
+            .zhHant: "Kairumo Pro（VIP 禮遇授權）",
+            .en: "Kairumo Pro (VIP Gift Pass)",
+            .zhHans: "Kairumo Pro（VIP 礼遇授权）",
+            .ja: "Kairumo Pro（VIP ギフトパス）",
+            .ko: "Kairumo Pro (VIP 기프트 패스)",
+            .th: "Kairumo Pro (บัตรของขวัญ VIP)"
+        ],
+        "pro_unlocked_toast": [
+            .zhHant: "已解鎖 Kairumo Pro 買斷版全部進階功能",
+            .en: "Kairumo Pro lifetime features unlocked",
+            .zhHans: "已解锁 Kairumo Pro 买断版全部进阶功能",
+            .ja: "Kairumo Pro 買い切り版の全機能が解除されました",
+            .ko: "Kairumo Pro 평생 소장판 기능이 모두 잠금 해제되었습니다",
+            .th: "ปลดล็อกฟีเจอร์ Kairumo Pro ตลอดชีพแล้ว"
+        ],
+        "pro_unlocked_vip_toast": [
+            .zhHant: "VIP 禮遇通行證驗證成功，已為您永久解鎖 Kairumo Pro",
+            .en: "VIP Gift Pass verified — Kairumo Pro unlocked",
+            .zhHans: "VIP 礼遇通行证验证成功，已为您永久解锁 Kairumo Pro",
+            .ja: "VIP ギフトパスを確認しました — Kairumo Pro を解除しました",
+            .ko: "VIP 기프트 패스 인증 완료 — Kairumo Pro가 잠금 해제되었습니다",
+            .th: "ยืนยันบัตรของขวัญ VIP แล้ว — ปลดล็อก Kairumo Pro สำเร็จ"
+        ],
+        "pro_upgrade_button": [
+            .zhHant: "升級 Pro 專業版",
+            .en: "Upgrade to Pro",
+            .zhHans: "升级 Pro 专业版",
+            .ja: "Pro にアップグレード",
+            .ko: "Pro로 업그레이드",
+            .th: "อัปเกรดเป็น Pro"
+        ],
+        "pro_vip_invalid_toast": [
+            .zhHant: "此禮遇連結無效或已過期",
+            .en: "This gift link is invalid or has expired",
+            .zhHans: "此礼遇链接无效或已过期",
+            .ja: "このギフトリンクは無効か、有効期限が切れています",
+            .ko: "이 기프트 링크는 유효하지 않거나 만료되었습니다",
+            .th: "ลิงก์ของขวัญนี้ไม่ถูกต้องหรือหมดอายุแล้ว"
         ],
         "profile_add": [
             .zhHant: "新增使用者",
