@@ -453,7 +453,19 @@ class AndroidCollabController(private val manager: CollaborationManager) {
         ink.known[page]?.removeAll(wires)
         ink.removed(page, wires)
         val engine = engineFor(page)
-        if (engine != null) return engine.removeRemoteStrokes { it.coreStrokeId in locals } > 0
+        if (engine != null) {
+            val removedHere = engine.strokes.mapNotNullTo(HashSet()) { s -> s.coreStrokeId?.takeIf { it in locals } }
+            val changed = engine.removeRemoteStrokes { it.coreStrokeId in locals } > 0
+            // 引擎手上沒有、核心裡卻還在的（引擎載入之後才由別的路徑寫進這一頁）：直接擦核心。
+            // 以前只擦引擎手上的 —— 那幾筆留在套件裡，重開或重連後又出現。與 Apple `ProInkCollab.applyRemote` 相同。
+            val leftover = locals - removedHere
+            if (leftover.isEmpty()) return changed
+            val inCore = runCatching { session.visibleStrokeDetails(page) }.getOrDefault(emptyList())
+                .mapTo(HashSet()) { it.id.lowercase() }
+            val stale = leftover.filter { it.lowercase() in inCore }
+            stale.forEach { InkPackageWriter.erase(session, page, it) }
+            return changed || stale.isNotEmpty()
+        }
         locals.forEach { InkPackageWriter.erase(session, page, it) }
         return true
     }
