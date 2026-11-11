@@ -55,6 +55,7 @@ object LocalizationStrings {
             putAll(part41())
             putAll(part42())
             putAll(part43())
+            putAll(part44())
         }
     }
 
@@ -18036,6 +18037,185 @@ object LocalizationStrings {
             "ko" to "녹음 일시정지",
             "th" to "หยุดการบันทึกชั่วคราว"
         ),
+        "paywall_buy_button" to mapOf(
+            "zh-Hant" to "一次買斷永久解鎖 Kairumo Pro",
+            "en" to "Unlock Kairumo Pro Forever",
+            "zh-Hans" to "一次买断永久解锁 Kairumo Pro",
+            "ja" to "Kairumo Pro を買い切りで解除",
+            "ko" to "Kairumo Pro 평생 잠금 해제",
+            "th" to "ปลดล็อก Kairumo Pro ตลอดชีพ"
+        ),
+        "paywall_context_prompt" to mapOf(
+            "zh-Hant" to "此功能為 Kairumo Pro 專屬進階工具",
+            "en" to "Requires Kairumo Pro",
+            "zh-Hans" to "此功能为 Kairumo Pro 专属进阶工具",
+            "ja" to "Kairumo Pro 専用機能",
+            "ko" to "Kairumo Pro 전용 기능",
+            "th" to "ฟีเจอร์สำหรับ Kairumo Pro"
+        ),
+        "paywall_existing_data_safe" to mapOf(
+            "zh-Hant" to "您現有的所有筆記本、頁面、備份與匯出功能在免費版中依然 100% 完整可讀可用。",
+            "en" to "All your existing notebooks, pages, backups, and exports remain 100% accessible on the Free plan.",
+            "zh-Hans" to "您现有的所有笔记本、页面、备份与导出功能在免费版中依然 100% 完整可读可用。",
+            "ja" to "既存のノート、ページ、バックアップ、書き出しは無料プランでも 100% そのまま閲覧・利用できます。",
+            "ko" to "기존 노트, 페이지, 백업 및 내보내기는 무료 플랜에서도 100% 그대로 열람하고 사용할 수 있습니다.",
+            "th" to "สมุดบันทึก หน้า ข้อมูลสำรอง และการส่งออกที่มีอยู่ทั้งหมดยังคงเปิดดูและใช้งานได้ 100% ในแผนฟรี"
+        )
+    )
+
+    private fun part28(): Map<String, Map<String, String>> = mapOf(
+        "paywall_feature_audio_transcribe_desc" to mapOf(
+            "zh-Hant" to "在裝置端離線將課堂與會議錄音轉為帶時間軸的可搜尋文字稿。",
+            "en" to "Convert recorded lectures and meetings into searchable, time-synced transcripts right on your device.",
+            "zh-Hans" to "在设备端离线将课堂与会议录音转为带时间轴的可搜索文字稿。",
+            "ja" to "講義や会議の録音を端末内でそのままタイムスタンプ付きテキストに変換。",
+            "ko" to "강의 및 회의 녹음을 기기 내에서 시간 동기화된 텍스트로 변환합니다.",
+            "th" to "แปลงเสียงบันทึกการบรรยายและการประชุมเป็นข้อความพร้อมเวลาซิงค์บนอุปกรณ์ของคุณโดยตรง"
+        ),
+        "paywall_feature_audio_transcribe_title" to mapOf(
+            "zh-Hant" to "本機離線錄音轉逐字稿",
+            "en" to "On-Device Audio-to-Text Transcription",
+            "zh-Hans" to "本机离线录音转逐字稿",
+            "ja" to "端末内音声文字起こし（オフライン）",
+            "ko" to "온디바이스 음성 텍스트 변환(오프라인)",
+            "th" to "ถอดเสียงเป็นข้อความในตัวเครื่อง (ออฟไลน์)"
+        ),
+        "paywall_feature_collab_host_desc" to mapOf(
+            "zh-Hant" to "作為房主開啟協同房間或跨網寄存；免費版夥伴掃描您的 QR Code 即可免費加入房間一起書寫。",
+            "en" to "Host collaborative whiteboard sessions and invite anyone — guests on the Free plan can scan your QR code to join and write together for free.",
+            "zh-Hans" to "作为房主开启协同房间或跨网寄存；免费版伙伴扫描您的 QR Code 即可免费加入房间一起书写。",
+            "ja" to "共同編集ルームを開設して招待。無料プランの参加者も QR コードで無料参加して一緒に書き込めます。",
+            "ko" to "공동 작업 방을 개설하고 초대하세요. 무료 플랜 사용자도 QR 코드로 무료로 참여하여 함께 필기할 수 있습니다.",
+            "th" to "เป็นเจ้าของห้องไวท์บอร์ดร่วมกันและเชิญทุกคน — ผู้เข้าร่วมที่ใช้แผนฟรีสามารถสแกนคิวอาร์โค้ดเพื่อเข้าร่วมและเขียนด้วยกันได้ฟรี"
+        ),
+        "paywall_feature_collab_host_title" to mapOf(
+            "zh-Hant" to "發起多人即時協同房間與跨網中繼寄存",
+            "en" to "Host Live Collaboration Rooms & Cloud Relay",
+            "zh-Hans" to "发起多人即时协同房间与跨网中继寄存",
+            "ja" to "共同編集ルームの主催＆クラウド中継共有",
+            "ko" to "실시간 공동 작업 방 개설 및 클라우드 릴레이 공유",
+            "th" to "เปิดห้องทำงานร่วมกันสดและแชร์ผ่านคลาวด์รีเลย์"
+        ),
+        "paywall_feature_drafting_desc" to mapOf(
+            "zh-Hant" to "尺寸標註、倒圓角、修剪延伸、陣列、三視圖投影與立體拉伸，以及空白地圖、圖例與描圖底圖。",
+            "en" to "Precision dimensions, fillets, chamfers, trim/extend, arrays, orthographic projections, solid extrusion, blank maps, legends, and tracing underlays.",
+            "zh-Hans" to "尺寸标注、倒圆角、修剪延伸、阵列、三视图投影与立体拉伸，以及空白地图、图例与描图底图。",
+            "ja" to "寸法線・フィレット・トリム・延長・配列・三面図・立体押し出し、白地図・凡例・トレース下絵。",
+            "ko" to "치수선, 필렛, 트림/연장, 배열, 삼각법 투영, 입체 돌출, 백지도, 범례 및 따라 그리기 밑그림.",
+            "th" to "เส้นบอกขนาด มุมมน ตัด/ต่อเส้น อาร์เรย์ ภาพฉายสามด้าน ดึงทรงตัน แผนที่เปล่า คำอธิบายสัญลักษณ์ และภาพรองลอกลาย"
+        ),
+        "paywall_feature_drafting_title" to mapOf(
+            "zh-Hant" to "工程圖學筆組與三視圖立體拉伸",
+            "en" to "Engineering Drafting & 2D-to-3D Extrusion",
+            "zh-Hans" to "工程图学笔组与三视图立体拉伸",
+            "ja" to "エンジニアリング製図ペン＆3D 押し出し",
+            "ko" to "엔지니어링 제도 펜 및 3D 돌출",
+            "th" to "ปากกาเขียนแบบวิศวกรรมและดึงรูปทรง 3D"
+        ),
+        "paywall_feature_pro_ink_desc" to mapOf(
+            "zh-Hant" to "書法筆、水彩、油畫、炭筆、噴槍、蠟筆，以及筆畫穩定器、對稱繪圖、飛梭工具盤與專業色相環。",
+            "en" to "Calligraphy, watercolor, oil paint, charcoal, airbrush, crayon, stroke stabilizer, symmetry drawing, radial tool menu, and HSB color wheel.",
+            "zh-Hans" to "书法笔、水彩、油画、炭笔、喷枪、蜡笔，以及笔画稳定器、对称绘图、飞梭工具盘与专业色相环。",
+            "ja" to "カリグラフィー・水彩・油彩・木炭・エアブラシ・手ブレ補正・対称描画・クイックツールリング・色相環。",
+            "ko" to "캘리그라피, 수채화, 유화, 목탄, 에어브러시, 손떨림 보정, 대칭 그리기, 원형 도구 모음 및 색상환.",
+            "th" to "ปากกาคัดลายมือ สีน้ำ สีน้ำมัน ชาร์โคล แอร์บรัช ระบบกันสั่น วาดสมมาตร วงล้อเครื่องมือด่วน และวงล้อสี"
+        ),
+        "paywall_feature_pro_ink_title" to mapOf(
+            "zh-Hant" to "9 款藝術筆刷與專業筆觸控制",
+            "en" to "Artistic Brushes & Pro Ink Controls",
+            "zh-Hans" to "9 款艺术笔刷与专业笔触控制",
+            "ja" to "9 種の芸術ブラシ＆プロ筆致コントロール",
+            "ko" to "9종 예술 브러시 및 프로 필기 제어",
+            "th" to "หัวแปรงศิลปะ 9 แบบและการควบคุมหมึกระดับโปร"
+        ),
+        "paywall_feature_studios_desc" to mapOf(
+            "zh-Hant" to "支援斜線表頭與合併儲存格的專業表格、統計圖表、數學算式計算機、3D 幾何立體模型與離線重點整理。",
+            "en" to "Word-grade cell merge & diagonal split headers, statistical charts, LaTeX math calculator, interactive 3D solids, and offline note intelligence.",
+            "zh-Hans" to "支持斜线表头与合并单元格的专业表格、统计图表、数学算式计算器、3D 几何立体模型与离线重点整理。",
+            "ja" to "セル結合や斜線見出し対応の表作成、統計グラフ、数式計算、3D 立体モデル、オフライン要約。",
+            "ko" to "셀 병합 및 대각선 분할 표, 통계 차트, 수식 계산기, 3D 입체 모델 및 오프라인 노트 요약.",
+            "th" to "ตารางระดับเอกสารพร้อมเส้นทแยงมุม กราฟสถิติ เครื่องคิดเลขสมการ โมเดล 3D และสรุปบันทึกออฟไลน์"
+        ),
+        "paywall_feature_studios_title" to mapOf(
+            "zh-Hant" to "專業表格、圖表、數學算式、3D 幾何與智慧整理工作台",
+            "en" to "Table, Chart, Math, 3D & Summary Studios",
+            "zh-Hans" to "专业表格、图表、数学算式、3D 几何与智能整理工作台",
+            "ja" to "表組・グラフ・数式・3D・要約スタジオ",
+            "ko" to "표·차트·수식·3D·요약 스튜디오",
+            "th" to "สตูดิโอตาราง กราฟ สมการ 3D และสรุปเนื้อหา"
+        ),
+        "paywall_feature_translation_pen_desc" to mapOf(
+            "zh-Hant" to "在 PDF 講義或手寫字跡上一筆劃過，本機即地辨識並翻譯外文段落。",
+            "en" to "Stroke across foreign text on PDFs or handwritten notes to recognize and translate on-device in place.",
+            "zh-Hans" to "在 PDF 讲义或手写字迹上一笔划过，本机即地识别并翻译外文段落。",
+            "ja" to "PDF や手書き文字の上をなぞるだけで、端末内でその場認識・翻訳。",
+            "ko" to "PDF나 필기 텍스트 위를 그어 기기 내에서 즉시 인식하고 번역합니다.",
+            "th" to "ลากปากกาผ่านข้อความบน PDF หรือลายมือเพื่อรู้จำและแปลภาษาในตัวเครื่องทันที"
+        ),
+        "paywall_feature_translation_pen_title" to mapOf(
+            "zh-Hant" to "掃描翻譯筆（劃過即譯）",
+            "en" to "Scan Translation Pen",
+            "zh-Hans" to "扫描翻译笔（划过即译）",
+            "ja" to "なぞり翻訳ペン",
+            "ko" to "스캔 번역 펜",
+            "th" to "ปากกาสแกนแปลภาษา"
+        ),
+        "paywall_lifetime_badge" to mapOf(
+            "zh-Hant" to "一次買斷 · 永久使用 · 絕無訂閱扣款",
+            "en" to "ONE-TIME PURCHASE · NO SUBSCRIPTION",
+            "zh-Hans" to "一次买断 · 永久使用 · 绝无订阅扣款",
+            "ja" to "買い切り · サブスクリプションなし",
+            "ko" to "일회성 구매 · 구독 없음",
+            "th" to "ซื้อครั้งเดียว · ไม่ต้องสมัครรายเดือน"
+        ),
+        "paywall_redeem_button" to mapOf(
+            "zh-Hant" to "兌換 App Store 代碼",
+            "en" to "Redeem App Store Code",
+            "zh-Hans" to "兑换 App Store 代码",
+            "ja" to "コードを使う",
+            "ko" to "코드 교환",
+            "th" to "แลกรหัส App Store"
+        ),
+        "paywall_restore_button" to mapOf(
+            "zh-Hant" to "恢復購買紀錄",
+            "en" to "Restore Purchases",
+            "zh-Hans" to "恢复购买记录",
+            "ja" to "購入を復元",
+            "ko" to "구매 복원",
+            "th" to "กู้คืนการซื้อ"
+        ),
+        "paywall_restore_nothing" to mapOf(
+            "zh-Hant" to "未在此 Apple ID 找到已購買的 Pro 紀錄",
+            "en" to "No previous Pro purchase was found for this Apple ID",
+            "zh-Hans" to "未在此 Apple ID 找到已购买的 Pro 记录",
+            "ja" to "この Apple ID で購入された Pro の履歴が見つかりませんでした",
+            "ko" to "이 Apple ID로 구매한 Pro 내역을 찾을 수 없습니다",
+            "th" to "ไม่พบประวัติการซื้อ Pro สำหรับ Apple ID นี้"
+        ),
+        "paywall_store_unavailable" to mapOf(
+            "zh-Hant" to "目前無法連線 App Store，請檢查網路後再試。",
+            "en" to "App Store is currently unreachable. Please check your connection and try again.",
+            "zh-Hans" to "目前无法连接 App Store，请检查网络后再试。",
+            "ja" to "現在 App Store に接続できません。通信環境を確認してからもう一度お試しください。",
+            "ko" to "현재 App Store에 연결할 수 없습니다. 네트워크 연결을 확인한 후 다시 시도해 주세요.",
+            "th" to "ไม่สามารถเชื่อมต่อ App Store ได้ในขณะนี้ โปรดตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
+        ),
+        "paywall_subtitle" to mapOf(
+            "zh-Hant" to "基礎筆記永久免費且不限筆記本與頁數。一次買斷即可永久解鎖跨領域專業工作台、工程製圖筆組、掃描翻譯筆與多人協同開房。",
+            "en" to "Core note-taking is free forever with unlimited notebooks and pages. Unlock cross-disciplinary studios, engineering drafting, scan translation, and live room hosting with a single one-time purchase.",
+            "zh-Hans" to "基础笔记永久免费且不限笔记本与页数。一次买断即可永久解锁跨领域专业工作台、工程制图笔组、扫描翻译笔与多人协同开房。",
+            "ja" to "基本ノート機能はノート数・ページ数無制限で永久無料。一度の買い切りで、専門スタジオ・製図ペン・なぞり翻訳・共同編集ルーム主催をすべて解放します。",
+            "ko" to "기본 필기 기능은 노트와 페이지 수 제한 없이 평생 무료입니다. 한 번의 구매로 전문 스튜디오, 제도 펜, 스캔 번역 펜, 실시간 공동 작업 방 개설을 모두 잠금 해제하세요.",
+            "th" to "ฟีเจอร์จดบันทึกพื้นฐานใช้ฟรีตลอดไปโดยไม่จำกัดจำนวนสมุดและหน้า ซื้อขาดครั้งเดียวเพื่อปลดล็อกสตูดิโอเฉพาะทาง ปากกาเขียนแบบ ปากกาแปลภาษา และการจัดตั้งห้องทำงานร่วมกัน"
+        ),
+        "paywall_title" to mapOf(
+            "zh-Hant" to "Kairumo Pro 專業買斷版",
+            "en" to "Kairumo Pro Lifetime Unlock",
+            "zh-Hans" to "Kairumo Pro 专业买断版",
+            "ja" to "Kairumo Pro 買い切りアップグレード",
+            "ko" to "Kairumo Pro 평생 소장판 업그레이드",
+            "th" to "อัปเกรด Kairumo Pro แบบซื้อขาดตลอดชีพ"
+        ),
         "pdf_choose_page" to mapOf(
             "zh-Hant" to "要插入第幾頁？",
             "en" to "Which page?",
@@ -18059,10 +18239,7 @@ object LocalizationStrings {
             "ja" to "%@ ページを読み込みました",
             "ko" to "%@페이지를 가져왔습니다",
             "th" to "นำเข้าแล้ว %@ หน้า"
-        )
-    )
-
-    private fun part28(): Map<String, Map<String, String>> = mapOf(
+        ),
         "pdf_import_hint" to mapOf(
             "zh-Hant" to "每一頁 PDF 會成為一頁筆記內頁，縮放到整頁大小；筆跡會畫在 PDF 上面。",
             "en" to "Each PDF page becomes a notebook page, scaled to fill it. Your ink goes on top of the PDF.",
@@ -18383,6 +18560,14 @@ object LocalizationStrings {
             "ko" to "계정도 서버도 추적도 없음",
             "th" to "ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่มีการติดตาม"
         ),
+        "pro_badge" to mapOf(
+            "zh-Hant" to "PRO",
+            "en" to "PRO",
+            "zh-Hans" to "PRO",
+            "ja" to "PRO",
+            "ko" to "PRO",
+            "th" to "PRO"
+        ),
         "pro_color" to mapOf(
             "zh-Hant" to "進階調色",
             "en" to "Advanced Color Studio",
@@ -18390,6 +18575,62 @@ object LocalizationStrings {
             "ja" to "高度な調色",
             "ko" to "고급 색상 조색",
             "th" to "สตูดิโอสีขั้นสูง"
+        ),
+        "pro_status_free" to mapOf(
+            "zh-Hant" to "免費基礎版",
+            "en" to "Free Plan",
+            "zh-Hans" to "免费基础版",
+            "ja" to "無料プラン",
+            "ko" to "무료 플랜",
+            "th" to "แผนฟรี"
+        ),
+        "pro_status_unlocked" to mapOf(
+            "zh-Hant" to "Kairumo Pro 已解鎖",
+            "en" to "Kairumo Pro Unlocked",
+            "zh-Hans" to "Kairumo Pro 已解锁",
+            "ja" to "Kairumo Pro ロック解除済み",
+            "ko" to "Kairumo Pro 잠금 해제됨",
+            "th" to "ปลดล็อก Kairumo Pro แล้ว"
+        ),
+        "pro_status_vip_unlocked" to mapOf(
+            "zh-Hant" to "Kairumo Pro（VIP 禮遇授權）",
+            "en" to "Kairumo Pro (VIP Gift Pass)",
+            "zh-Hans" to "Kairumo Pro（VIP 礼遇授权）",
+            "ja" to "Kairumo Pro（VIP ギフトパス）",
+            "ko" to "Kairumo Pro (VIP 기프트 패스)",
+            "th" to "Kairumo Pro (บัตรของขวัญ VIP)"
+        ),
+        "pro_unlocked_toast" to mapOf(
+            "zh-Hant" to "已解鎖 Kairumo Pro 買斷版全部進階功能",
+            "en" to "Kairumo Pro lifetime features unlocked",
+            "zh-Hans" to "已解锁 Kairumo Pro 买断版全部进阶功能",
+            "ja" to "Kairumo Pro 買い切り版の全機能が解除されました",
+            "ko" to "Kairumo Pro 평생 소장판 기능이 모두 잠금 해제되었습니다",
+            "th" to "ปลดล็อกฟีเจอร์ Kairumo Pro ตลอดชีพแล้ว"
+        ),
+        "pro_unlocked_vip_toast" to mapOf(
+            "zh-Hant" to "VIP 禮遇通行證驗證成功，已為您永久解鎖 Kairumo Pro",
+            "en" to "VIP Gift Pass verified — Kairumo Pro unlocked",
+            "zh-Hans" to "VIP 礼遇通行证验证成功，已为您永久解锁 Kairumo Pro",
+            "ja" to "VIP ギフトパスを確認しました — Kairumo Pro を解除しました",
+            "ko" to "VIP 기프트 패스 인증 완료 — Kairumo Pro가 잠금 해제되었습니다",
+            "th" to "ยืนยันบัตรของขวัญ VIP แล้ว — ปลดล็อก Kairumo Pro สำเร็จ"
+        ),
+        "pro_upgrade_button" to mapOf(
+            "zh-Hant" to "升級 Pro 專業版",
+            "en" to "Upgrade to Pro",
+            "zh-Hans" to "升级 Pro 专业版",
+            "ja" to "Pro にアップグレード",
+            "ko" to "Pro로 업그레이드",
+            "th" to "อัปเกรดเป็น Pro"
+        ),
+        "pro_vip_invalid_toast" to mapOf(
+            "zh-Hant" to "此禮遇連結無效或已過期",
+            "en" to "This gift link is invalid or has expired",
+            "zh-Hans" to "此礼遇链接无效或已过期",
+            "ja" to "このギフトリンクは無効か、有効期限が切れています",
+            "ko" to "이 기프트 링크는 유효하지 않거나 만료되었습니다",
+            "th" to "ลิงก์ของขวัญนี้ไม่ถูกต้องหรือหมดอายุแล้ว"
         ),
         "profile_add" to mapOf(
             "zh-Hant" to "新增使用者",
@@ -18462,7 +18703,10 @@ object LocalizationStrings {
             "ja" to "これはこの端末の元のユーザーのため、削除できません。",
             "ko" to "이 기기의 기존 사용자이므로 삭제할 수 없습니다.",
             "th" to "นี่คือผู้ใช้เดิมของอุปกรณ์นี้ จึงลบไม่ได้"
-        ),
+        )
+    )
+
+    private fun part29(): Map<String, Map<String, String>> = mapOf(
         "profile_delete_message" to mapOf(
             "zh-Hant" to "將刪除「%1@」在這台裝置上的所有筆記、設定與登入，無法復原。雲端上的資料不受影響：用同一個 Google 帳號重新登入即可取回。",
             "en" to "All notes, settings and sign-ins of “%1@” on this device will be deleted and cannot be recovered. Data in the cloud is not affected: sign in with the same Google account to get it back.",
@@ -18702,10 +18946,7 @@ object LocalizationStrings {
             "ja" to "PIN は 4〜8 桁の数字にしてください",
             "ko" to "PIN은 4~8자리 숫자여야 합니다",
             "th" to "PIN ต้องเป็นตัวเลข 4 ถึง 8 หลัก"
-        )
-    )
-
-    private fun part29(): Map<String, Map<String, String>> = mapOf(
+        ),
         "profile_pin_locked" to mapOf(
             "zh-Hant" to "嘗試次數太多，請在 %1@ 之後再試",
             "en" to "Too many attempts. Try again in %1@.",
@@ -19105,7 +19346,10 @@ object LocalizationStrings {
             "ja" to "録音",
             "ko" to "녹음",
             "th" to "บันทึก"
-        ),
+        )
+    )
+
+    private fun part30(): Map<String, Map<String, String>> = mapOf(
         "recorded_duration" to mapOf(
             "zh-Hant" to "已錄 %@ 秒",
             "en" to "Recorded %@s",
@@ -19345,10 +19589,7 @@ object LocalizationStrings {
             "ja" to "同じネットワークでなくても使えます。共同編集は1つのネットワークに縛られません。自分で用意した中継を wss://…（TLS）で指定すれば、どこからでも参加できます。内容は暗号化されていてもルームIDや参加者は平文で流れるため、ws:// は自分のプライベートネットワーク内でのみ許可されます。入手方法は3通り、手引きを参照してください。",
             "ko" to "같은 네트워크가 아니어도 됩니다. 협업은 한 네트워크에 묶여 있지 않습니다. 직접 운영하는 중계를 wss://…(TLS)로 입력하면 어디서든 참여할 수 있습니다. 내용은 암호화되지만 룸 ID와 참여자 정보는 평문으로 흐르므로 ws:// 는 자신의 사설 네트워크 안에서만 허용됩니다. 준비하는 세 가지 방법은 설명서를 참고하세요.",
             "th" to "ไม่ได้อยู่เครือข่ายเดียวกันก็ใช้ได้ การทำงานร่วมกันไม่ได้ผูกกับเครือข่ายเดียว กรอกที่อยู่รีเลย์ที่คุณดูแลเองเป็น wss://… (TLS) แล้วทุกคนเข้าร่วมจากที่ไหนก็ได้ ws:// ธรรมดาอนุญาตเฉพาะในเครือข่ายส่วนตัวของคุณ เพราะ Room ID และรายชื่อผู้เข้าร่วมส่งแบบไม่เข้ารหัสแม้เนื้อหาจะเข้ารหัสแล้ว ดูสามวิธีได้ในคู่มือ"
-        )
-    )
-
-    private fun part30(): Map<String, Map<String, String>> = mapOf(
+        ),
         "relay_server_address" to mapOf(
             "zh-Hant" to "協同伺服器位址",
             "en" to "Relay Server Address",
@@ -19748,7 +19989,10 @@ object LocalizationStrings {
             "ja" to "三分割構図ガイド",
             "ko" to "3등분 법칙 격자",
             "th" to "ตารางกฎสามส่วน"
-        ),
+        )
+    )
+
+    private fun part31(): Map<String, Map<String, String>> = mapOf(
         "ruler" to mapOf(
             "zh-Hant" to "尺規輔助線",
             "en" to "Ruler Guide",
@@ -19988,10 +20232,7 @@ object LocalizationStrings {
             "ja" to "音声ガイド：Kairumoの設計思想とコアアーキテクチャ",
             "ko" to "음성 가이드: Kairumo 설계 철학과 핵심 아키텍처",
             "th" to "เสียงบรรยาย: ปรัชญาการออกแบบและสถาปัตยกรรมหลักของ Kairumo"
-        )
-    )
-
-    private fun part31(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_showcase_calc_typed_desc" to mapOf(
             "zh-Hant" to "使用方式：\n1. 自由手繪：直接用手寫筆書寫微積分算式（包括積分號、分式、上標、三角函數）。\n2. 公式識別：套索選中後點擊【識別為公式】，瞬間轉換為標準化 LaTeX 排版。\n3. 分步解析：融合打字解析卡，手寫推導步驟與打字說明無縫並列呈現。",
             "en" to "How to use:\n1. Handwrite formulas using Apple Pencil (integral signs, limits, radicals).\n2. Lasso or tap Math OCR to convert into formatted LaTeX text.\n3. The built-in solver renders the step-by-step derivation card below.",
@@ -20391,7 +20632,10 @@ object LocalizationStrings {
             "ja" to "世界中の創作者・技術者・研究者が Kairumo を選ぶ理由",
             "ko" to "전 세계의 창작자, 엔지니어, 연구자들이 Kairumo를 선택하는 이유",
             "th" to "เหตุผลที่นักสร้างสรรค์ วิศวกร และนักวิชาการเลือก Kairumo"
-        ),
+        )
+    )
+
+    private fun part32(): Map<String, Map<String, String>> = mapOf(
         "sample_showcase_p4_hero_badge" to mapOf(
             "zh-Hant" to "★ Kairumo 殺手級體驗：手寫自由與打字秩序的無界融合",
             "en" to "★ Kairumo Superpower: Zero Friction Synthesis of Hand & Type",
@@ -20631,10 +20875,7 @@ object LocalizationStrings {
             "ja" to "これは実際の表オブジェクトです。セルをダブルタップで編集、角をドラッグでサイズ変更できます。",
             "ko" to "이것은 실제 표 객체입니다. 셀을 두 번 눌러 수정하고, 모서리를 끌어 크기를 조절하세요.",
             "th" to "นี่คือวัตถุตารางจริง แตะสองครั้งที่ช่องใดก็ได้เพื่อแก้ไข ลากมุมเพื่อปรับขนาด"
-        )
-    )
-
-    private fun part32(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_p2_title" to mapOf(
             "zh-Hant" to "工具列怎麼用",
             "en" to "Using the toolbar",
@@ -21034,7 +21275,10 @@ object LocalizationStrings {
             "ja" to "ページテンプレート",
             "ko" to "페이지 템플릿",
             "th" to "เทมเพลตหน้า"
-        ),
+        )
+    )
+
+    private fun part33(): Map<String, Map<String, String>> = mapOf(
         "selected" to mapOf(
             "zh-Hant" to "已選取",
             "en" to "Selected",
@@ -21274,10 +21518,7 @@ object LocalizationStrings {
             "ja" to "山形",
             "ko" to "갈매기형",
             "th" to "ลูกศรเชฟรอน"
-        )
-    )
-
-    private fun part33(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_cloud" to mapOf(
             "zh-Hant" to "雲朵",
             "en" to "Cloud",
@@ -21677,7 +21918,10 @@ object LocalizationStrings {
             "ja" to "直角三角形",
             "ko" to "직각삼각형",
             "th" to "สามเหลี่ยมมุมฉาก"
-        ),
+        )
+    )
+
+    private fun part34(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_roundedrectangle" to mapOf(
             "zh-Hant" to "圓角矩形",
             "en" to "Rounded rectangle",
@@ -21917,10 +22161,7 @@ object LocalizationStrings {
             "ja" to "フローチャート記号（ISO 5807）",
             "ko" to "순서도 기호(ISO 5807)",
             "th" to "สัญลักษณ์ผังงาน (ISO 5807)"
-        )
-    )
-
-    private fun part34(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_section_solid" to mapOf(
             "zh-Hant" to "立體圖（可調深度）",
             "en" to "Solids (3D, adjustable depth)",
@@ -22320,7 +22561,10 @@ object LocalizationStrings {
             "ja" to "展開を再生",
             "ko" to "펼치기 재생",
             "th" to "เล่นการคลี่"
-        ),
+        )
+    )
+
+    private fun part35(): Map<String, Map<String, String>> = mapOf(
         "solid_glass_progress" to mapOf(
             "zh-Hant" to "展開進度",
             "en" to "Unfolding progress",
@@ -22560,10 +22804,7 @@ object LocalizationStrings {
             "ja" to "スケッチから押し出しました",
             "ko" to "스케치에서 돌출했습니다",
             "th" to "ดึงจากสเก็ตช์ของคุณแล้ว"
-        )
-    )
-
-    private fun part35(): Map<String, Map<String, String>> = mapOf(
+        ),
         "solid_step" to mapOf(
             "zh-Hant" to "轉折位置",
             "en" to "Step at",
@@ -22963,7 +23204,10 @@ object LocalizationStrings {
             "ja" to "箇条書き",
             "ko" to "글머리 기호",
             "th" to "จุดนำ"
-        ),
+        )
+    )
+
+    private fun part36(): Map<String, Map<String, String>> = mapOf(
         "sticker_calendar" to mapOf(
             "zh-Hant" to "日期",
             "en" to "Date",
@@ -23203,10 +23447,7 @@ object LocalizationStrings {
             "ja" to "疑問符",
             "ko" to "물음표",
             "th" to "เครื่องหมายคำถาม"
-        )
-    )
-
-    private fun part36(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticker_ribbon" to mapOf(
             "zh-Hant" to "緞帶",
             "en" to "Ribbon",
@@ -23606,7 +23847,10 @@ object LocalizationStrings {
             "ja" to "クラウドのデータを削除できなかったため、ローカルは何も変更していません。もう一度試すか、このオプションをオフにしてください。",
             "ko" to "클라우드 데이터를 지우지 못해 로컬은 아무것도 변경하지 않았습니다. 다시 시도하거나 이 옵션을 끄세요.",
             "th" to "ลบข้อมูลบนคลาวด์ไม่สำเร็จ จึงไม่ได้ลบอะไรในเครื่อง ลองอีกครั้งหรือปิดตัวเลือกนี้"
-        ),
+        )
+    )
+
+    private fun part37(): Map<String, Map<String, String>> = mapOf(
         "storage_reset_cloud_note" to mapOf(
             "zh-Hant" to "清掉本 App 在 Google Drive 或同步資料夾裡的資料，其他裝置就不會把檔案帶回來。其他裝置本機的副本要等你在那些裝置上也重設才會清掉。",
             "en" to "Clears this app's Google Drive or sync-folder data so other devices cannot bring the files back. Other devices keep their own local copies until you reset them too.",
@@ -23846,10 +24090,7 @@ object LocalizationStrings {
             "ja" to "同期は分散型の仕組みです。iCloud Drive または任意のフォルダを設定すると、ノートごとに専用の `.padnote` フォルダ（ベクター筆跡や録音などを格納）が自動で作られます。この `.padnote` は同期に必要な正常な構成なので、むやみに削除しないでください。",
             "ko" to "동기화는 분산형 구조입니다. iCloud Drive 또는 원하는 폴더를 설정하면 노트마다 전용 `.padnote` 폴더(벡터 필기와 녹음 파일 등 포함)가 자동으로 만들어집니다. 이 `.padnote` 폴더는 동기화를 유지하는 정상적인 구조이므로 함부로 삭제하지 마세요.",
             "th" to "การซิงก์ใช้สถาปัตยกรรมแบบกระจายศูนย์ เมื่อตั้งค่า iCloud Drive หรือโฟลเดอร์ที่คุณเลือก โน้ตแต่ละเล่มจะสร้างโฟลเดอร์ `.padnote` ของตัวเองโดยอัตโนมัติ (เก็บลายเส้นเวกเตอร์ ไฟล์เสียง ฯลฯ) โฟลเดอร์ `.padnote` เหล่านี้เป็นโครงสร้างปกติที่ใช้ซิงก์ โปรดอย่าลบทิ้ง"
-        )
-    )
-
-    private fun part37(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_account" to mapOf(
             "zh-Hant" to "帳號",
             "en" to "Account",
@@ -24249,7 +24490,10 @@ object LocalizationStrings {
             "ja" to "完全にプライベート、アカウント不要",
             "ko" to "완전한 프라이버시, 계정 불필요",
             "th" to "เป็นส่วนตัวทั้งหมด ไม่ต้องสมัครบัญชี"
-        ),
+        )
+    )
+
+    private fun part38(): Map<String, Map<String, String>> = mapOf(
         "sync_q_what" to mapOf(
             "zh-Hant" to "這個功能在同步什麼？",
             "en" to "What does this sync?",
@@ -24489,10 +24733,7 @@ object LocalizationStrings {
             "ja" to "テーブル",
             "ko" to "표",
             "th" to "ตาราง"
-        )
-    )
-
-    private fun part38(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_add_column" to mapOf(
             "zh-Hant" to "新增欄",
             "en" to "Add Column",
@@ -24892,7 +25133,10 @@ object LocalizationStrings {
             "ja" to "Description",
             "ko" to "Description",
             "th" to "Description"
-        ),
+        )
+    )
+
+    private fun part39(): Map<String, Map<String, String>> = mapOf(
         "table_design" to mapOf(
             "zh-Hant" to "表格設計",
             "en" to "Table Design",
@@ -25132,10 +25376,7 @@ object LocalizationStrings {
             "ja" to "Preferred Width",
             "ko" to "Preferred Width",
             "th" to "Preferred Width"
-        )
-    )
-
-    private fun part39(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_preview" to mapOf(
             "zh-Hant" to "預覽",
             "en" to "Preview",
@@ -25535,7 +25776,10 @@ object LocalizationStrings {
             "ja" to "表の幅",
             "ko" to "표 너비",
             "th" to "ความกว้างตาราง"
-        ),
+        )
+    )
+
+    private fun part40(): Map<String, Map<String, String>> = mapOf(
         "table_wrap" to mapOf(
             "zh-Hant" to "自動換行",
             "en" to "Wrap text",
@@ -25775,10 +26019,7 @@ object LocalizationStrings {
             "ja" to "基本スタイル",
             "ko" to "기본 스타일",
             "th" to "ทั่วไป"
-        )
-    )
-
-    private fun part40(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_method" to mapOf(
             "zh-Hant" to "筆記方法",
             "en" to "Note-taking Methods",
@@ -26178,7 +26419,10 @@ object LocalizationStrings {
             "ja" to "ムードボードと配色",
             "ko" to "무드보드 및 색상 매트릭스",
             "th" to "มู้ดบอร์ดและตารางจานสี"
-        ),
+        )
+    )
+
+    private fun part41(): Map<String, Map<String, String>> = mapOf(
         "tmpl_moodboard_desc" to mapOf(
             "zh-Hant" to "頂部 5 格代表色票位，中央大尺寸靈感畫布",
             "en" to "Top 5-color swatch strip with central inspiration canvas",
@@ -26418,10 +26662,7 @@ object LocalizationStrings {
             "ja" to "ボールペン",
             "ko" to "볼펜",
             "th" to "ปากกาลูกลื่น"
-        )
-    )
-
-    private fun part41(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_brush" to mapOf(
             "zh-Hant" to "毛筆",
             "en" to "Calligraphy Brush",
@@ -26821,7 +27062,10 @@ object LocalizationStrings {
             "ja" to "フレーズ",
             "ko" to "구문",
             "th" to "วลี"
-        ),
+        )
+    )
+
+    private fun part42(): Map<String, Map<String, String>> = mapOf(
         "trans_pen_kind_sentence" to mapOf(
             "zh-Hant" to "整句對照",
             "en" to "Sentence View",
@@ -27061,10 +27305,7 @@ object LocalizationStrings {
             "ja" to "英語 (en)",
             "ko" to "영어 (en)",
             "th" to "ภาษาอังกฤษ (en)"
-        )
-    )
-
-    private fun part42(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transcribe_lang_ja" to mapOf(
             "zh-Hant" to "日本語 (ja)",
             "en" to "Japanese (ja)",
@@ -27464,7 +27705,10 @@ object LocalizationStrings {
             "ja" to "未分類ノート",
             "ko" to "미분류 노트",
             "th" to "บันทึกที่ไม่ได้จัดหมวดหมู่"
-        ),
+        )
+    )
+
+    private fun part43(): Map<String, Map<String, String>> = mapOf(
         "unhide_items" to mapOf(
             "zh-Hant" to "重置隱藏項目",
             "en" to "Reset Hidden",
@@ -27704,10 +27948,7 @@ object LocalizationStrings {
             "ja" to "濃い黄",
             "ko" to "진한 노랑",
             "th" to "เหลืองเข้ม"
-        )
-    )
-
-    private fun part43(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_c_gold" to mapOf(
             "zh-Hant" to "金色",
             "en" to "Gold",
@@ -28107,7 +28348,10 @@ object LocalizationStrings {
             "ja" to "主要アクションボタン（CTA）",
             "ko" to "주요 행동 버튼 (CTA)",
             "th" to "ปุ่มหลัก (CTA)"
-        ),
+        )
+    )
+
+    private fun part44(): Map<String, Map<String, String>> = mapOf(
         "wireframe_card" to mapOf(
             "zh-Hant" to "內容資訊卡片",
             "en" to "Content card",

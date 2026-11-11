@@ -509,29 +509,31 @@ struct AudioAttachmentItemView: View {
     }
 
     private func performTranscribe(language: String? = nil) {
-        guard fileExists, !isTranscribing else { return }
-        isTranscribing = true
-        Task {
-            do {
-                let text = try await AudioTranscriber.shared.transcribe(url: fileUrl, languageCode: language)
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                await MainActor.run {
-                    self.isTranscribing = false
-                    if trimmed.isEmpty {
-                        self.transcribeAlertMessage = localizationManager.localized("transcribe_no_speech")
-                    } else {
-                        self.onTranscribe?(trimmed)
-                        // 翻譯失敗時文字是原文 —— 要說，不然使用者會以為「轉出文字語言」沒作用。
-                        if let reason = AudioTranscriber.shared.lastTranslationError {
-                            self.transcribeAlertMessage = String(
-                                format: localizationManager.localized("hw_asr_translate_failed"), reason)
+        EntitlementManager.shared.requirePro(.audioTranscription) {
+            guard fileExists, !isTranscribing else { return }
+            isTranscribing = true
+            Task {
+                do {
+                    let text = try await AudioTranscriber.shared.transcribe(url: fileUrl, languageCode: language)
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    await MainActor.run {
+                        self.isTranscribing = false
+                        if trimmed.isEmpty {
+                            self.transcribeAlertMessage = localizationManager.localized("transcribe_no_speech")
+                        } else {
+                            self.onTranscribe?(trimmed)
+                            // 翻譯失敗時文字是原文 —— 要說，不然使用者會以為「轉出文字語言」沒作用。
+                            if let reason = AudioTranscriber.shared.lastTranslationError {
+                                self.transcribeAlertMessage = String(
+                                    format: localizationManager.localized("hw_asr_translate_failed"), reason)
+                            }
                         }
                     }
-                }
-            } catch {
-                await MainActor.run {
-                    self.isTranscribing = false
-                    self.transcribeAlertMessage = "\(localizationManager.localized("transcribe_failed")): \(L10n.errorText(error))"
+                } catch {
+                    await MainActor.run {
+                        self.isTranscribing = false
+                        self.transcribeAlertMessage = "\(localizationManager.localized("transcribe_failed")): \(L10n.errorText(error))"
+                    }
                 }
             }
         }

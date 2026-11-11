@@ -21,6 +21,7 @@ public struct HomeWorkbenchView: View {
     @StateObject private var audioManager = AudioRecorderManager.shared
     @StateObject private var localizationManager = LocalizationManager.shared
     @ObservedObject private var transcriber = AudioTranscriber.shared
+    @ObservedObject private var entitlement = EntitlementManager.shared
 
     @State private var searchText: String = ""
     /// 核心索引的搜尋結果（轉錄、PDF、OCR）。見 `NotebookSearchIndex`。
@@ -639,6 +640,7 @@ public struct HomeWorkbenchView: View {
                 userAvatarCircle
                 userProfileTexts
                 Spacer(minLength: 8)
+                proUpgradeOrStatusButton
                 switchUserButton
                 switchAccountButton
             }
@@ -652,6 +654,7 @@ public struct HomeWorkbenchView: View {
                 }
                 HStack {
                     Spacer()
+                    proUpgradeOrStatusButton
                     switchUserButton
                     switchAccountButton
                 }
@@ -723,6 +726,35 @@ public struct HomeWorkbenchView: View {
         // Button 的子樹合併成一個無障礙元素，內層的識別碼浮不上來，
         // 於是畫面稽核找不到它（而畫面對照閘門掃原始碼看得到，所以是綠的）。
         .accessibilityIdentifier("home.identity.edit")
+    }
+
+    private var proUpgradeOrStatusButton: some View {
+        Button {
+            entitlement.presentPaywall(focus: .studios)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: entitlement.isProUnlocked ? "checkmark.seal.fill" : "sparkles")
+                    .font(.system(size: 11, weight: .bold))
+                Text(localizationManager.localized(
+                    entitlement.isVIPUnlocked
+                        ? "pro_status_vip_unlocked"
+                        : (entitlement.isProUnlocked ? "pro_badge" : "pro_upgrade_button")
+                ))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+            }
+            .foregroundColor(entitlement.isProUnlocked ? .accentColor : .white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                entitlement.isProUnlocked
+                    ? Color.accentColor.opacity(0.14)
+                    : Color.accentColor
+            )
+            .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home.pro.upgrade")
     }
 
     // MARK: - 2. 頂部搜尋列

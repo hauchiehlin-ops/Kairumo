@@ -1401,7 +1401,8 @@ public struct NotebookEditorView: View {
             PerfProbe.shared.measure(.pageSave) { saveCurrentPageDrawing() }
             currentPageIndex = bounded // state-entry: 切換頁面的唯一正門
             PerfProbe.shared.measure(.pageLoad) { loadCurrentPage() }
-            if paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
+            if EntitlementManager.shared.isProUnlocked,
+               paperUsesDrafting(paperId: notebook.paperId(forPage: bounded)) {
                 applyEditorTool(.drafting)
             }
         }
@@ -1497,7 +1498,8 @@ public struct NotebookEditorView: View {
         // `onChange(currentRoomId)` 會重建一次。不在協同中就不在開啟時付這筆主執行緒成本。
         if isCollaborating { enterCollabRoomBaseline() }
         // 製圖用的紙（三視圖、等角、作圖步驟…）一打開就選好「圖學」筆組。
-        if paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
+        if EntitlementManager.shared.isProUnlocked,
+           paperUsesDrafting(paperId: notebook.paperId(forPage: currentPageIndex)) {
             applyEditorTool(.drafting)
         }
         MacWindowTitle.apply()

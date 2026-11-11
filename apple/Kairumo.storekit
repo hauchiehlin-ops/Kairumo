@@ -1,0 +1,40 @@
+{
+  "identifier" : "E8A1F9C0-4D2B-4E9A-8C11-7B29A3F01001",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : true,
+      "internalID" : "PRO_LIFETIME_001",
+      "localizations" : [
+        {
+          "description" : "一次買斷永久解鎖專業工作台、工程圖學筆組、掃描翻譯筆、錄音轉文字與協同開房。",
+          "displayName" : "Kairumo Pro 專業買斷版",
+          "locale" : "zh_Hant"
+        },
+        {
+          "description" : "Lifetime unlock for Studios, Engineering Drafting, Scan Translation Pen, Transcription, and Room Hosting.",
+          "displayName" : "Kairumo Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.kairumo.padnote.pro.lifetime",
+      "referenceName" : "Kairumo Pro Lifetime Unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6738000001",
+    "_developerTeamID" : "KAIRUMODEV",
+    "_lastSynchronizedDate" : 753000000
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

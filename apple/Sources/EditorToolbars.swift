@@ -80,10 +80,12 @@ extension NotebookEditorView {
                 .accessibilityIdentifier("editor.insert.fill_region")
             // 圖例：著色後說明「哪個顏色代表什麼」（與 Android「插入」選單同一項）。
             Button {
-                presentFromMenu {
-                    let draft = insertLegend()
-                    transitionToMode(.type)
-                    inlineEditingTextId = draft.id
+                EntitlementManager.shared.requirePro(.draftingAndSolid) {
+                    presentFromMenu {
+                        let draft = insertLegend()
+                        transitionToMode(.type)
+                        inlineEditingTextId = draft.id
+                    }
                 }
             } label: { Label(localizationManager.localized("insert_legend"), systemImage: "list.bullet.rectangle") }
                 .accessibilityIdentifier("editor.insert.legend")
@@ -129,15 +131,21 @@ extension NotebookEditorView {
             } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
                 .accessibilityIdentifier("editor.insert.document")
             Button {
-                presentFromMenu { showMathCalculator = true }
+                EntitlementManager.shared.requirePro(.studios) {
+                    presentFromMenu { showMathCalculator = true }
+                }
             } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                 .accessibilityIdentifier("editor.insert.math")
             Button {
-                presentFromMenu { showChartStudio = true }
+                EntitlementManager.shared.requirePro(.studios) {
+                    presentFromMenu { showChartStudio = true }
+                }
             } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                 .accessibilityIdentifier("editor.insert.chart")
             Button {
-                presentFromMenu { showTableStudio = true }
+                EntitlementManager.shared.requirePro(.studios) {
+                    presentFromMenu { showTableStudio = true }
+                }
             } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                 .accessibilityIdentifier("editor.insert.table")
             Button {
@@ -145,11 +153,15 @@ extension NotebookEditorView {
             } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                 .accessibilityIdentifier("editor.insert.shape")
             Button {
-                presentFromMenu { show3DStudio = true }
+                EntitlementManager.shared.requirePro(.studios) {
+                    presentFromMenu { show3DStudio = true }
+                }
             } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                 .accessibilityIdentifier("editor.insert.model3d")
             Button {
-                presentFromMenu { showThemeToolsSheet = true }
+                EntitlementManager.shared.requirePro(.draftingAndSolid) {
+                    presentFromMenu { showThemeToolsSheet = true }
+                }
             } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                 .accessibilityIdentifier("editor.insert.theme_tools")
             Button {
@@ -164,7 +176,9 @@ extension NotebookEditorView {
             Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                 .accessibilityIdentifier("editor.insert.refine_sketch")
             Button {
-                presentFromMenu { showNoteIntelligence = true }
+                EntitlementManager.shared.requirePro(.studios) {
+                    presentFromMenu { showNoteIntelligence = true }
+                }
             } label: {
                 Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
             }
@@ -201,7 +215,9 @@ extension NotebookEditorView {
             }
             .accessibilityIdentifier("editor.insert.palm_thresholds")
             Button {
-                presentFromMenu { showAdvancedPenSettingsSheet = true }
+                EntitlementManager.shared.requirePro(.proInk) {
+                    presentFromMenu { showAdvancedPenSettingsSheet = true }
+                }
             } label: {
                 Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
             }
@@ -1204,20 +1220,22 @@ extension NotebookEditorView {
                     onUndo: { performUndo() },
                     onRedo: { performRedo() },
                     onInsertTable: { rows, cols in
-                        let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
-                        let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
-                        let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
-                        let targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
-                        var table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
-                        fitTableToPageRules(&table)
+                        EntitlementManager.shared.requirePro(.studios) {
+                            let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
+                            let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
+                            let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
+                            let targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
+                            var table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
+                            fitTableToPageRules(&table)
 
-                        if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-                        notebook.tableAttachments?.append(table)
-                        activeSelectedObjectId = table.id
-                        selectedObjectIds = [table.id]
-                        commitNotebook()
-                        PageThumbnailRenderer.invalidateAll()
-                        showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
+                            if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                            notebook.tableAttachments?.append(table)
+                            activeSelectedObjectId = table.id
+                            selectedObjectIds = [table.id]
+                            commitNotebook()
+                            PageThumbnailRenderer.invalidateAll()
+                            showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
+                        }
                     },
                     onInsertImage: { showPhotoPicker = true },
                 onInsertImageFile: { triggerFileImport(.image) },
@@ -1269,6 +1287,10 @@ extension NotebookEditorView {
     /// 再按一次套索是離開套索。
     func selectEditorTool(_ tool: EditorToolType) {
         MainThreadStallMonitor.shared.breadcrumb("select tool \(tool)")
+        if tool.isProRequired && !EntitlementManager.shared.isProUnlocked {
+            EntitlementManager.shared.presentPaywall(focus: tool.proFeatureGate)
+            return
+        }
         if tool == .lasso, selectedTool == .lasso {
             exitLassoMode()
         } else {
@@ -1929,7 +1951,9 @@ extension NotebookEditorView {
 
                     // 🌟 專業 HSV 色相環與和諧色彈窗
                     Button {
-                        showProColorWheel = true
+                        EntitlementManager.shared.requirePro(.proInk) {
+                            showProColorWheel = true
+                        }
                     } label: {
                         Image(systemName: "circle.hexagongrid.fill")
                             .font(.system(size: DS.Icon.small, weight: .medium))
@@ -1959,9 +1983,15 @@ extension NotebookEditorView {
                 // 🌟 專業筆刷平滑防抖 (Stroke Stabilizer)
                 Menu {
                     Button(localizationManager.localized("stab_off")) { strokeStabilizer = 0.0 }
-                    Button(localizationManager.localized("stab_light")) { strokeStabilizer = 0.25 }
-                    Button(localizationManager.localized("stab_medium")) { strokeStabilizer = 0.50 }
-                    Button(localizationManager.localized("stab_strong")) { strokeStabilizer = 0.85 }
+                    Button(localizationManager.localized("stab_light")) {
+                        EntitlementManager.shared.requirePro(.proInk) { strokeStabilizer = 0.25 }
+                    }
+                    Button(localizationManager.localized("stab_medium")) {
+                        EntitlementManager.shared.requirePro(.proInk) { strokeStabilizer = 0.50 }
+                    }
+                    Button(localizationManager.localized("stab_strong")) {
+                        EntitlementManager.shared.requirePro(.proInk) { strokeStabilizer = 0.85 }
+                    }
                 } label: {
                     HStack(spacing: 3) {
                         Image(systemName: "waveform.path")
@@ -1982,7 +2012,9 @@ extension NotebookEditorView {
 
                 // 🌟 鏡像對稱尺規 (Symmetry Guide)
                 Button {
-                    isSymmetryActive.toggle()
+                    EntitlementManager.shared.requirePro(.proInk) {
+                        isSymmetryActive.toggle()
+                    }
                 } label: {
                     Image(systemName: isSymmetryActive ? "arrow.left.and.right.square.fill" : "arrow.left.and.right.square")
                         .font(.system(size: 14, weight: isSymmetryActive ? .bold : .regular))
@@ -2017,11 +2049,13 @@ extension NotebookEditorView {
                     isMinimalistCanvasActive ? "exit_canvas_minimal_mode" : "enter_canvas_minimal_mode"
                 ))
 
-                // 🌟 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
+                // 🌟 飛梭工具盤手動喚醒按鈕
                 Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
-                        radialMenuAnchor = nil
-                        showRadialMenu.toggle()
+                    EntitlementManager.shared.requirePro(.proInk) {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                            radialMenuAnchor = nil
+                            showRadialMenu.toggle()
+                        }
                     }
                 } label: {
                     Image(systemName: showRadialMenu ? "circle.circle.fill" : "circle.circle")

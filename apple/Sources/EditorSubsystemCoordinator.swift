@@ -208,5 +208,6 @@ extension NotebookEditorView {
                     insertAudioAttachment(recording)
                 }
             } }
+            .paywallSubsystem()
     }
 }
