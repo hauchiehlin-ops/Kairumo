@@ -28271,6 +28271,14 @@
     "zhHans": "目前无法连接 App Store，请检查网络后再试。",
     "zhHant": "目前無法連線 App Store，請檢查網路後再試。"
   },
+  "paywall_product_unavailable": {
+    "en": "The Pro purchase is temporarily unavailable. Please try again later.",
+    "ja": "Pro の購入は一時的にご利用いただけません。しばらくしてからもう一度お試しください。",
+    "ko": "Pro 구매를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    "th": "ไม่สามารถซื้อ Pro ได้ชั่วคราว โปรดลองอีกครั้งในภายหลัง",
+    "zhHans": "购买项目暂时无法使用，请稍后再试。",
+    "zhHant": "購買項目暫時無法使用，請稍後再試。"
+  },
   "paywall_feature_studios_title": {
     "en": "Table, Chart, Math, 3D & Summary Studios",
     "ja": "表組・グラフ・数式・3D・要約スタジオ",

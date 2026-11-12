@@ -1018,7 +1018,7 @@ enum ProInkDabCache {
         return cached
     }
 
-    static func set(_ cached: ProInkRenderer.Cached, for stroke: ProStroke) {
+    static func set(_ cached: ProInkRenderer.Cached, for stroke: ProStroke, persistToDisk: Bool = true) {
         let key = cacheKey(for: stroke)
         lock.lock()
         if memoryCache.count >= maxMemoryEntries {
@@ -1027,6 +1027,7 @@ enum ProInkDabCache {
         memoryCache[key] = cached
         lock.unlock()
 
+        guard persistToDisk else { return }
         DispatchQueue.global(qos: .utility).async {
             var data = Data(capacity: 24 + cached.dabs.count * 32)
             data.append(contentsOf: [0x44, 0x41, 0x42, 0x31]) // "DAB1"
@@ -1303,38 +1304,81 @@ final class ProInkLayerView: UIView {
     /// 以 id 為鍵，並用「筆點數＋頭尾點＋筆寬」當簽章：搬動、改寫之後簽章會變，快取自動失效。
     private var boundsCache: [String: (sig: Int, rect: CGRect)] = [:]
 
-    private func cachedBounds(_ stroke: ProStroke) -> CGRect {
+    /// 筆畫的快速內容簽章：涵蓋 id、筆種、粗細、圖層、線型、色彩、混合模式、點數與頭尾座標。
+    /// 當筆畫被套索搬移（`id` 不變但座標改變）、換色或改圖層時，簽章立刻變化，
+    /// 讓增量烘焙底圖（`updateBackingStore` / `patchRegion`）能偵測就地變更並局部重繪新舊外框聯集。
+    private static func strokeSignature(_ stroke: ProStroke) -> Int {
         var h = Hasher()
-        h.combine(stroke.points.count)
+        h.combine(stroke.id)
+        h.combine(stroke.tool)
         h.combine(stroke.baseWidth)
+        h.combine(stroke.layerId)
+        h.combine(stroke.lineTypeId)
+        h.combine(stroke.colorRGBA)
+        h.combine(stroke.blendMode)
+        h.combine(stroke.points.count)
         if let f = stroke.points.first { h.combine(f.x); h.combine(f.y) }
         if let l = stroke.points.last { h.combine(l.x); h.combine(l.y) }
-        let sig = h.finalize()
+        return h.finalize()
+    }
+
+    private func cachedBounds(_ stroke: ProStroke) -> CGRect {
+        let sig = Self.strokeSignature(stroke)
         if let hit = boundsCache[stroke.id], hit.sig == sig { return hit.rect }
         let rect = stroke.bounds
         boundsCache[stroke.id] = (sig, rect)
         return rect
     }
 
-    /// 已烘焙的序列與目前序列只差「被拿掉／插進來」的幾筆（其餘相對順序不變）時，回傳要局部重畫的範圍；
-    /// 否則 `nil`（整頁重建）。擦掉一筆因此只重畫那一筆的範圍，不必把整頁幾百筆重貼一遍。
+    /// 已烘焙的序列與目前序列只差「被拿掉／插進來」或「同 id 筆畫就地搬移／換色」的幾筆時，回傳要局部重畫的範圍；
+    /// 否則 `nil`（整頁重建）。擦掉或套索搬移幾筆因此只重畫受影響的新舊範圍，不必把整頁幾百筆重貼一遍。
     private func patchRegion(baked: [String], ordered: [ProStroke]) -> CGRect? {
         let ids = ordered.map(\.id)
-        guard ids.count != baked.count else { return nil }
+        if ids.count == baked.count {
+            guard ids == baked, bakedStrokeSigs.count == baked.count, bakedStrokeBounds.count == baked.count else {
+                return nil
+            }
+            var region = CGRect.null
+            var changedCount = 0
+            for i in ordered.indices {
+                let sig = Self.strokeSignature(ordered[i])
+                if bakedStrokeSigs[i] != sig {
+                    changedCount += 1
+                    if changedCount > 32 { return nil }
+                    region = region.union(bakedStrokeBounds[i]).union(cachedBounds(ordered[i]))
+                }
+            }
+            return (changedCount > 0 && !region.isNull) ? region : nil
+        }
         let removal = ids.count < baked.count
         let longer = removal ? baked : ids
         let shorter = removal ? ids : baked
         var j = 0
         var differing: [Int] = []
         for (i, id) in longer.enumerated() {
-            if j < shorter.count, shorter[j] == id { j += 1 } else { differing.append(i) }
+            if j < shorter.count, shorter[j] == id {
+                if !removal {
+                    let bIdx = j - 1
+                    if bIdx < bakedStrokeSigs.count, bakedStrokeSigs[bIdx] != Self.strokeSignature(ordered[i]) {
+                        return nil
+                    }
+                }
+                j += 1
+            } else {
+                differing.append(i)
+            }
         }
         guard j == shorter.count, !differing.isEmpty, differing.count <= 8 else { return nil }
         var region = CGRect.null
         for i in differing {
             if removal {
-                guard let known = boundsCache[longer[i]] else { return nil }
-                region = region.union(known.rect)
+                if i < bakedStrokeBounds.count, !bakedStrokeBounds[i].isNull {
+                    region = region.union(bakedStrokeBounds[i])
+                } else if let known = boundsCache[longer[i]] {
+                    region = region.union(known.rect)
+                } else {
+                    return nil
+                }
             } else {
                 region = region.union(cachedBounds(ordered[i]))
             }
@@ -1361,6 +1405,8 @@ final class ProInkLayerView: UIView {
         }
         ctx.restoreGState()
         bakedStrokeIds = ordered.map(\.id)
+        bakedStrokeSigs = ordered.map(Self.strokeSignature)
+        bakedStrokeBounds = ordered.map { cachedBounds($0) }
         bakedStrokeCount = ordered.count
     }
 
@@ -1669,6 +1715,8 @@ final class ProInkLayerView: UIView {
     private var backingContext: CGContext?
     private var bakedStrokeCount: Int = 0
     private var bakedStrokeIds: [String] = []
+    private var bakedStrokeSigs: [Int] = []
+    private var bakedStrokeBounds: [CGRect] = []
     private var lastPageKey: String = ""
     private var lastDarkMode: Bool = false
     private var lastBackingBounds: CGSize = .zero
@@ -1680,6 +1728,8 @@ final class ProInkLayerView: UIView {
         backingContext = nil
         bakedStrokeCount = 0
         bakedStrokeIds.removeAll()
+        bakedStrokeSigs.removeAll()
+        bakedStrokeBounds.removeAll()
         lastPageKey = ""
         lastBackingBounds = .zero
     }
@@ -1689,6 +1739,8 @@ final class ProInkLayerView: UIView {
         let token = BakeToken()
         bakeToken = token
         let ids = ordered.map(\.id)
+        let sigs = ordered.map(Self.strokeSignature)
+        let rects = ordered.map { cachedBounds($0) }
         inFlightBake = (ids, pageKey, isDark, size)
         nonisolated(unsafe) let strokes = ordered
         Self.bakeQueue.async { [weak self] in
@@ -1706,6 +1758,8 @@ final class ProInkLayerView: UIView {
                 self.backingContext = ctx
                 self.backingImage = UIImage(cgImage: image, scale: scale, orientation: .up)
                 self.bakedStrokeIds = ids
+                self.bakedStrokeSigs = sigs
+                self.bakedStrokeBounds = rects
                 self.bakedStrokeCount = ids.count
                 self.lastPageKey = pageKey
                 self.lastDarkMode = isDark
@@ -1792,6 +1846,8 @@ final class ProInkLayerView: UIView {
         backingContext = ctx
         bakedStrokeCount = 0
         bakedStrokeIds.removeAll()
+        bakedStrokeSigs.removeAll()
+        bakedStrokeBounds.removeAll()
         backingImage = nil
         return ctx
     }
@@ -1808,16 +1864,17 @@ final class ProInkLayerView: UIView {
         if pageKey != lastPageKey || isDark != lastDarkMode || fullBounds.size != lastBackingBounds || bakedStrokeCount > ordered.count || (bakedStrokeCount > 0 && ordered.isEmpty) {
             needsFullRebuild = true
         } else {
-            // 檢查已烘焙筆劃是否與當前筆劃序列完全吻合（防止中間筆畫被擦除、搬動或圖層屬性變更）
+            // 檢查已烘焙筆劃是否與當前筆劃序列完全吻合（防止中間筆畫被擦除、套索搬動、換色或圖層屬性變更）
             for i in 0..<bakedStrokeIds.count {
-                if bakedStrokeIds[i] != ordered[i].id {
+                let sigMismatch = i >= bakedStrokeSigs.count || bakedStrokeSigs[i] != Self.strokeSignature(ordered[i])
+                if bakedStrokeIds[i] != ordered[i].id || sigMismatch {
                     needsFullRebuild = true
                     break
                 }
             }
         }
 
-        // 只差幾筆被擦掉／放回來：局部重畫就好。
+        // 只差幾筆被擦掉／放回來，或同 id 筆畫被套索搬移／換色：局部重畫就好。
         if needsFullRebuild, inFlightBake == nil, bakedStrokeCount > 0,
            pageKey == lastPageKey, isDark == lastDarkMode, fullBounds.size == lastBackingBounds,
            let region = patchRegion(baked: bakedStrokeIds, ordered: ordered) {
@@ -1848,6 +1905,8 @@ final class ProInkLayerView: UIView {
             bCtx.restoreGState()
             bakedStrokeCount = 0
             bakedStrokeIds.removeAll()
+            bakedStrokeSigs.removeAll()
+            bakedStrokeBounds.removeAll()
             lastPageKey = pageKey
             lastDarkMode = isDark
             lastBackingBounds = fullBounds.size
@@ -1869,6 +1928,8 @@ final class ProInkLayerView: UIView {
                 bCtx.restoreGState()
             }
             bakedStrokeIds.append(stroke.id)
+            bakedStrokeSigs.append(Self.strokeSignature(stroke))
+            bakedStrokeBounds.append(cachedBounds(stroke))
             bakedStrokeCount += 1
         }
 
@@ -2650,17 +2711,17 @@ final class ProInkLayerView: UIView {
         moveTotal.height += delta.height
         var dirtyRect = CGRect.null
         for i in ownStrokes.indices where ids.contains(ownStrokes[i].id) {
-            let strokeId = ownStrokes[i].id
-            let oldBounds = ownStrokes[i].bounds
+            let oldBounds = cachedBounds(ownStrokes[i])
+            let existingCache = ProInkDabCache.get(for: ownStrokes[i])
             dirtyRect = dirtyRect.union(oldBounds)
             for k in ownStrokes[i].points.indices {
                 ownStrokes[i].points[k].x += Float(delta.width)
                 ownStrokes[i].points[k].y += Float(delta.height)
             }
-            if let existing = ProInkDabCache.get(for: ownStrokes[i]) {
-                ProInkDabCache.set(existing.translated(by: delta), for: ownStrokes[i])
+            if let existingCache {
+                ProInkDabCache.set(existingCache.translated(by: delta), for: ownStrokes[i], persistToDisk: false)
             }
-            dirtyRect = dirtyRect.union(ownStrokes[i].bounds)
+            dirtyRect = dirtyRect.union(cachedBounds(ownStrokes[i]))
         }
         if !dirtyRect.isNull {
             setNeedsDisplay(dirtyRect.insetBy(dx: -8, dy: -8))
@@ -2672,6 +2733,11 @@ final class ProInkLayerView: UIView {
         let ids = moveIds, total = moveTotal
         moveIds = []
         moveTotal = .zero
+        for stroke in ownStrokes where ids.contains(stroke.id) {
+            if let cached = ProInkDabCache.peek(for: stroke) {
+                ProInkDabCache.set(cached, for: stroke, persistToDisk: true)
+            }
+        }
         retireForModification(ids: ids)
         persist()
         setNeedsDisplay()   // 拖曳途中的局部重畫可能殘留舊位置的像素，放手時整層重畫一次
@@ -2686,7 +2752,51 @@ final class ProInkLayerView: UIView {
             layer.moveTotal = .zero
             layer.retireForModification(ids: ids)
             layer.persist()
+            layer.setNeedsDisplay()
             layer.registerMoveUndo(ids: ids, delta: CGSize(width: -delta.width, height: -delta.height))
+        }
+    }
+
+    /// 套索換色：更新選取筆畫的 RGBA 色彩並支援復原。
+    func recolor(ids: Set<String>, to rgba: [UInt8]) {
+        guard !ids.isEmpty, rgba.count == 4 else { return }
+        promoteForeignIfNeeded(ids: ids)
+        var previousColors: [String: [UInt8]] = [:]
+        var dirtyRect = CGRect.null
+        for i in ownStrokes.indices where ids.contains(ownStrokes[i].id) {
+            guard ownStrokes[i].colorRGBA != rgba else { continue }
+            previousColors[ownStrokes[i].id] = ownStrokes[i].colorRGBA
+            ownStrokes[i].colorRGBA = rgba
+            dirtyRect = dirtyRect.union(cachedBounds(ownStrokes[i]))
+        }
+        guard !previousColors.isEmpty else { return }
+        retireForModification(ids: Set(previousColors.keys))
+        persist()
+        if !dirtyRect.isNull {
+            setNeedsDisplay(dirtyRect.insetBy(dx: -8, dy: -8))
+        }
+        registerRecolorUndo(previousColors: previousColors)
+    }
+
+    private func registerRecolorUndo(previousColors: [String: [UInt8]]) {
+        guard let manager = undoManagerProvider?() else { return }
+        manager.registerUndo(withTarget: self) { layer in
+            var nextColors: [String: [UInt8]] = [:]
+            var dirtyRect = CGRect.null
+            for i in layer.ownStrokes.indices {
+                let id = layer.ownStrokes[i].id
+                guard let prev = previousColors[id] else { continue }
+                nextColors[id] = layer.ownStrokes[i].colorRGBA
+                layer.ownStrokes[i].colorRGBA = prev
+                dirtyRect = dirtyRect.union(layer.cachedBounds(layer.ownStrokes[i]))
+            }
+            guard !nextColors.isEmpty else { return }
+            layer.retireForModification(ids: Set(nextColors.keys))
+            layer.persist()
+            if !dirtyRect.isNull {
+                layer.setNeedsDisplay(dirtyRect.insetBy(dx: -8, dy: -8))
+            }
+            layer.registerRecolorUndo(previousColors: nextColors)
         }
     }
 

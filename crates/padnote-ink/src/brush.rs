@@ -860,30 +860,55 @@ impl ChineseBrush {
     }
 }
 
-/// 炭筆：顆粒**沿著紙的紋理**積下來。
+/// 炭筆：鬆脆碳粉揉擦底霧＋橫向木炭纖維碎粒＋外圍飄散浮塵。
 ///
 /// 炭筆（Charcoal）：鬆脆乾燥的碳化柳木條或壓縮炭精
-/// - 接觸面寬幅粗獷，完全吸光的極致啞光碳黑（Velvety Carbon Black, shade: -0.32）；
-/// - 筆觸呈現粗糙纖維碎裂毛邊，重壓深邃密實，輕壓紙紋谷底吃色；
-/// - 外圍伴隨自然飄散的浮塵炭粉微粒；
-/// - 側著拿（傾角大）是整支炭條的側面在畫，筆觸變得很寬。
+/// - 核心帶一層柔邊碳粉暈染底霧（`softness: 0.78`），呈現手指或紙筆推抹般的絲絨煙燻感；
+/// - 表面顆粒橫切筆畫方向（`contact_angle`），隨紙紋凹谷深淺沉積，完全吸光啞光碳黑（`shade: -0.35..-0.55`）；
+/// - 外圍伴隨多顆自然飄散的微細炭粉浮塵（`softness: 0.85`），形成鬆散毛邊；
+/// - 側著拿（傾角大）是整支炭條的側面在畫，筆觸大幅加寬。
 fn charcoal(s: Sample, base: f32, spacing: f32, rng: &mut Rng, out: &mut Vec<Dab>) {
     let p = pressure_scale(s.pressure);
-    let reach = base * side_of_stick(s.tilt, 1.8) * (0.68 + 0.45 * p);
-    let count = ((2.2 * reach * spacing) * 1.05 * (0.55 + 0.85 * p))
-        .ceil()
-        .clamp(2.0, 65.0) as usize;
-    let tooth = 0.18 + 0.78 * p;
+    let tilt_gain = side_of_stick(s.tilt, 1.85);
+    let reach = base * tilt_gain * (0.72 + 0.48 * p);
     let contact_angle = if s.tilt > 0.25 {
         s.azimuth
     } else {
         s.heading + std::f32::consts::FRAC_PI_2
     };
+
+    // 1. 絲絨炭粉柔霧核心（softness >= 0.5）：賦予炭筆獨特的煙燻粉霧感與連貫墨韻，與蠟筆的硬朗條紋截然不同
+    let smudge_count = if reach > 2.2 { 2 } else { 1 };
+    for i in 0..smudge_count {
+        let offset = if smudge_count == 1 {
+            rng.signed() * reach * 0.18
+        } else {
+            (i as f32 - 0.5) * reach * 0.42 + rng.signed() * reach * 0.12
+        };
+        let (nx, ny) = (-s.heading.sin(), s.heading.cos());
+        let (sx, sy) = (s.x + nx * offset, s.y + ny * offset);
+        out.push(Dab {
+            x: sx,
+            y: sy,
+            rx: (reach * (0.68 + 0.18 * rng.unit())).max(0.75),
+            ry: (reach * (0.42 + 0.16 * rng.unit())).max(0.55),
+            angle: contact_angle + rng.signed() * 0.18,
+            alpha: (0.14 + 0.24 * p).min(0.45),
+            softness: 0.78,
+            shade: -0.42,
+        });
+    }
+
+    // 2. 紙紋凹谷咬合的橫向木炭碎粒（softness < 0.5）
+    let count = ((2.4 * reach * spacing) * 1.15 * (0.48 + 0.92 * p))
+        .ceil()
+        .clamp(2.0, 68.0) as usize;
+    let tooth = 0.16 + 0.72 * p;
     for _ in 0..count {
         let angle = rng.unit() * std::f32::consts::TAU;
         let rr = reach * rng.unit().sqrt();
-        // 毛邊：越靠外越容易被丟掉。
-        if rng.unit() < (rr / reach).powf(2.4) * 0.88 {
+        // 鬆散碎裂毛邊：越靠外越容易剝落
+        if rng.unit() < (rr / reach.max(0.1)).powf(2.1) * 0.86 {
             continue;
         }
         let (px, py) = (s.x + angle.cos() * rr, s.y + angle.sin() * rr);
@@ -891,77 +916,99 @@ fn charcoal(s: Sample, base: f32, spacing: f32, rng: &mut Rng, out: &mut Vec<Dab
         if g > tooth {
             continue;
         }
-        let depth = 1.0 - g / tooth; // 谷越深、顏料越多
-        let size = (0.75 + 0.65 * rng.unit()) * (0.85 + 0.20 * side_of_stick(s.tilt, 1.0));
+        let depth = 1.0 - g / tooth; // 谷越深、炭粉堆積越厚
+        let size = (0.58 + 0.58 * rng.unit()) * (0.82 + 0.22 * side_of_stick(s.tilt, 1.0));
         out.push(Dab {
             x: px,
             y: py,
-            rx: size * 1.25,
-            ry: size * (0.65 + 0.35 * rng.unit()),
-            angle: contact_angle + rng.signed() * 0.25,
-            alpha: ((0.42 + 0.58 * depth) * (0.55 + 0.45 * p)).min(1.0),
-            softness: 0.12,
-            shade: -0.30 - 0.20 * depth, // 啞光深邃碳黑（Velvety Carbon Black）
+            rx: size * 1.38,
+            ry: size * (0.48 + 0.28 * rng.unit()),
+            angle: contact_angle + rng.signed() * 0.32,
+            alpha: ((0.38 + 0.62 * depth) * (0.50 + 0.50 * p)).min(1.0),
+            softness: 0.22,
+            shade: -0.35 - 0.20 * depth, // 啞光深邃碳黑（Velvety Carbon Black）
         });
     }
-    // 飄散的微細炭粉浮塵
-    if rng.unit() < 0.35 {
-        let ang = rng.unit() * std::f32::consts::TAU;
-        let dist = reach * (0.85 + 0.65 * rng.unit());
-        out.push(Dab {
-            x: s.x + ang.cos() * dist,
-            y: s.y + ang.sin() * dist,
-            rx: 0.48,
-            ry: 0.48,
-            angle: 0.0,
-            alpha: 0.24 * (0.5 + 0.5 * p),
-            softness: 0.85,
-            shade: -0.35,
-        });
+
+    // 3. 外圍飄散的微細炭粉浮塵（softness = 0.85）：營造炭筆特有的粉末飛白邊緣
+    let dust_trials = if p > 0.45 { 2 } else { 1 };
+    for _ in 0..dust_trials {
+        if rng.unit() < 0.58 {
+            let ang = rng.unit() * std::f32::consts::TAU;
+            let dist = reach * (0.82 + 0.72 * rng.unit());
+            let dust_r = 0.38 + 0.34 * rng.unit();
+            out.push(Dab {
+                x: s.x + ang.cos() * dist,
+                y: s.y + ang.sin() * dist,
+                rx: dust_r,
+                ry: dust_r * (0.75 + 0.25 * rng.unit()),
+                angle: rng.unit() * std::f32::consts::PI,
+                alpha: (0.18 + 0.16 * rng.unit()) * (0.45 + 0.55 * p),
+                softness: 0.85,
+                shade: -0.45,
+            });
+        }
     }
 }
 
-/// 蠟筆：蠟**積在紙的凸起上**，凹谷留白；重壓才把縫填滿、帶一點蠟的光澤。
+/// 蠟筆：濃厚不透明的油蠟順著筆畫方向拉出**平行縱向蠟紋**，邊緣銳利無飛塵，帶溫潤蠟質光澤。
 ///
-/// 跟炭筆最大的差別：蠟是不透明的、顆粒較大，而且順著筆畫方向有一條一條的**條紋**
-/// （蠟筆尖有微小的缺口，拖過去留下平行的紋）。
+/// 跟炭筆的關鍵差異：
+/// 1. **順向長條蠟痕（`angle = s.heading`, `rx >> ry`）**：蠟筆尖端微缺口在拖曳時沿行進方向刮出多道平行連續條紋，而非炭筆的橫向散落粉粒；
+/// 2. **硬朗厚塗無粉霧（`softness = 0.0`）**：蠟質黏稠不飛粉，無外圍煙燻浮塵，邊界俐落；
+/// 3. **蠟質反光色澤（`shade > 0`）**：油蠟表面帶微亮蠟光（即使用純黑畫出亦呈現溫潤油蠟灰黑光澤，與炭筆的吸光死黑形成鮮明對比）。
 fn crayon(s: Sample, base: f32, spacing: f32, seed: f32, rng: &mut Rng, out: &mut Vec<Dab>) {
     let p = pressure_scale(s.pressure);
-    let reach = base * side_of_stick(s.tilt, 0.9) * (0.8 + 0.3 * p);
-    let count = ((2.0 * reach * spacing) * 1.5 * (0.6 + 0.7 * p))
+    let reach = base * side_of_stick(s.tilt, 1.15) * (0.76 + 0.32 * p);
+    let count = ((2.2 * reach * spacing) * 1.55 * (0.48 + 0.82 * p))
         .ceil()
-        .clamp(1.0, 70.0) as usize;
-    // 垂直於行進方向的座標：條紋沿著它變化。
+        .clamp(2.0, 72.0) as usize;
+    // 垂直於行進方向的單位向量：控制橫截面上的平行蠟溝
     let (nx, ny) = (-s.heading.sin(), s.heading.cos());
+    let (hx, hy) = (s.heading.cos(), s.heading.sin());
+    // 縱向條紋尺度隨筆刷粗細自適應，確保小字號與大筆刷都能拉出鮮明的順向蠟條
+    let length_scale = (0.95 + 0.22 * base.min(6.0)).clamp(1.0, 2.3);
+    let width_scale = (0.34 + 0.06 * base.min(6.0)).clamp(0.36, 0.72);
+
     for _ in 0..count {
-        let along = rng.signed();
+        let along = rng.signed() * 0.85;
         let across = rng.signed() * reach;
-        if rng.unit() < (across.abs() / reach).powf(3.0) * 0.9 {
+        if rng.unit() < (across.abs() / reach.max(0.1)).powf(3.4) * 0.82 {
             continue;
         }
+        // 將橫向位置微幅吸附至平行蠟脊軌道，形成肉眼清晰可辨的平行刮紋
+        let track_freq = 2.35 / (base * 0.45).clamp(0.75, 2.2);
+        let track_phase = across * track_freq + seed * 0.13;
+        let ridge = (track_phase.sin() * 0.5 + 0.5).powf(0.75);
+        if rng.unit() > 0.32 + 0.68 * ridge {
+            continue;
+        }
+
         let (px, py) = (
-            s.x + nx * across + s.heading.cos() * along * spacing,
-            s.y + ny * across + s.heading.sin() * along * spacing,
+            s.x + nx * across + hx * along * spacing,
+            s.y + ny * across + hy * along * spacing,
         );
-        // 條紋：垂直方向每隔一格的深淺不同，整筆畫都一樣。
-        let q = (px * nx + py * ny) * 1.15 + seed;
+        // 整筆一致的平行蠟痕深淺調變
+        let q = (px * nx + py * ny) * 1.25 + seed;
         let streak = value_noise(q, seed * 0.37);
         let g = paper_grain(px, py);
-        let tooth = 0.3 + 0.6 * p + 0.16 * (streak - 0.5);
+        let tooth = (0.18 + 0.56 * p + 0.14 * (ridge - 0.4)).clamp(0.12, 0.78);
         if g > tooth {
             continue;
         }
-        let size = 0.8 + 0.7 * rng.unit();
-        let shine = if p > 0.82 { 0.1 } else { 0.0 };
+        let depth = 1.0 - g / tooth;
+        let dab_len = (0.92 + 0.52 * rng.unit()) * length_scale;
+        let dab_wid = (0.78 + 0.32 * rng.unit()) * width_scale * (0.85 + 0.30 * p);
+        let wax_sheen = 0.20 + 0.24 * ridge + 0.14 * p;
         out.push(Dab {
             x: px,
             y: py,
-            rx: size,
-            ry: size * (0.8 + 0.2 * rng.unit()),
-            angle: 0.0,
-            alpha: ((0.55 + 0.4 * p) * (0.86 + 0.14 * streak)).min(1.0),
-            softness: 0.05,
-            shade: -0.06 + 0.12 * (1.0 - g / tooth) + shine,
+            rx: dab_len,
+            ry: dab_wid,
+            angle: s.heading + rng.signed() * 0.04,
+            alpha: ((0.74 + 0.26 * p) * (0.84 + 0.16 * streak)).min(1.0),
+            softness: 0.0,
+            shade: (wax_sheen + 0.10 * depth).min(0.65),
         });
     }
 }
@@ -1329,6 +1376,57 @@ mod tests {
             assert!(d.len() > 200);
             let m = mean_grain(&d);
             assert!(m < 0.4, "{tool:?} 的顆粒沒有選擇紙紋的凹谷（平均 {m}）");
+        }
+    }
+
+    #[test]
+    fn charcoal_and_crayon_have_distinct_textures_and_orientations() {
+        // 驗證日常書寫粗細（3 號筆刷 base_width ≈ 4.8）與較粗筆刷（12.0）下，炭筆與蠟筆具備截然不同的物理筆觸特徵：
+        // - 炭筆：具備柔霧煙燻核心與浮塵（softness > 0.5）、啞光吸光碳黑（shade < -0.3）、橫切筆畫方向的木炭纖維顆粒。
+        // - 蠟筆：具備順向平行長條蠟痕（rx > ry * 1.6 且沿筆畫方向 angle ≈ 0）、硬朗邊緣無飛塵（softness == 0）、溫潤蠟質反光（shade > 0.15）。
+        for base_width in [4.8, 12.0] {
+            let pts = line(36, 0.65);
+            let charcoal_dabs = dabs(Tool::Charcoal, &pts, base_width);
+            let crayon_dabs = dabs(Tool::Crayon, &pts, base_width);
+
+            let charcoal_soft_ratio = charcoal_dabs.iter().filter(|d| d.softness > 0.5).count()
+                as f32
+                / charcoal_dabs.len() as f32;
+            let crayon_soft_ratio = crayon_dabs.iter().filter(|d| d.softness > 0.5).count() as f32
+                / crayon_dabs.len() as f32;
+            assert!(
+                charcoal_soft_ratio > 0.15 && crayon_soft_ratio == 0.0,
+                "base={base_width}: 炭筆應含煙燻柔霧與浮塵（{charcoal_soft_ratio}），蠟筆則應邊緣俐落無飛塵（{crayon_soft_ratio}）"
+            );
+
+            let charcoal_mean_shade =
+                charcoal_dabs.iter().map(|d| d.shade).sum::<f32>() / charcoal_dabs.len() as f32;
+            let crayon_mean_shade =
+                crayon_dabs.iter().map(|d| d.shade).sum::<f32>() / crayon_dabs.len() as f32;
+            assert!(
+                charcoal_mean_shade < -0.30 && crayon_mean_shade > 0.18,
+                "base={base_width}: 炭筆應為啞光深黑（{charcoal_mean_shade}），蠟筆應帶油蠟反光色澤（{crayon_mean_shade}）"
+            );
+
+            let horizontal: Vec<InkPoint> = (0..36)
+                .map(|i| InkPoint::new(10.0 + i as f32 * 8.0, 50.0, 0.65, 8_000))
+                .collect();
+            let h_charcoal = dabs(Tool::Charcoal, &horizontal, base_width);
+            let h_crayon = dabs(Tool::Crayon, &horizontal, base_width);
+            let crayon_elongated_ratio = h_crayon
+                .iter()
+                .filter(|d| d.rx > d.ry * 1.6 && d.angle.abs() < 0.15)
+                .count() as f32
+                / h_crayon.len() as f32;
+            let charcoal_cross_grain_ratio = h_charcoal
+                .iter()
+                .filter(|d| d.softness < 0.5 && (d.angle - std::f32::consts::FRAC_PI_2).abs() < 0.4)
+                .count() as f32
+                / h_charcoal.iter().filter(|d| d.softness < 0.5).count() as f32;
+            assert!(
+                crayon_elongated_ratio > 0.85 && charcoal_cross_grain_ratio > 0.85,
+                "base={base_width}: 蠟筆應順向拉出長條蠟紋（{crayon_elongated_ratio}），炭筆顆粒應橫切紋理（{charcoal_cross_grain_ratio}）"
+            );
         }
     }
 

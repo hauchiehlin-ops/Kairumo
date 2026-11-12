@@ -554,6 +554,17 @@ final class LassoSelection: ObservableObject {
             let newInk = PKInk(oldStroke.ink.inkType, color: newColor)
             strokes[idx] = PKStroke(ink: newInk, path: oldStroke.path, transform: oldStroke.transform, mask: oldStroke.mask)
         }
+        if !proIds.isEmpty {
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 1
+            newColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+            let rgba: [UInt8] = [
+                UInt8(min(255, max(0, (r * 255).rounded()))),
+                UInt8(min(255, max(0, (g * 255).rounded()))),
+                UInt8(min(255, max(0, (b * 255).rounded()))),
+                UInt8(min(255, max(0, (a * 255).rounded())))
+            ]
+            proHost()?.recolor(ids: proIds, to: rgba)
+        }
         return PKDrawing(strokes: strokes)
     }
 

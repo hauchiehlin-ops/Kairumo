@@ -18079,6 +18079,14 @@ extension LocalizationManager {
             .ko: "일회성 구매 · 구독 없음",
             .th: "ซื้อครั้งเดียว · ไม่ต้องสมัครรายเดือน"
         ],
+        "paywall_product_unavailable": [
+            .zhHant: "購買項目暫時無法使用，請稍後再試。",
+            .en: "The Pro purchase is temporarily unavailable. Please try again later.",
+            .zhHans: "购买项目暂时无法使用，请稍后再试。",
+            .ja: "Pro の購入は一時的にご利用いただけません。しばらくしてからもう一度お試しください。",
+            .ko: "Pro 구매를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+            .th: "ไม่สามารถซื้อ Pro ได้ชั่วคราว โปรดลองอีกครั้งในภายหลัง"
+        ],
         "paywall_redeem_button": [
             .zhHant: "兌換 App Store 代碼",
             .en: "Redeem App Store Code",
