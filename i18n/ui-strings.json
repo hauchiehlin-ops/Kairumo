@@ -28199,6 +28199,54 @@
     "zhHans": "兑换 App Store 代码",
     "zhHant": "兌換 App Store 代碼"
   },
+  "paywall_redeem_vip_button": {
+    "en": "Redeem VIP Pass",
+    "ja": "VIP パスを交換",
+    "ko": "VIP 패스 교환",
+    "th": "แลกบัตร VIP",
+    "zhHans": "兑换 VIP 礼遇码",
+    "zhHant": "兌換 VIP 禮遇碼"
+  },
+  "redeem_vip_title": {
+    "en": "Redeem VIP Gift Pass",
+    "ja": "VIP ギフトパスを交換",
+    "ko": "VIP 기프트 패스 등록",
+    "th": "แลกบัตรของขวัญ VIP",
+    "zhHans": "兑换 VIP 礼遇通行证",
+    "zhHant": "兌換 VIP 禮遇通行證"
+  },
+  "redeem_vip_hint": {
+    "en": "Paste or enter the VIP link or gift token",
+    "ja": "VIP リンクまたはギフトトークンを貼り付けてください",
+    "ko": "VIP 링크 또는 기프트 토큰을 입력하세요",
+    "th": "วางหรือใส่ลิงก์ VIP หรือโทเค็นของขวัญ",
+    "zhHans": "请贴上或输入 VIP 礼遇代码或完整链接",
+    "zhHant": "請貼上或輸入 VIP 禮遇代碼或完整連結"
+  },
+  "redeem_vip_paste_unlock": {
+    "en": "Paste & Unlock",
+    "ja": "貼り付けてロック解除",
+    "ko": "붙여넣고 잠금 해제",
+    "th": "วางและปลดล็อก",
+    "zhHans": "贴上并立即解锁",
+    "zhHant": "貼上並立即解鎖"
+  },
+  "clipboard_vip_detected": {
+    "en": "VIP gift pass detected in clipboard",
+    "ja": "クリップボードから VIP パスを検出しました",
+    "ko": "클립보드에서 VIP 패스를 감지했습니다",
+    "th": "ตรวจพบบัตรของขวัญ VIP ในคลิปบอร์ด",
+    "zhHans": "检测到剪贴板中的 VIP 礼遇码",
+    "zhHant": "偵測到剪貼簿中的 VIP 禮遇碼"
+  },
+  "unlock_now": {
+    "en": "Unlock Now",
+    "ja": "今すぐ解除",
+    "ko": "지금 잠금 해제",
+    "th": "ปลดล็อกทันที",
+    "zhHans": "立即解锁",
+    "zhHant": "立即解鎖"
+  },
   "paywall_existing_data_safe": {
     "en": "All your existing notebooks, pages, backups, and exports remain 100% accessible on the Free plan.",
     "ja": "既存のノート、ページ、バックアップ、書き出しは無料プランでも 100% そのまま閲覧・利用できます。",

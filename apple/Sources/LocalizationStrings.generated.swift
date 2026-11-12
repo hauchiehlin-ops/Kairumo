@@ -4423,6 +4423,14 @@ extension LocalizationManager {
             .ko: "클립보드에 이미지 또는 스크린샷이 없습니다",
             .th: "ไม่พบรูปภาพหรือภาพหน้าจอบนคลิปบอร์ด"
         ],
+        "clipboard_vip_detected": [
+            .zhHant: "偵測到剪貼簿中的 VIP 禮遇碼",
+            .en: "VIP gift pass detected in clipboard",
+            .zhHans: "检测到剪贴板中的 VIP 礼遇码",
+            .ja: "クリップボードから VIP パスを検出しました",
+            .ko: "클립보드에서 VIP 패스를 감지했습니다",
+            .th: "ตรวจพบบัตรของขวัญ VIP ในคลิปบอร์ด"
+        ],
         "close": [
             .zhHant: "關閉",
             .en: "Close",
@@ -18079,6 +18087,14 @@ extension LocalizationManager {
             .ko: "코드 교환",
             .th: "แลกรหัส App Store"
         ],
+        "paywall_redeem_vip_button": [
+            .zhHant: "兌換 VIP 禮遇碼",
+            .en: "Redeem VIP Pass",
+            .zhHans: "兑换 VIP 礼遇码",
+            .ja: "VIP パスを交換",
+            .ko: "VIP 패스 교환",
+            .th: "แลกบัตร VIP"
+        ],
         "paywall_restore_button": [
             .zhHant: "恢復購買紀錄",
             .en: "Restore Purchases",
@@ -19454,6 +19470,30 @@ extension LocalizationManager {
             .ja: "パスワードの再設定はできません。パスフレーズを忘れた場合、このコードだけが唯一の手段です。表示は一度きりです。",
             .ko: "비밀번호 재설정이 없습니다. 암호를 잊으면 이 코드가 유일한 방법입니다. 한 번만 표시됩니다.",
             .th: "ไม่มีการรีเซ็ตรหัสผ่าน หากลืมรหัส โค้ดนี้คือทางเดียว และแสดงเพียงครั้งเดียว"
+        ],
+        "redeem_vip_hint": [
+            .zhHant: "請貼上或輸入 VIP 禮遇代碼或完整連結",
+            .en: "Paste or enter the VIP link or gift token",
+            .zhHans: "请贴上或输入 VIP 礼遇代码或完整链接",
+            .ja: "VIP リンクまたはギフトトークンを貼り付けてください",
+            .ko: "VIP 링크 또는 기프트 토큰을 입력하세요",
+            .th: "วางหรือใส่ลิงก์ VIP หรือโทเค็นของขวัญ"
+        ],
+        "redeem_vip_paste_unlock": [
+            .zhHant: "貼上並立即解鎖",
+            .en: "Paste & Unlock",
+            .zhHans: "贴上并立即解锁",
+            .ja: "貼り付けてロック解除",
+            .ko: "붙여넣고 잠금 해제",
+            .th: "วางและปลดล็อก"
+        ],
+        "redeem_vip_title": [
+            .zhHant: "兌換 VIP 禮遇通行證",
+            .en: "Redeem VIP Gift Pass",
+            .zhHans: "兑换 VIP 礼遇通行证",
+            .ja: "VIP ギフトパスを交換",
+            .ko: "VIP 기프트 패스 등록",
+            .th: "แลกบัตรของขวัญ VIP"
         ],
         "redo": [
             .zhHant: "重做",
@@ -27646,6 +27686,14 @@ extension LocalizationManager {
             .ja: "暗号化したときに設定したパスフレーズを入力してください。",
             .ko: "암호화할 때 설정한 암호를 입력하세요.",
             .th: "ป้อนรหัสผ่านที่คุณตั้งไว้ตอนเข้ารหัส"
+        ],
+        "unlock_now": [
+            .zhHant: "立即解鎖",
+            .en: "Unlock Now",
+            .zhHans: "立即解锁",
+            .ja: "今すぐ解除",
+            .ko: "지금 잠금 해제",
+            .th: "ปลดล็อกทันที"
         ],
         "unlock_recovery_prompt": [
             .zhHant: "輸入全部 24 個詞，以空白分隔",

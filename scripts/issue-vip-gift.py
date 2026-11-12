@@ -324,8 +324,14 @@ def main() -> int:
     print(f"Expiration        : {args.expires or 'Never (Lifetime)'}")
     print(f"Public Key (B64)  : {pk_b64}")
     print("-" * 72)
-    print("Send this link to the recipient (tap in iMessage / Mail / Safari / QR):")
-    print(f"\n  {url}\n")
+    # 擷取 token 部分以產生 LINE / 微信等通訊軟體保證識別的 HTTPS 萬用跳轉網址
+    token_str = url.split("gift=", 1)[1] if "gift=" in url else url
+    web_url = f"https://hauchiehlin-ops.github.io/Kairumo/vip.html?gift={token_str}"
+    print("Links for recipient (both Apple & Android fully supported):")
+    print(f"\n  [1] Universal Web Link (100% clickable in LINE, WeChat, Messenger, SMS):")
+    print(f"      {web_url}\n")
+    print(f"  [2] Direct Native Deep Link (Safari, iMessage, system browser):")
+    print(f"      {url}\n")
     print("=" * 72)
     return 0
 

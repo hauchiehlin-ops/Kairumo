@@ -51,6 +51,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -1110,11 +1111,28 @@ fun PaywallDialog(
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
-    var showVipInput by remember { mutableStateOf(false) }
-    var vipCodeText by remember { mutableStateOf("") }
+    val clipboardManager = LocalClipboardManager.current
+    var showRedeemDialog by remember { mutableStateOf(false) }
+
+    // 檢查剪貼簿是否有 VIP 禮遇通行證內容
+    val clipText = remember { clipboardManager.getText()?.text?.trim() }
+    val hasVipInClipboard = remember(clipText) {
+        !clipText.isNullOrEmpty() && (clipText.contains("vip") || clipText.contains("gift="))
+    }
 
     val orderedFeatures = remember(highlightedFeature) {
         listOf(highlightedFeature) + ProFeatureGate.entries.filter { it != highlightedFeature }
+    }
+
+    if (showRedeemDialog) {
+        RedeemVipDialog(
+            languageTag = languageTag,
+            onDismiss = { showRedeemDialog = false },
+            onSuccess = {
+                showRedeemDialog = false
+                onDismiss()
+            }
+        )
     }
 
     Dialog(
@@ -1157,6 +1175,47 @@ fun PaywallDialog(
                     }
                     TextButton(onClick = onDismiss) {
                         Text(LocalizationStrings.localized("close", languageTag))
+                    }
+                }
+
+                if (hasVipInClipboard && !EntitlementManager.isProUnlocked && clipText != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = ProGoldStart.copy(alpha = 0.16f),
+                        border = BorderStroke(1.dp, ProGoldEnd.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val ok = EntitlementManager.handleVIPUri(context, clipText, languageTag)
+                                if (ok) onDismiss()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                VipCrownIcon(size = 16.dp)
+                                Text(
+                                    text = LocalizationStrings.localized("clipboard_vip_detected", languageTag),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ProGoldEnd
+                                )
+                            }
+                            Text(
+                                text = LocalizationStrings.localized("unlock_now", languageTag) + " ▸",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ProGoldEnd
+                            )
+                        }
                     }
                 }
 
@@ -1326,42 +1385,191 @@ fun PaywallDialog(
                         )
                     }
                     TextButton(
-                        onClick = { showVipInput = !showVipInput }
+                        onClick = { showRedeemDialog = true }
                     ) {
                         Text(
-                            text = LocalizationStrings.localized("paywall_redeem_button", languageTag),
+                            text = LocalizationStrings.localized("paywall_redeem_vip_button", languageTag),
                             fontSize = 13.sp
                         )
                     }
                 }
+            }
+        }
+    }
+}
 
-                if (showVipInput) {
-                    Spacer(Modifier.height(8.dp))
+/**
+ * 獨立的 VIP 禮遇通行證兌換對話框。
+ * 1. 獨立置中顯示，鍵盤不遮擋。
+ * 2. 開啟時自動偵測剪貼簿，若有 VIP 連結/代碼自動填入。
+ * 3. 實體「貼上」按鈕，一鍵讀取剪貼簿貼入，免除長按呼叫系統選單之困擾。
+ * 4. 支援「貼上並立即解鎖」，一鍵完成。
+ */
+@Composable
+fun RedeemVipDialog(
+    languageTag: String,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    var codeText by remember { mutableStateOf("") }
+    var autoPastedNote by remember { mutableStateOf<String?>(null) }
+
+    // 開啟時自動偵測剪貼簿
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val clip = clipboardManager.getText()?.text?.trim()
+        if (!clip.isNullOrEmpty() && (clip.contains("vip") || clip.contains("gift=") || clip.contains("."))) {
+            codeText = clip
+            autoPastedNote = LocalizationStrings.localized("clipboard_vip_detected", languageTag)
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .widthIn(max = 480.dp)
+                .fillMaxWidth(0.92f)
+                .padding(16.dp)
+                .testTag("redeem.vip.dialog")
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = vipCodeText,
-                            onValueChange = { vipCodeText = it },
-                            placeholder = {
-                                Text(
-                                    text = "kairumo://vip?gift=...",
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp
-                                )
-                            },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
+                        VipCrownIcon(size = 18.dp)
+                        Text(
+                            text = LocalizationStrings.localized("redeem_vip_title", languageTag),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                        OutlinedButton(
-                            onClick = {
-                                EntitlementManager.handleVIPUri(context, vipCodeText, languageTag)
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text(LocalizationStrings.localized("close", languageTag))
+                    }
+                }
+
+                Text(
+                    text = LocalizationStrings.localized("redeem_vip_hint", languageTag),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (autoPastedNote != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = ProGoldStart.copy(alpha = 0.14f),
+                        border = BorderStroke(1.dp, ProGoldEnd.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "✨ " + autoPastedNote!!,
+                            fontSize = 12.sp,
+                            color = ProGoldEnd,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = codeText,
+                    onValueChange = {
+                        codeText = it
+                        autoPastedNote = null
+                    },
+                    placeholder = {
+                        Text(
+                            text = "kairumo://vip?gift=...",
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (codeText.isNotEmpty()) {
+                                TextButton(onClick = { codeText = "" }) {
+                                    Text("✕", fontSize = 14.sp)
+                                }
                             }
-                        ) {
-                            Text(LocalizationStrings.localized("confirm", languageTag))
+                            TextButton(
+                                onClick = {
+                                    val clip = clipboardManager.getText()?.text?.trim()
+                                    if (!clip.isNullOrEmpty()) {
+                                        codeText = clip
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = LocalizationStrings.localized("action_paste", languageTag),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
+                    },
+                    singleLine = false,
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val clip = clipboardManager.getText()?.text?.trim()
+                            if (!clip.isNullOrEmpty()) {
+                                codeText = clip
+                                val success = EntitlementManager.handleVIPUri(context, clip, languageTag)
+                                if (success) {
+                                    onSuccess()
+                                    onDismiss()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "📋 " + LocalizationStrings.localized("redeem_vip_paste_unlock", languageTag),
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val success = EntitlementManager.handleVIPUri(context, codeText, languageTag)
+                            if (success) {
+                                onSuccess()
+                                onDismiss()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ProGoldEnd),
+                        enabled = codeText.isNotBlank(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = LocalizationStrings.localized("unlock_now", languageTag),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
