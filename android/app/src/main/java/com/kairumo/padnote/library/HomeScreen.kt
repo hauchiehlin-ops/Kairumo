@@ -369,29 +369,6 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(profileName, fontWeight = FontWeight.SemiBold)
-                            if (com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
-                                val statusText = if (com.kairumo.padnote.entitlement.EntitlementManager.isVIPUnlocked) {
-                                    l("pro_status_vip_unlocked").replace(
-                                        "%@",
-                                        com.kairumo.padnote.entitlement.EntitlementManager.vipRecipientName ?: ""
-                                    )
-                                } else {
-                                    l("pro_status_unlocked")
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .background(Color(0xFFF5A623).copy(alpha = 0.20f), RoundedCornerShape(999.dp))
-                                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "✨ $statusText",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFD97706)
-                                    )
-                                }
-                            }
                         }
                         Text(
                             l("identity_desc_short"),
@@ -399,23 +376,11 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (!com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFFD97706), RoundedCornerShape(999.dp))
-                                .clickable { com.kairumo.padnote.entitlement.EntitlementManager.presentPaywall() }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                .testTag("home.pro.upgrade"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✨ " + l("pro_upgrade_button"),
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    com.kairumo.padnote.entitlement.LicenseStatusBadge(
+                        tier = com.kairumo.padnote.entitlement.EntitlementManager.licenseTier,
+                        onUpgradeClick = { com.kairumo.padnote.entitlement.EntitlementManager.presentPaywall() },
+                        l = l
+                    )
                     TextButton(
                         onClick = onSwitchUser,
                         modifier = Modifier.testTag("home.profile.switch")

@@ -160,4 +160,27 @@ class EntitlementManagerTest {
         val sig = sigHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
         assertTrue(Ed25519Verifier.verify(pub, ByteArray(0), sig))
     }
+
+    @Test
+    fun `license tier state transitions and date formatting`() {
+        EntitlementManager.resetStateForTesting(
+            playPurchased = false,
+            vipUnlocked = false,
+            forceFree = true
+        )
+        // 1. Basic 狀態
+        assertEquals(com.kairumo.padnote.entitlement.LicenseTier.Basic, EntitlementManager.licenseTier)
+
+        // 2. Pro 買斷狀態
+        EntitlementManager.resetStateForTesting(playPurchased = true)
+        assertEquals(com.kairumo.padnote.entitlement.LicenseTier.Pro, EntitlementManager.licenseTier)
+
+        // 3. VIP 狀態
+        EntitlementManager.resetStateForTesting(vipUnlocked = true)
+        assertEquals(com.kairumo.padnote.entitlement.LicenseTier.Vip, EntitlementManager.licenseTier)
+
+        // 4. 到期日格式化檢驗（2026/12/31）
+        val dateStr = EntitlementManager.formatLicenseDate(1798732800L)
+        assertTrue(dateStr.contains("2026/12/31") || dateStr.contains("2027/01/01"))
+    }
 }

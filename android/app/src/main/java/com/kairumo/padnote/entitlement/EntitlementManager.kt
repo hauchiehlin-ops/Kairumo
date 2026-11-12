@@ -5,7 +5,9 @@ import android.content.Context
 import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,8 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -54,6 +58,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -178,6 +183,16 @@ data class VIPGiftPayload(
 )
 
 /**
+ * 授權狀態分級（與 Apple 端 `LicenseTier` 完全對齊）。
+ */
+sealed class LicenseTier {
+    object Basic : LicenseTier()
+    data class VipLimited(val expiryDate: Long) : LicenseTier()
+    object Vip : LicenseTier()
+    object Pro : LicenseTier()
+}
+
+/**
  * 二段式無打擾輕提示（Nudge Toast）狀態。
  */
 data class ProNudgeNotice(
@@ -213,6 +228,27 @@ object EntitlementManager {
     /** VIP 禮遇通行證受贈者名稱 */
     var vipRecipientName by mutableStateOf<String?>(null)
         private set
+
+    /** VIP 禮遇通行證過期時間戳（秒，null 為永久） */
+    var vipExpirationTimestamp by mutableStateOf<Long?>(null)
+        private set
+
+    /** 當前授權階層狀態 */
+    val licenseTier: LicenseTier
+        get() {
+            if (isPlayBillingPurchased) return LicenseTier.Pro
+            if (isVIPUnlocked) {
+                val exp = vipExpirationTimestamp
+                return if (exp != null) LicenseTier.VipLimited(exp) else LicenseTier.Vip
+            }
+            return LicenseTier.Basic
+        }
+
+    /** 格式化到期日為 yyyy/MM/dd（如 2026/12/31） */
+    fun formatLicenseDate(epochSeconds: Long): String {
+        val sdf = java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.US)
+        return sdf.format(java.util.Date(epochSeconds * 1000L))
+    }
 
     /** Google Play 商品顯示價格（尚未連線時顯示預設美金參考價） */
     var displayPrice by mutableStateOf("US$9.99")
@@ -287,10 +323,12 @@ object EntitlementManager {
             if (payload != null) {
                 isVIPUnlocked = true
                 vipRecipientName = payload.sub
+                vipExpirationTimestamp = payload.exp
             } else {
                 prefs.edit().remove(KEY_VIP_TOKEN).apply()
                 isVIPUnlocked = false
                 vipRecipientName = null
+                vipExpirationTimestamp = null
             }
         }
         if (!initialized) {
@@ -557,6 +595,7 @@ object EntitlementManager {
                 .apply()
             isVIPUnlocked = true
             vipRecipientName = payload.sub
+            vipExpirationTimestamp = payload.exp
             activePaywallFeature = null
             showFeedback(
                 LocalizationStrings.localized("pro_unlocked_vip_toast", languageTag)
@@ -656,6 +695,8 @@ object EntitlementManager {
     ) {
         isPlayBillingPurchased = playPurchased
         isVIPUnlocked = vipUnlocked
+        vipRecipientName = null
+        vipExpirationTimestamp = null
         forceFreeForTest = forceFree
         showLockedProBrushes = showLockedBrushes
         activeNudge = null
@@ -1135,6 +1176,43 @@ fun PaywallDialog(
                     textAlign = TextAlign.Center
                 )
 
+                val tier = EntitlementManager.licenseTier
+                if (tier is LicenseTier.VipLimited) {
+                    val dateStr = EntitlementManager.formatLicenseDate(tier.expiryDate)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFA0522D).copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, Color(0xFFA0522D).copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(text = "⏱️", fontSize = 16.sp)
+                            Column {
+                                Text(
+                                    text = LocalizationStrings.localized("paywall_vip_limited_notice", languageTag)
+                                        .replace("%@", dateStr),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF8B4513)
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = LocalizationStrings.localized("paywall_vip_limited_desc", languageTag)
+                                        .replace("%@", dateStr),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
 
                 // 六大 Pro 專業版亮點卡片（觸發來源排第一並高亮邊框）
@@ -1285,6 +1363,191 @@ fun PaywallDialog(
                             Text(LocalizationStrings.localized("confirm", languageTag))
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * VIP 專屬古典三尖黃金平底王冠（金色實心古典造型）。
+ */
+@Composable
+fun VipCrownIcon(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 13.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val path = Path().apply {
+            moveTo(w * 0.15f, h * 0.85f)
+            lineTo(w * 0.85f, h * 0.85f)
+            lineTo(w * 0.92f, h * 0.35f)
+            lineTo(w * 0.65f, h * 0.55f)
+            lineTo(w * 0.50f, h * 0.20f)
+            lineTo(w * 0.35f, h * 0.55f)
+            lineTo(w * 0.08f, h * 0.35f)
+            close()
+        }
+        drawPath(path, color = Color(0xFFF59E0B))
+        // 頂部金球
+        drawCircle(Color(0xFFFBBF24), radius = w * 0.06f, center = Offset(w * 0.50f, h * 0.18f))
+        drawCircle(Color(0xFFFBBF24), radius = w * 0.05f, center = Offset(w * 0.08f, h * 0.33f))
+        drawCircle(Color(0xFFFBBF24), radius = w * 0.05f, center = Offset(w * 0.92f, h * 0.33f))
+    }
+}
+
+/**
+ * PRO 專屬鑽石星芒拱頂帝王冠（圓拱帝王冠頂戴鑽石星芒，外型結構顯著差異）。
+ */
+@Composable
+fun ProDiamondCrownIcon(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 14.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        // 雙拱冠身
+        val bodyPath = Path().apply {
+            moveTo(w * 0.15f, h * 0.85f)
+            lineTo(w * 0.85f, h * 0.85f)
+            cubicTo(w * 0.90f, h * 0.65f, w * 0.85f, h * 0.45f, w * 0.72f, h * 0.40f)
+            cubicTo(w * 0.60f, h * 0.45f, w * 0.55f, h * 0.60f, w * 0.50f, h * 0.45f)
+            cubicTo(w * 0.45f, h * 0.60f, w * 0.40f, h * 0.45f, w * 0.28f, h * 0.40f)
+            cubicTo(w * 0.15f, h * 0.45f, w * 0.10f, h * 0.65f, w * 0.15f, h * 0.85f)
+            close()
+        }
+        drawPath(
+            bodyPath,
+            brush = Brush.linearGradient(
+                listOf(Color(0xFF38BDF8), Color(0xFFBAE6FD)),
+                start = Offset(0f, h),
+                end = Offset(w, 0f)
+            )
+        )
+        // 中央菱形鑽石切面
+        val diamondPath = Path().apply {
+            moveTo(w * 0.50f, h * 0.52f)
+            lineTo(w * 0.60f, h * 0.68f)
+            lineTo(w * 0.50f, h * 0.84f)
+            lineTo(w * 0.40f, h * 0.68f)
+            close()
+        }
+        drawPath(diamondPath, color = Color.White)
+        // 頂部四芒鑽石星芒 (✦)
+        val starPath = Path().apply {
+            moveTo(w * 0.50f, h * 0.05f)
+            cubicTo(w * 0.50f, h * 0.20f, w * 0.45f, h * 0.24f, w * 0.35f, h * 0.25f)
+            cubicTo(w * 0.45f, h * 0.26f, w * 0.50f, h * 0.30f, w * 0.50f, h * 0.42f)
+            cubicTo(w * 0.50f, h * 0.30f, w * 0.55f, h * 0.26f, w * 0.65f, h * 0.25f)
+            cubicTo(w * 0.55f, h * 0.24f, w * 0.50f, h * 0.20f, w * 0.50f, h * 0.05f)
+            close()
+        }
+        drawPath(starPath, color = Color(0xFFE0F2FE))
+    }
+}
+
+/**
+ * 跨平台首頁授權狀態標籤（對齊 Basic、VIP Limited、VIP、PRO 四種狀態）。
+ */
+@Composable
+fun LicenseStatusBadge(
+    tier: LicenseTier,
+    onUpgradeClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    l: (String) -> String = { LocalizationStrings.localized(it, "zh-Hant") }
+) {
+    when (tier) {
+        is LicenseTier.Basic -> {
+            // 「Basic」：文字顏色為黑色（粗體加底線），點擊後出現購買卡片
+            Box(
+                modifier = modifier
+                    .background(Color(0xFFF3F4F6), RoundedCornerShape(8.dp))
+                    .clickable { onUpgradeClick() }
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .testTag("home.pro.upgrade"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = l("license_tier_basic"),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = TextDecoration.Underline,
+                    color = Color(0xFF111827)
+                )
+            }
+        }
+        is LicenseTier.VipLimited -> {
+            // 「VIP Limited」：文字顏色為暗銅色彩，點擊後出現購買卡片
+            Box(
+                modifier = modifier
+                    .background(Color(0xFFA0522D).copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                    .border(BorderStroke(1.dp, Color(0xFFA0522D).copy(alpha = 0.35f)), RoundedCornerShape(8.dp))
+                    .clickable { onUpgradeClick() }
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .testTag("home.pro.upgrade"),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(text = "⏱️", fontSize = 11.sp)
+                    Text(
+                        text = l("license_tier_vip_limited"),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF8B4513)
+                    )
+                }
+            }
+        }
+        is LicenseTier.Vip -> {
+            // 「VIP」：文字顏色為閃金黃色＋金色皇冠，因屬永久授權，所以不需出現購買卡片
+            Box(
+                modifier = modifier
+                    .background(Color(0xFFF59E0B).copy(alpha = 0.14f), RoundedCornerShape(8.dp))
+                    .border(BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .testTag("home.pro.upgrade"),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    VipCrownIcon(size = 12.dp)
+                    Text(
+                        text = l("license_tier_vip"),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD97706)
+                    )
+                }
+            }
+        }
+        is LicenseTier.Pro -> {
+            // 「PRO」：文字顏色為鑽石閃光＋鑽石皇冠，因屬永久授權，所以不需出現購買卡片
+            Box(
+                modifier = modifier
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0284C7).copy(alpha = 0.14f), Color(0xFFBAE6FD).copy(alpha = 0.18f))
+                        ),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .border(BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.40f)), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .testTag("home.pro.upgrade"),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    ProDiamondCrownIcon(size = 13.dp)
+                    Text(
+                        text = l("license_tier_pro"),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF0284C7)
+                    )
                 }
             }
         }

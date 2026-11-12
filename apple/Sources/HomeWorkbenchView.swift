@@ -728,33 +728,110 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.identity.edit")
     }
 
+    @ViewBuilder
     private var proUpgradeOrStatusButton: some View {
-        Button {
-            entitlement.presentPaywall(focus: .studios)
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: entitlement.isProUnlocked ? "checkmark.seal.fill" : "sparkles")
-                    .font(.system(size: 11, weight: .bold))
-                Text(localizationManager.localized(
-                    entitlement.isVIPUnlocked
-                        ? "pro_status_vip_unlocked"
-                        : (entitlement.isProUnlocked ? "pro_badge" : "pro_upgrade_button")
-                ))
+        switch entitlement.licenseTier {
+        case .basic:
+            // 「Basic」：文字顏色為黑色（粗體加底線），點擊後出現購買卡片
+            Button {
+                entitlement.presentPaywall(focus: .studios)
+            } label: {
+                Text(localizationManager.localized("license_tier_basic"))
                     .font(.caption)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
+                    .underline()
+                    .foregroundColor(Color(uiColor: .label))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(8)
             }
-            .foregroundColor(entitlement.isProUnlocked ? .accentColor : .white)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("home.pro.upgrade")
+
+        case .vipLimited:
+            // 「VIP Limited」：文字顏色為暗銅色彩，點擊後出現購買卡片
+            Button {
+                entitlement.presentPaywall(focus: .studios)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "hourglass.badge.gearshape")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(localizationManager.localized("license_tier_vip_limited"))
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                .foregroundColor(Color(red: 0.65, green: 0.38, blue: 0.15))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(red: 0.65, green: 0.38, blue: 0.15).opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(red: 0.65, green: 0.38, blue: 0.15).opacity(0.35), lineWidth: 1)
+                )
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("home.pro.upgrade")
+
+        case .vip:
+            // 「VIP」：文字顏色為閃金黃色＋金色皇冠，因屬永久授權，所以不需出現購買卡片
+            HStack(spacing: 4) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(red: 0.96, green: 0.68, blue: 0.10))
+                Text(localizationManager.localized("license_tier_vip"))
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color(red: 0.96, green: 0.68, blue: 0.10))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color(red: 0.96, green: 0.68, blue: 0.10).opacity(0.14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(red: 0.96, green: 0.68, blue: 0.10).opacity(0.35), lineWidth: 1)
+            )
+            .cornerRadius(8)
+            .accessibilityIdentifier("home.pro.upgrade")
+
+        case .pro:
+            // 「PRO」：文字顏色為鑽石閃光＋鑽石皇冠，因屬永久授權，所以不需出現購買卡片
+            HStack(spacing: 5) {
+                ProDiamondCrownView(size: 13)
+                Text(localizationManager.localized("license_tier_pro"))
+                    .font(.caption)
+                    .fontWeight(.heavy)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.05, green: 0.65, blue: 0.95),
+                                Color(red: 0.55, green: 0.90, blue: 1.0)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
-                entitlement.isProUnlocked
-                    ? Color.accentColor.opacity(0.14)
-                    : Color.accentColor
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.05, green: 0.65, blue: 0.95).opacity(0.14),
+                        Color(red: 0.55, green: 0.90, blue: 1.0).opacity(0.18)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(red: 0.35, green: 0.75, blue: 0.95).opacity(0.4), lineWidth: 1)
             )
             .cornerRadius(8)
+            .accessibilityIdentifier("home.pro.upgrade")
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("home.pro.upgrade")
     }
 
     // MARK: - 2. 頂部搜尋列
