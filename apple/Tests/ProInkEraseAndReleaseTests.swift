@@ -112,4 +112,48 @@ final class ProInkEraseAndReleaseTests: XCTestCase {
         for i in 0 ..< min(before.count, after.count) where abs(Int(before[i]) - Int(after[i])) > 2 { diff += 1 }
         XCTAssertEqual(diff, 0, "釋放算繪資源再回來，畫面要一樣（差異像素 \(diff)）")
     }
+
+    func testMovingStrokesWithLassoUpdatesCanvasBackingAndMatchesFullRebuild() {
+        let all = strokes()
+        let layer = makeLayer("m1", all)
+        let before = image(layer)
+        let manager = UndoManager()
+        manager.groupsByEvent = false
+        layer.undoManagerProvider = { manager }
+        PerfProbe.shared.reset()
+
+        let victim = all[12]
+        manager.beginUndoGrouping()
+        layer.move(ids: [victim.id], by: CGSize(width: 24, height: 18))
+        _ = image(layer)   // 拖曳途中即時局部重繪
+        layer.move(ids: [victim.id], by: CGSize(width: 16, height: 14))
+        layer.endMove()
+        manager.endUndoGrouping()
+
+        let movedImage = image(layer)
+        XCTAssertGreaterThanOrEqual(PerfProbe.shared.counter(.backingPatch), 1, "套索搬移應觸發增量底圖局部重畫")
+        XCTAssertEqual(PerfProbe.shared.counter(.backingFullRebuild), 0, "套索搬移單筆不可觸發整頁重建")
+
+        var changeFromBefore = 0
+        for i in 0 ..< min(before.count, movedImage.count) where abs(Int(before[i]) - Int(movedImage[i])) > 2 {
+            changeFromBefore += 1
+        }
+        XCTAssertGreaterThan(changeFromBefore, 50, "套索搬移後畫布像素必須隨筆跡同步移動，不可停在原位不動")
+
+        let fresh = makeLayer("m1b", layer.ownStrokes)
+        let rebuilt = image(fresh)
+        var diff = 0
+        for i in 0 ..< min(movedImage.count, rebuilt.count) where abs(Int(movedImage[i]) - Int(rebuilt[i])) > 2 {
+            diff += 1
+        }
+        XCTAssertEqual(diff, 0, "套索搬移後的畫布底圖必須與整頁重繪完全一致（差異像素 \(diff)）")
+
+        manager.undo()
+        let undone = image(layer)
+        var undoDiff = 0
+        for i in 0 ..< min(before.count, undone.count) where abs(Int(before[i]) - Int(undone[i])) > 2 {
+            undoDiff += 1
+        }
+        XCTAssertEqual(undoDiff, 0, "復原套索搬移後畫布應回到原貌（差異像素 \(undoDiff)）")
+    }
 }

@@ -3,6 +3,7 @@ package com.kairumo.padnote.entitlement
 import android.app.Activity
 import android.content.Context
 import android.util.Base64
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -290,6 +291,16 @@ object EntitlementManager {
     private var billingClient: BillingClient? = null
     private var cachedProductDetails: ProductDetails? = null
 
+    private enum class ProductLoadState {
+        NOT_LOADED,
+        LOADED,
+        PRODUCT_MISSING,
+        REQUEST_FAILED
+    }
+
+    @Volatile
+    private var productLoadState: ProductLoadState = ProductLoadState.NOT_LOADED
+
     /** 單元測試可覆寫此旗標以強制驗證免費版門禁行為 */
     internal var forceFreeForTest: Boolean = false
 
@@ -470,13 +481,22 @@ object EntitlementManager {
             .setProductList(productList)
             .build()
         client.queryProductDetailsAsync(params) { result, detailsList ->
-            if (result.responseCode == BillingClient.BillingResponseCode.OK && detailsList.isNotEmpty()) {
-                val detail = detailsList.first()
-                cachedProductDetails = detail
-                val formatted = detail.oneTimePurchaseOfferDetails?.formattedPrice
-                if (!formatted.isNullOrBlank()) {
-                    mainScope.launch { displayPrice = formatted }
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                val detail = detailsList.firstOrNull { it.productId == PRO_LIFETIME_PRODUCT_ID }
+                if (detail != null) {
+                    cachedProductDetails = detail
+                    productLoadState = ProductLoadState.LOADED
+                    val formatted = detail.oneTimePurchaseOfferDetails?.formattedPrice
+                    if (!formatted.isNullOrBlank()) {
+                        mainScope.launch { displayPrice = formatted }
+                    }
+                } else {
+                    productLoadState = ProductLoadState.PRODUCT_MISSING
+                    Log.e("KairumoBilling", "Store returned no product for $PRO_LIFETIME_PRODUCT_ID")
                 }
+            } else {
+                productLoadState = ProductLoadState.REQUEST_FAILED
+                Log.e("KairumoBilling", "queryProductDetails failed: ${result.responseCode} ${result.debugMessage}")
             }
         }
     }
@@ -547,8 +567,13 @@ object EntitlementManager {
         }
         val details = cachedProductDetails
         if (details == null) {
+            val key = if (productLoadState == ProductLoadState.PRODUCT_MISSING) {
+                "paywall_product_unavailable"
+            } else {
+                "paywall_store_unavailable"
+            }
             queryProductDetails(client)
-            showFeedback(LocalizationStrings.localized("paywall_store_unavailable", languageTag))
+            showFeedback(LocalizationStrings.localized(key, languageTag))
             return
         }
         isPurchasing = true

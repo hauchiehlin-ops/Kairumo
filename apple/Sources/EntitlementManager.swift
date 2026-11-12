@@ -14,6 +14,7 @@
 
 import CryptoKit
 import Foundation
+import os
 import StoreKit
 import SwiftUI
 
@@ -331,15 +332,51 @@ final class EntitlementManager: ObservableObject {
     }
 
     // MARK: - StoreKit 2 Operations
+
+    /// 上一次向 App Store 取商品的結果。用來分辨「連不上 App Store」與「連得上但商品不存在」——
+    /// 後者是內購項目未通過審核／未上架（實際發生過：App 已上架，內購仍在「準備提交」），
+    /// 以前兩者都顯示「請檢查網路」，使用者與開發者都被誤導。
+    enum ProductLoadState: Equatable {
+        case notLoaded
+        case loaded
+        /// 請求成功，但 App Store 沒有回傳這個商品。
+        case productMissing
+        /// 請求本身失敗（離線、App Store 服務異常）。
+        case requestFailed
+    }
+
+    @Published private(set) var productLoadState: ProductLoadState = .notLoaded
+    private static let storeLog = Logger(subsystem: "com.kairumo", category: "storekit")
+
     func loadProducts() async {
         do {
             let fetched = try await Product.products(for: [Self.proLifetimeProductID])
             if let match = fetched.first(where: { $0.id == Self.proLifetimeProductID }) {
                 self.proProduct = match
+                productLoadState = .loaded
+            } else {
+                productLoadState = .productMissing
+                Self.storeLog.error("App Store returned no product for \(Self.proLifetimeProductID, privacy: .public)")
             }
         } catch {
-            // 離線或沙盒未配置時靜默降級，保留靜態價格展示
+            productLoadState = .requestFailed
+            Self.storeLog.error("Product request failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// 購買面板打開時呼叫：清掉上一次留下的提示，商品還沒取到就再取一次。
+    func preparePaywall() async {
+        feedbackBannerText = nil
+        if proProduct == nil {
+            await loadProducts()
+        }
+    }
+
+    /// 取不到商品時要顯示哪一句話。
+    private var productUnavailableMessage: String {
+        productLoadState == .productMissing
+            ? L10n.t("paywall_product_unavailable")
+            : L10n.t("paywall_store_unavailable")
     }
 
     func refreshEntitlements() async {
@@ -367,7 +404,7 @@ final class EntitlementManager: ObservableObject {
             await loadProducts()
         }
         guard let product = proProduct else {
-            feedbackBannerText = L10n.t("paywall_store_unavailable")
+            feedbackBannerText = productUnavailableMessage
             return
         }
 
@@ -387,6 +424,7 @@ final class EntitlementManager: ObservableObject {
                 break
             }
         } catch {
+            Self.storeLog.error("Purchase failed: \(error.localizedDescription, privacy: .public)")
             feedbackBannerText = L10n.t("paywall_store_unavailable")
         }
     }
@@ -563,6 +601,9 @@ struct PaywallSheet: View {
             #if !targetEnvironment(macCatalyst)
             .offerCodeRedemption(isPresented: $showOfferCodeRedemption)
             #endif
+            .task {
+                await entitlement.preparePaywall()
+            }
         }
     }
 
