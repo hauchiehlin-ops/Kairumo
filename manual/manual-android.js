@@ -103,7 +103,7 @@ window.KAIRUMO_MANUAL = {
           "素材圖庫"
         ],
         "steps": [
-          "最上方是你的顯示身分 —— 協同時隊友看到的就是這個名字，點右邊的「編輯身分」可以修改。",
+          "最上方是你的顯示身分與授權狀態標籤 —— 包含 Basic（免費基礎版）、VIP Limited（限期 VIP 禮遇）、VIP（永久 VIP 禮遇）與 PRO（專業買斷版）。點擊 Basic 或 VIP Limited 可查看進階功能或購買買斷版；持有 VIP 禮遇通行證者可點擊專屬連結喚醒自動離線解鎖，或在購買視窗點選「兌換 VIP 禮遇碼」貼上啟用。點右邊的「編輯身分」可隨時修改名稱與代表色。",
           "搜尋列可以同時搜尋筆記標題、打字內容與錄音轉錄出來的文字。",
           "中間三張大卡片是主要動作：新增筆記、開始錄音、素材圖庫。",
           "「繼續」列出最近開過的筆記，點一下就回到上次的位置。",
@@ -1036,7 +1036,7 @@ window.KAIRUMO_MANUAL = {
           "Asset Library"
         ],
         "steps": [
-          "At the top is your display identity — the name teammates see while collaborating. Tap “Edit Identity” to change it.",
+          "At the top is your display identity and license tier badge — including Basic (free plan), VIP Limited (time-limited gift pass), VIP (lifetime gift pass), and PRO (lifetime purchase). Tapping Basic or VIP Limited presents the feature paywall or upgrade options; VIP gift pass holders can tap a universal link to unlock offline or use “Redeem VIP Pass” in the paywall. Tap “Edit Identity” on the right to change your name and colour.",
           "The search field searches note titles, typed text and transcribed speech at the same time.",
           "The three large cards are the main actions: New Note, Start Recording and Asset Library.",
           "“Continue” lists the notes you opened recently; one tap returns you to where you left off.",
