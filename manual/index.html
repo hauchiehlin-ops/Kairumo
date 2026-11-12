@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kairumo Manual</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root {
     --paper: #F5F7F9;
@@ -133,7 +130,16 @@
   }
   @media (min-width: 1000px) {
     .layout { grid-template-columns: 250px minmax(0, 1fr); gap: 56px; align-items: start; }
-    .toc { position: sticky; top: 24px; }
+    .toc {
+      position: sticky;
+      top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-right: 8px;
+    }
+    .toc::-webkit-scrollbar { width: 4px; }
+    .toc::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
   }
 
   /* ---------- 目錄 ---------- */
@@ -286,9 +292,39 @@
     margin-top: 4px;
   }
 
+
+  /* 零基礎：每一步一張卡片，文字在上、截圖在下 */
+  .walk { display: flex; flex-direction: column; gap: 18px; margin: 0 0 22px; }
+  .walk-step {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 16px 18px 18px;
+    max-width: 640px;
+  }
+  .walk-step h3 {
+    display: flex; align-items: baseline; gap: 10px;
+    margin: 0 0 8px; font-size: 17px; line-height: 1.35;
+  }
+  .walk-step h3 .wn {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-soft); border-radius: 6px; padding: 2px 8px;
+  }
+  .walk-step p { margin: 0 0 12px; max-width: 62ch; }
+  .walk-step figure { margin: 0; max-width: 420px; }
+
   dl.faq { margin: 0; display: flex; flex-direction: column; gap: 18px; max-width: 68ch; }
   dl.faq dt { font-weight: 600; margin-bottom: 2px; }
   dl.faq dd { margin: 0; color: var(--ink-soft); }
+  dl.faq dt, h3.faq-cat { scroll-margin-top: 16px; }
+  h3.faq-cat { margin: 28px 0 10px; font-size: 1.05em; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  nav.faq-toc { margin: 0 0 8px; padding: 14px 16px; max-width: 68ch; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface-sunk); }
+  nav.faq-toc .faq-toc-title { margin: 0 0 8px; font-weight: 700; }
+  nav.faq-toc a { color: inherit; text-decoration: none; }
+  nav.faq-toc a:hover { text-decoration: underline; }
+  nav.faq-toc .faq-toc-cat { display: block; margin-top: 10px; font-weight: 600; color: var(--accent); }
+  nav.faq-toc ul { margin: 4px 0 0; padding-left: 1.2em; }
+  nav.faq-toc li { margin: 3px 0; color: var(--ink-soft); }
 
   .back { font-family: var(--mono); font-size: 12px; text-decoration: none; }
   .back:hover { text-decoration: underline; }
@@ -306,12 +342,63 @@
   @media (prefers-reduced-motion: no-preference) {
     html { scroll-behavior: smooth; }
   }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 10px;
+  }
+  .header-top .eyebrow { margin: 0; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .action-btn svg { width: 15px; height: 15px; }
+
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .masthead { border-bottom: none; padding: 20px 0 10px; }
+    .header-actions, .langbar, .toc, .back, footer.page-foot { display: none !important; }
+    .layout { display: block; padding: 0; }
+    .step-section { break-inside: avoid; page-break-inside: avoid; border-bottom: 1px solid var(--rule); }
+    figure { break-inside: avoid; page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
 <header class="masthead">
   <div class="shell">
-    <p class="eyebrow">Kairumo</p>
+    <div class="header-top">
+      <p class="eyebrow">Kairumo</p>
+      <div class="header-actions">
+        <button type="button" class="action-btn" id="print-btn" onclick="triggerPrintOrExport()" title="Print / Export PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span id="print-label">列印 / 匯出 PDF</span>
+        </button>
+      </div>
+    </div>
     <h1 id="doc-title"></h1>
     <p class="tagline" id="doc-tagline"></p>
     <p class="version" id="doc-version"></p>
@@ -326,13 +413,44 @@
 
 <script src="manual.js" charset="utf-8"></script>
 <script>
-  const PRIVACY_URL = "https://claude.ai/code/artifact/c9e37c83-b380-4eee-81ce-57e778cdf3e1";
+  const PRIVACY_URL = "https://hauchiehlin-ops.github.io/Kairumo/legal/privacy.html";
   const ORDER = ["zh-Hant", "en", "zh-Hans", "ja", "ko", "th"];
   const STORE_KEY = "kairumo.manual.lang";
   const M = window.KAIRUMO_MANUAL;
 
+  function triggerPrintOrExport() {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kairumoPrint) {
+      window.webkit.messageHandlers.kairumoPrint.postMessage("print");
+    } else if (window.kairumoBridge && window.kairumoBridge.print) {
+      window.kairumoBridge.print();
+    } else {
+      window.print();
+    }
+  }
+
   const pad = n => String(n).padStart(2, "0");
   const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+
+  /**
+   * 把 `**重點**` 標成粗體，其餘原樣。
+   *
+   * 只認這一個標記，而且**不碰 innerHTML 以外的任何輸入** —— 文字全部
+   * 來自 manual.js（我們自己的檔案），切開之後每一段都走 textContent，
+   * 所以內容裡的 < 與 & 不會被當成標籤。
+   */
+  function richText(node, text) {
+    const parts = String(text == null ? "" : text).split("**");
+    parts.forEach((part, i) => {
+      if (!part) return;
+      if (i % 2 === 1) {
+        const b = el("strong");
+        b.textContent = part;
+        node.appendChild(b);
+      } else {
+        node.appendChild(document.createTextNode(part));
+      }
+    });
+  }
 
   function figure(figKey, caption, figset, note) {
     const f = el("figure");
@@ -358,6 +476,8 @@
     document.getElementById("doc-title").textContent = ui.docTitle;
     document.getElementById("doc-tagline").textContent = ui.tagline;
     document.getElementById("doc-version").textContent = ui.version;
+    const printLabel = document.getElementById("print-label");
+    if (printLabel && ui.exportPdfPrint) printLabel.textContent = ui.exportPdfPrint;
 
     // 目錄
     const toc = document.getElementById("toc");
@@ -394,7 +514,7 @@
       h.innerHTML = '<span class="num">' + pad(i + 1) + "</span><span>" + s.title + "</span>";
       sec.appendChild(h);
 
-      if (s.lead) { const p = el("p", "lead"); p.textContent = s.lead; sec.appendChild(p); }
+      if (s.lead) { const p = el("p", "lead"); richText(p, s.lead); sec.appendChild(p); }
 
       if (s.buttons && s.buttons.length) {
         const chips = el("div", "chips");
@@ -403,34 +523,87 @@
         sec.appendChild(chips);
       }
 
+      if (s.walk && s.walk.length) {
+        const w = el("div", "walk");
+        s.walk.forEach((st, k) => {
+          const card = el("div", "walk-step");
+          const hd = el("h3");
+          hd.innerHTML = '<span class="wn">' + pad(k + 1) + "</span><span>" + st.title + "</span>";
+          card.appendChild(hd);
+          const p = el("p"); richText(p, st.text); card.appendChild(p);
+          if (st.fig) card.appendChild(figure(st.fig, st.cap, d.figset, ui.figNote));
+          w.appendChild(card);
+        });
+        sec.appendChild(w);
+      }
+
       if (s.steps && s.steps.length) {
         const lab = el("p", "steps-label"); lab.textContent = ui.stepsLabel; sec.appendChild(lab);
         // 有明確先後順序的用編號，純說明用破折號
-        const ordered = s.id !== "home" && s.id !== "start" && s.id !== "editor";
+        const ordered = s.id !== "intro" && s.id !== "home" && s.id !== "start" && s.id !== "editor";
         const list = el(ordered ? "ol" : "ul", ordered ? "steps" : "plain");
-        s.steps.forEach(t => { const li = el("li"); const sp = el("span"); sp.textContent = t; li.appendChild(sp); list.appendChild(li); });
+        s.steps.forEach(t => { const li = el("li"); const sp = el("span"); richText(sp, t); li.appendChild(sp); list.appendChild(li); });
         sec.appendChild(list);
       }
 
       if (s.fig) sec.appendChild(figure(s.fig, s.cap, d.figset, ui.figNote));
       if (s.fig2) sec.appendChild(figure(s.fig2, s.cap2, d.figset, ui.figNote));
+      if (s.fig3) sec.appendChild(figure(s.fig3, s.cap3, d.figset, ui.figNote));
 
       if (s.tip) {
         const t = el("div", "tip");
         const k = el("span", "k"); k.textContent = ui.tipLabel;
-        const p = el("p"); p.textContent = s.tip;
+        const p = el("p"); richText(p, s.tip);
         t.appendChild(k); t.appendChild(p);
         sec.appendChild(t);
       }
 
       if (s.faq) {
-        const dl = el("dl", "faq");
-        s.faq.forEach(([q, a]) => {
-          const dt = el("dt"); dt.textContent = q;
-          const dd = el("dd"); dd.textContent = a;
-          dl.appendChild(dt); dl.appendChild(dd);
+        // 有分類的話（`faqCategories`）：節首放「問題一覽」目錄（分類 → 問題，都是連結），
+        // 內文依分類分組，每個分類與每個問題都有錨點。沒有分類就維持原來的平鋪。
+        const cats = s.faqCategories || [];
+        const entries = s.faq.map(([q, a, cat], i) => ({ q, a, cat, id: s.id + "-q" + (i + 1) }));
+        const groups = cats
+          .map(([key, title]) => ({ key, title, items: entries.filter((e) => e.cat === key) }))
+          .filter((g) => g.items.length);
+        const loose = entries.filter((e) => !cats.some(([key]) => key === e.cat));
+        if (loose.length) groups.push({ key: "other", title: "", items: loose });
+
+        if (cats.length) {
+          const nav = el("nav", "faq-toc");
+          nav.setAttribute("aria-label", s.faqTocTitle || s.title);
+          const head = el("p", "faq-toc-title"); head.textContent = s.faqTocTitle || s.title;
+          nav.appendChild(head);
+          groups.forEach((g) => {
+            if (g.title) {
+              const a = el("a", "faq-toc-cat");
+              a.href = "#" + s.id + "-cat-" + g.key; a.textContent = g.title;
+              nav.appendChild(a);
+            }
+            const ul = el("ul");
+            g.items.forEach((e) => {
+              const li = el("li"); const a = el("a");
+              a.href = "#" + e.id; a.textContent = e.q;
+              li.appendChild(a); ul.appendChild(li);
+            });
+            nav.appendChild(ul);
+          });
+          sec.appendChild(nav);
+        }
+
+        groups.forEach((g) => {
+          if (g.title) {
+            const h = el("h3", "faq-cat"); h.id = s.id + "-cat-" + g.key; h.textContent = g.title;
+            sec.appendChild(h);
+          }
+          const dl = el("dl", "faq");
+          g.items.forEach((e) => {
+            const dt = el("dt"); dt.id = e.id; dt.textContent = e.q;
+            const dd = el("dd"); richText(dd, e.a);
+            dl.appendChild(dt); dl.appendChild(dd);
+          });
+          sec.appendChild(dl);
         });
-        sec.appendChild(dl);
       }
 
       const back = el("a", "back");
@@ -500,6 +673,12 @@
       else if (nav.startsWith("th")) initial = "th";
       else if (nav.includes("hans") || nav === "zh-cn") initial = "zh-Hans";
     }
+  } catch (e) { /* ignore */ }
+    // App 內嵌顯示時由 App 指定語言（`?lang=`）：語言已經在首頁選過，頁面上就不再放第二個語言選單。
+  // 公開網頁版沒有這個參數，仍然保留選單。
+  try {
+    const forced = new URLSearchParams(location.search).get("lang");
+    if (forced && M[forced]) { initial = forced; bar.style.display = "none"; }
   } catch (e) { /* ignore */ }
   render(initial);
 </script>
