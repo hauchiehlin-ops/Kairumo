@@ -776,60 +776,70 @@ public struct HomeWorkbenchView: View {
 
         case .vip:
             // 「VIP」：文字顏色為閃金黃色＋金色皇冠，因屬永久授權，所以不需出現購買卡片
-            HStack(spacing: 4) {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Color(red: 0.96, green: 0.68, blue: 0.10))
-                Text(localizationManager.localized("license_tier_vip"))
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color(red: 0.96, green: 0.68, blue: 0.10))
+            Button {
+                // 空動作：吸收點擊事件，防止穿透觸發相鄰的「編輯身分」按鈕
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color(red: 0.96, green: 0.68, blue: 0.10))
+                    Text(localizationManager.localized("license_tier_vip"))
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color(red: 0.96, green: 0.68, blue: 0.10))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(red: 0.96, green: 0.68, blue: 0.10).opacity(0.14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(red: 0.96, green: 0.68, blue: 0.10).opacity(0.35), lineWidth: 1)
+                )
+                .cornerRadius(8)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color(red: 0.96, green: 0.68, blue: 0.10).opacity(0.14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(red: 0.96, green: 0.68, blue: 0.10).opacity(0.35), lineWidth: 1)
-            )
-            .cornerRadius(8)
+            .buttonStyle(.plain)
             .accessibilityIdentifier("home.pro.upgrade")
 
         case .pro:
             // 「PRO」：文字顏色為鑽石閃光＋鑽石皇冠，因屬永久授權，所以不需出現購買卡片
-            HStack(spacing: 5) {
-                ProDiamondCrownView(size: 13)
-                Text(localizationManager.localized("license_tier_pro"))
-                    .font(.caption)
-                    .fontWeight(.heavy)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.05, green: 0.65, blue: 0.95),
-                                Color(red: 0.55, green: 0.90, blue: 1.0)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
+            Button {
+                // 空動作：吸收點擊事件，防止穿透觸發相鄰的「編輯身分」按鈕
+            } label: {
+                HStack(spacing: 5) {
+                    ProDiamondCrownView(size: 13)
+                    Text(localizationManager.localized("license_tier_pro"))
+                        .font(.caption)
+                        .fontWeight(.heavy)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.05, green: 0.65, blue: 0.95),
+                                    Color(red: 0.55, green: 0.90, blue: 1.0)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.05, green: 0.65, blue: 0.95).opacity(0.14),
+                            Color(red: 0.55, green: 0.90, blue: 1.0).opacity(0.18)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.05, green: 0.65, blue: 0.95).opacity(0.14),
-                        Color(red: 0.55, green: 0.90, blue: 1.0).opacity(0.18)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
                 )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(red: 0.35, green: 0.75, blue: 0.95).opacity(0.4), lineWidth: 1)
-            )
-            .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(red: 0.35, green: 0.75, blue: 0.95).opacity(0.4), lineWidth: 1)
+                )
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
             .accessibilityIdentifier("home.pro.upgrade")
         }
     }

@@ -1712,6 +1712,10 @@ fun LicenseStatusBadge(
                 modifier = modifier
                     .background(Color(0xFFF59E0B).copy(alpha = 0.14f), RoundedCornerShape(8.dp))
                     .border(BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)), RoundedCornerShape(8.dp))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { /* 空動作：攔截點擊，防止穿透觸發相鄰控制項 */ }
                     .padding(horizontal = 10.dp, vertical = 5.dp)
                     .testTag("home.pro.upgrade"),
                 contentAlignment = Alignment.Center
@@ -1741,6 +1745,10 @@ fun LicenseStatusBadge(
                         RoundedCornerShape(8.dp)
                     )
                     .border(BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.40f)), RoundedCornerShape(8.dp))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { /* 空動作：攔截點擊，防止穿透觸發相鄰控制項 */ }
                     .padding(horizontal = 10.dp, vertical = 5.dp)
                     .testTag("home.pro.upgrade"),
                 contentAlignment = Alignment.Center
