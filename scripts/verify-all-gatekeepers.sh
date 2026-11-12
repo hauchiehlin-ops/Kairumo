@@ -91,6 +91,7 @@ run_check "多設定檔狀態分類無遺漏" python3 "${REPO_ROOT}/scripts/chec
 run_check "介面無硬寫死字串" python3 "${REPO_ROOT}/scripts/check-hardcoded-strings.py"
 run_check "全平台版本號一致性" "${REPO_ROOT}/scripts/check-version-consistency.sh"
 run_check "無未被引用的孤兒實作" python3 "${REPO_ROOT}/scripts/check-orphans.py"
+run_check "跨平台畫面控制項與選單順序對照" python3 "${REPO_ROOT}/scripts/check-screen-parity.py"
 
 echo ""
 echo "── [Layer 5] 畫布核心純度與重型次系統隔離（Canvas Isolation）──"

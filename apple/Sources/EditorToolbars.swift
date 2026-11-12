@@ -81,6 +81,23 @@ extension NotebookEditorView {
                 }
             } label: { Label(localizationManager.localized("fill_region"), systemImage: "drop.fill") }
                 .accessibilityIdentifier("editor.insert.fill_region")
+            // 圖例：著色後說明「哪個顏色代表什麼」（與 Android「插入」選單同一項，依核心規格順序排列）。
+            Button {
+                EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("insert_legend")) {
+                    presentFromMenu {
+                        let draft = insertLegend()
+                        transitionToMode(.type)
+                        inlineEditingTextId = draft.id
+                    }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("insert_legend"),
+                    systemImage: "list.bullet.rectangle",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.legend")
             Button {
                 presentFromMenu { showStickerLibrary = true }
             } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
@@ -123,10 +140,6 @@ extension NotebookEditorView {
             } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
                 .accessibilityIdentifier("editor.insert.document")
             Button {
-                presentFromMenu { showShapeStudio = true }
-            } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                .accessibilityIdentifier("editor.insert.shape")
-            Button {
                 presentFromMenu { showLinkPreviewSheet = true }
             } label: { Label(localizationManager.localized("insert_link"), systemImage: "link") }
                 .accessibilityIdentifier("editor.insert.link")
@@ -134,7 +147,7 @@ extension NotebookEditorView {
             Text(localizationManager.localized("insert_object"))
         }
 
-        // 區塊 2（方案 A 選單分區 + 鎖標）：Pro 專業工作台與進階工具
+        // 區塊 2（方案 A 選單分區 + 鎖標）：Pro 專業工作台與進階工具（保持核心 ffi_screens 嚴格順序）
         Section {
             Button {
                 EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("math_calc")) {
@@ -173,6 +186,10 @@ extension NotebookEditorView {
             }
                 .accessibilityIdentifier("editor.insert.table")
             Button {
+                presentFromMenu { showShapeStudio = true }
+            } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                .accessibilityIdentifier("editor.insert.shape")
+            Button {
                 EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("insert_3d")) {
                     presentFromMenu { show3DStudio = true }
                 }
@@ -184,23 +201,6 @@ extension NotebookEditorView {
                 )
             }
                 .accessibilityIdentifier("editor.insert.model3d")
-            // 圖例：著色後說明「哪個顏色代表什麼」（與 Android「插入」選單同一項）。
-            Button {
-                EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("insert_legend")) {
-                    presentFromMenu {
-                        let draft = insertLegend()
-                        transitionToMode(.type)
-                        inlineEditingTextId = draft.id
-                    }
-                }
-            } label: {
-                ProMenuItemLabel(
-                    title: localizationManager.localized("insert_legend"),
-                    systemImage: "list.bullet.rectangle",
-                    isLocked: isProLocked
-                )
-            }
-                .accessibilityIdentifier("editor.insert.legend")
             Button {
                 EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("theme_tools")) {
                     presentFromMenu { showThemeToolsSheet = true }
@@ -213,6 +213,14 @@ extension NotebookEditorView {
                 )
             }
                 .accessibilityIdentifier("editor.insert.theme_tools")
+        } header: {
+            Text(localizationManager.localized("pro_menu_section_header"))
+        }
+
+        // 區塊 3：畫布與協同輔助工具
+        Section {
+            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                .accessibilityIdentifier("editor.insert.refine_sketch")
             Button {
                 EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("ai_summary")) {
                     presentFromMenu { showNoteIntelligence = true }
@@ -224,15 +232,7 @@ extension NotebookEditorView {
                     isLocked: isProLocked
                 )
             }
-            .accessibilityIdentifier("editor.insert.ai_summary")
-        } header: {
-            Text(localizationManager.localized("pro_menu_section_header"))
-        }
-
-        // 區塊 3：畫布與協同輔助工具（免費可用）
-        Section {
-            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
-                .accessibilityIdentifier("editor.insert.refine_sketch")
+                .accessibilityIdentifier("editor.insert.ai_summary")
             Button { recognizeHandwritingOnCurrentPage() } label: {
                 Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
             }
