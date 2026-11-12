@@ -681,16 +681,20 @@ public struct CollaborationSheet: View {
             // 「同一 Wi‑Fi」：房間開在這台內建的本機中繼上（同一 Wi‑Fi 的 QR Code）。
             // 只有存了自架的 wss:// 中繼時才連到那台，按鈕也照舊叫「開啟多人協同」。
             let customRemote = CollaborationManager.usesCustomRemoteRelay(collaborationManager.serverAddress)
+            let hostTitle = localizationManager.localized(customRemote ? "start_collaboration" : "collab_start_local")
             Button {
-                EntitlementManager.shared.requirePro(.collabHost) {
+                EntitlementManager.shared.requirePro(.collabHost, itemName: hostTitle) {
                     collaborationManager.createRoom(notebookId: notebookId, server: collaborationManager.localRoomServer)
                 }
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: customRemote ? "sparkles" : "wifi")
                         .font(.system(size: 16, weight: .bold))
-                    Text(localizationManager.localized(customRemote ? "start_collaboration" : "collab_start_local"))
+                    Text(hostTitle)
                         .font(.headline)
+                    if !EntitlementManager.shared.isProUnlocked {
+                        ProMicroBadgeView(compact: false)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)

@@ -50,11 +50,13 @@ report_auto_fix() {
 echo ""
 echo "── [步驟 1/6] 檔案系統衛生：macOS 衍生檔案清理 ──"
 if [ -x "${REPO_ROOT}/scripts/clean-appledouble.sh" ]; then
-    "${REPO_ROOT}/scripts/clean-appledouble.sh" >/dev/null 2>&1 || true
-    # 確保暫存區與未暫存區無任何 ._* 檔案
-    DIRTY_APPLEDOUBLE=$(git status --porcelain 2>/dev/null | grep -E '(^| )(\._[^ ]*|\.DS_Store)$' || true)
+    "${REPO_ROOT}/scripts/clean-appledouble.sh" --git-only >/dev/null 2>&1 || true
+    # 確保暫存區無任何誤加的 ._* 或 .DS_Store 檔案（避免在 exFAT 外接碟上啟動全盤 find 卡住 UVFSService）
+    DIRTY_APPLEDOUBLE=$(git diff --cached --name-only 2>/dev/null | grep -E '(^|/)(\._[^/]*|\.DS_Store)$' || true)
     if [ -n "$DIRTY_APPLEDOUBLE" ]; then
-        "${REPO_ROOT}/scripts/clean-appledouble.sh" --all >/dev/null 2>&1 || true
+        while IFS= read -r f; do
+            [ -n "$f" ] && git rm --cached --quiet -- "$f" 2>/dev/null || true
+        done <<<"$DIRTY_APPLEDOUBLE"
         report_auto_fix "清除暫存與工作目錄中的 macOS ._* / .DS_Store 檔案"
     else
         report_pass "工作目錄與 .git 樹無 AppleDouble 污染"

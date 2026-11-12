@@ -54,6 +54,9 @@ extension NotebookEditorView {
     /// 筆設定與「回到初始狀態」，窄版又少了插入連結 —— 同一台 iPad 轉個方向，功能就不見了。
     @ViewBuilder
     var insertMenuContent: some View {
+        let isProLocked = !entitlementManager.isProUnlocked
+
+        // 區塊 1：基礎版直接可用的插入工具
         Section {
             Button {
                 presentFromMenu { showAssetLibrarySheet = true }
@@ -78,17 +81,6 @@ extension NotebookEditorView {
                 }
             } label: { Label(localizationManager.localized("fill_region"), systemImage: "drop.fill") }
                 .accessibilityIdentifier("editor.insert.fill_region")
-            // 圖例：著色後說明「哪個顏色代表什麼」（與 Android「插入」選單同一項）。
-            Button {
-                EntitlementManager.shared.requirePro(.draftingAndSolid) {
-                    presentFromMenu {
-                        let draft = insertLegend()
-                        transitionToMode(.type)
-                        inlineEditingTextId = draft.id
-                    }
-                }
-            } label: { Label(localizationManager.localized("insert_legend"), systemImage: "list.bullet.rectangle") }
-                .accessibilityIdentifier("editor.insert.legend")
             Button {
                 presentFromMenu { showStickerLibrary = true }
             } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
@@ -131,39 +123,9 @@ extension NotebookEditorView {
             } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
                 .accessibilityIdentifier("editor.insert.document")
             Button {
-                EntitlementManager.shared.requirePro(.studios) {
-                    presentFromMenu { showMathCalculator = true }
-                }
-            } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                .accessibilityIdentifier("editor.insert.math")
-            Button {
-                EntitlementManager.shared.requirePro(.studios) {
-                    presentFromMenu { showChartStudio = true }
-                }
-            } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                .accessibilityIdentifier("editor.insert.chart")
-            Button {
-                EntitlementManager.shared.requirePro(.studios) {
-                    presentFromMenu { showTableStudio = true }
-                }
-            } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                .accessibilityIdentifier("editor.insert.table")
-            Button {
                 presentFromMenu { showShapeStudio = true }
             } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                 .accessibilityIdentifier("editor.insert.shape")
-            Button {
-                EntitlementManager.shared.requirePro(.studios) {
-                    presentFromMenu { show3DStudio = true }
-                }
-            } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                .accessibilityIdentifier("editor.insert.model3d")
-            Button {
-                EntitlementManager.shared.requirePro(.draftingAndSolid) {
-                    presentFromMenu { showThemeToolsSheet = true }
-                }
-            } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-                .accessibilityIdentifier("editor.insert.theme_tools")
             Button {
                 presentFromMenu { showLinkPreviewSheet = true }
             } label: { Label(localizationManager.localized("insert_link"), systemImage: "link") }
@@ -172,17 +134,105 @@ extension NotebookEditorView {
             Text(localizationManager.localized("insert_object"))
         }
 
+        // 區塊 2（方案 A 選單分區 + 鎖標）：Pro 專業工作台與進階工具
         Section {
-            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
-                .accessibilityIdentifier("editor.insert.refine_sketch")
             Button {
-                EntitlementManager.shared.requirePro(.studios) {
+                EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("math_calc")) {
+                    presentFromMenu { showMathCalculator = true }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("math_calc"),
+                    systemImage: "plus.forwardslash.minus",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.math")
+            Button {
+                EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("chart_studio")) {
+                    presentFromMenu { showChartStudio = true }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("chart_studio"),
+                    systemImage: "chart.bar.xaxis",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.chart")
+            Button {
+                EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("table_studio")) {
+                    presentFromMenu { showTableStudio = true }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("table_studio"),
+                    systemImage: "tablecells",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.table")
+            Button {
+                EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("insert_3d")) {
+                    presentFromMenu { show3DStudio = true }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("insert_3d"),
+                    systemImage: "cube.transparent",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.model3d")
+            // 圖例：著色後說明「哪個顏色代表什麼」（與 Android「插入」選單同一項）。
+            Button {
+                EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("insert_legend")) {
+                    presentFromMenu {
+                        let draft = insertLegend()
+                        transitionToMode(.type)
+                        inlineEditingTextId = draft.id
+                    }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("insert_legend"),
+                    systemImage: "list.bullet.rectangle",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.legend")
+            Button {
+                EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("theme_tools")) {
+                    presentFromMenu { showThemeToolsSheet = true }
+                }
+            } label: {
+                ProMenuItemLabel(
+                    title: localizationManager.localized("theme_tools"),
+                    systemImage: "paintpalette.fill",
+                    isLocked: isProLocked
+                )
+            }
+                .accessibilityIdentifier("editor.insert.theme_tools")
+            Button {
+                EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("ai_summary")) {
                     presentFromMenu { showNoteIntelligence = true }
                 }
             } label: {
-                Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
+                ProMenuItemLabel(
+                    title: localizationManager.localized("ai_summary"),
+                    systemImage: "sparkles",
+                    isLocked: isProLocked
+                )
             }
             .accessibilityIdentifier("editor.insert.ai_summary")
+        } header: {
+            Text(localizationManager.localized("pro_menu_section_header"))
+        }
+
+        // 區塊 3：畫布與協同輔助工具（免費可用）
+        Section {
+            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                .accessibilityIdentifier("editor.insert.refine_sketch")
             Button { recognizeHandwritingOnCurrentPage() } label: {
                 Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
             }
@@ -215,11 +265,15 @@ extension NotebookEditorView {
             }
             .accessibilityIdentifier("editor.insert.palm_thresholds")
             Button {
-                EntitlementManager.shared.requirePro(.proInk) {
+                EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("pen_settings_title")) {
                     presentFromMenu { showAdvancedPenSettingsSheet = true }
                 }
             } label: {
-                Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
+                ProMenuItemLabel(
+                    title: localizationManager.localized("pen_settings_title"),
+                    systemImage: "applepencil.and.scribble",
+                    isLocked: isProLocked
+                )
             }
             .accessibilityIdentifier("editor.insert.advanced_pen_settings")
 
@@ -1220,7 +1274,7 @@ extension NotebookEditorView {
                     onUndo: { performUndo() },
                     onRedo: { performRedo() },
                     onInsertTable: { rows, cols in
-                        EntitlementManager.shared.requirePro(.studios) {
+                        EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("table_studio")) {
                             let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
                             let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
                             let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
@@ -1288,7 +1342,10 @@ extension NotebookEditorView {
     func selectEditorTool(_ tool: EditorToolType) {
         MainThreadStallMonitor.shared.breadcrumb("select tool \(tool)")
         if tool.isProRequired && !EntitlementManager.shared.isProUnlocked {
-            EntitlementManager.shared.presentPaywall(focus: tool.proFeatureGate)
+            EntitlementManager.shared.nudgeOrPresentPaywall(
+                focus: tool.proFeatureGate,
+                itemName: localizationManager.localized(tool.localizationKey)
+            )
             return
         }
         if tool == .lasso, selectedTool == .lasso {
@@ -1584,11 +1641,18 @@ extension NotebookEditorView {
     /// 徹底根除深層視圖階層引起的主執行緒堆疊溢位（Stack Overflow / EXC_BAD_ACCESS）。
     @ViewBuilder
     var minimalToolboxContent: some View {
+        let visibleProCount = EditorToolType.allCases.filter {
+            $0.isProRequired && toolbarSettings.isVisible($0.parityIdentifier)
+        }.count
         VStack(spacing: 8) {
-            // 1. 筆刷工具水平快捷滑動列
+            // 1. 筆刷工具水平快捷滑動列（方案 A + C：未解鎖預設收合，展開時顯示鎖標與半透明）
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(EditorToolType.allCases.filter { toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
+                    ForEach(EditorToolType.allCases.filter {
+                        toolbarSettings.isVisible($0.parityIdentifier)
+                            && entitlementManager.shouldDisplayToolInToolbar($0)
+                    }) { tool in
+                        let isLockedPro = tool.isProRequired && !entitlementManager.isProUnlocked
                         Button {
                             selectEditorTool(tool)
                         } label: {
@@ -1600,10 +1664,13 @@ extension NotebookEditorView {
                                     .background(selectedTool == tool ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.08))
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
+                            .proLockedToolbarItem(isLockedPro, compactBadge: true)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(localizationManager.localized(tool.localizationKey))
                     }
+
+                    ProBrushesCollapseButton(showLabels: false, proToolCount: visibleProCount)
 
                     // 文字方塊快捷按鈕
                     Button {
@@ -1782,6 +1849,7 @@ extension NotebookEditorView {
     /// 工具列上的一顆工具按鈕：向量圖示、（筆刷才有）示範筆跡、選取時凸起。
     @ViewBuilder
     func brushToolButton(_ tool: EditorToolType, showToolLabels: Bool) -> some View {
+        let isLockedPro = tool.isProRequired && !entitlementManager.isProUnlocked
         Button {
             selectEditorTool(tool)
         } label: {
@@ -1793,6 +1861,7 @@ extension NotebookEditorView {
                     Text(localizationManager.localized(tool.localizationKey))
                         .font(.system(size: 9, weight: selectedTool == tool ? .semibold : .regular))
                         .foregroundColor(selectedTool == tool ? .primary : .secondary)
+                        .opacity(isLockedPro ? 0.52 : 1.0)
                 }
             }
             .padding(.horizontal, 2)
@@ -1825,11 +1894,19 @@ extension NotebookEditorView {
     /// 換行版才不會因為內容被包在容器裡而永遠不換行。
     @ViewBuilder
     func drawingToolbarItems(showToolLabels: Bool) -> some View {
+                let isProLocked = !entitlementManager.isProUnlocked
+                let visibleProCount = EditorToolType.allCases.filter {
+                    $0.isProRequired && toolbarSettings.isVisible($0.parityIdentifier)
+                }.count
+
                 // 筆刷依「書寫／繪畫／標記」三族分段，族與族之間一條分隔線。
                 // 橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
+                // 方案 C：基礎版預設收合 Pro 筆刷，點擊展開鈕後顯示。
                 ForEach(Array([FfiBrushFamily.writing, .painting, .marking].enumerated()), id: \.offset) { index, family in
                     let tools = EditorToolType.allCases.filter {
-                        $0.family == family && toolbarSettings.isVisible($0.parityIdentifier)
+                        $0.family == family
+                            && toolbarSettings.isVisible($0.parityIdentifier)
+                            && entitlementManager.shouldDisplayToolInToolbar($0)
                     }
                     if !tools.isEmpty {
                         if index > 0 {
@@ -1845,9 +1922,16 @@ extension NotebookEditorView {
                     .frame(height: 36)
 
                 // 擦除與選取。與筆刷分開，因為它們不沾墨，也不吃顏色與粗細。
-                ForEach(EditorToolType.allCases.filter { !$0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
+                ForEach(EditorToolType.allCases.filter {
+                    !$0.isBrush
+                        && toolbarSettings.isVisible($0.parityIdentifier)
+                        && entitlementManager.shouldDisplayToolInToolbar($0)
+                }) { tool in
                     brushToolButton(tool, showToolLabels: showToolLabels)
                 }
+
+                // 方案 C：收合／展開 Pro 進階筆組按鈕
+                ProBrushesCollapseButton(showLabels: showToolLabels, proToolCount: visibleProCount)
 
                 Button {
                     let draft = insertTextBox(at: freeTextBoxOrigin())
@@ -1951,7 +2035,7 @@ extension NotebookEditorView {
 
                     // 🌟 專業 HSV 色相環與和諧色彈窗
                     Button {
-                        EntitlementManager.shared.requirePro(.proInk) {
+                        EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("ink_pro_wheel")) {
                             showProColorWheel = true
                         }
                     } label: {
@@ -1959,6 +2043,7 @@ extension NotebookEditorView {
                             .font(.system(size: DS.Icon.small, weight: .medium))
                             .foregroundStyle(DS.Color.secondaryText)
                             .frame(width: DS.Icon.medium, height: DS.Icon.medium)
+                            .proLockedToolbarItem(isProLocked, compactBadge: true)
                     }
                     .buttonStyle(.plain)
                     .help(localizationManager.localized("ink_pro_wheel"))
@@ -1983,14 +2068,14 @@ extension NotebookEditorView {
                 // 🌟 專業筆刷平滑防抖 (Stroke Stabilizer)
                 Menu {
                     Button(localizationManager.localized("stab_off")) { strokeStabilizer = 0.0 }
-                    Button(localizationManager.localized("stab_light")) {
-                        EntitlementManager.shared.requirePro(.proInk) { strokeStabilizer = 0.25 }
+                    Button(isProLocked ? "\(localizationManager.localized("stab_light"))  🔒 \(L10n.t("pro_badge"))" : localizationManager.localized("stab_light")) {
+                        EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("stab_title")) { strokeStabilizer = 0.25 }
                     }
-                    Button(localizationManager.localized("stab_medium")) {
-                        EntitlementManager.shared.requirePro(.proInk) { strokeStabilizer = 0.50 }
+                    Button(isProLocked ? "\(localizationManager.localized("stab_medium"))  🔒 \(L10n.t("pro_badge"))" : localizationManager.localized("stab_medium")) {
+                        EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("stab_title")) { strokeStabilizer = 0.50 }
                     }
-                    Button(localizationManager.localized("stab_strong")) {
-                        EntitlementManager.shared.requirePro(.proInk) { strokeStabilizer = 0.85 }
+                    Button(isProLocked ? "\(localizationManager.localized("stab_strong"))  🔒 \(L10n.t("pro_badge"))" : localizationManager.localized("stab_strong")) {
+                        EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("stab_title")) { strokeStabilizer = 0.85 }
                     }
                 } label: {
                     HStack(spacing: 3) {
@@ -2006,13 +2091,14 @@ extension NotebookEditorView {
                     .padding(.vertical, 4)
                     .background(strokeStabilizer > 0 ? Color.accentColor.opacity(0.15) : Color.clear)
                     .cornerRadius(6)
+                    .proLockedToolbarItem(isProLocked, compactBadge: true)
                 }
                 .help(localizationManager.localized("stab_desc"))
                 .accessibilityLabel(localizationManager.localized("stab_title"))
 
                 // 🌟 鏡像對稱尺規 (Symmetry Guide)
                 Button {
-                    EntitlementManager.shared.requirePro(.proInk) {
+                    EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("symmetry_guide")) {
                         isSymmetryActive.toggle()
                     }
                 } label: {
@@ -2023,6 +2109,7 @@ extension NotebookEditorView {
                         .padding(.vertical, 4)
                         .background(isSymmetryActive ? Color.accentColor.opacity(0.15) : Color.clear)
                         .cornerRadius(6)
+                        .proLockedToolbarItem(isProLocked, compactBadge: true)
                 }
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("symmetry_guide_desc"))
@@ -2051,7 +2138,7 @@ extension NotebookEditorView {
 
                 // 🌟 飛梭工具盤手動喚醒按鈕
                 Button {
-                    EntitlementManager.shared.requirePro(.proInk) {
+                    EntitlementManager.shared.requirePro(.proInk, itemName: localizationManager.localized("radial_menu")) {
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
                             radialMenuAnchor = nil
                             showRadialMenu.toggle()
@@ -2064,6 +2151,7 @@ extension NotebookEditorView {
                         .padding(4)
                         .background(showRadialMenu ? Color.accentColor.opacity(0.15) : Color.clear)
                         .clipShape(Circle())
+                        .proLockedToolbarItem(isProLocked, compactBadge: true)
                 }
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("radial_menu"))

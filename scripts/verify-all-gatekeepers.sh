@@ -25,11 +25,11 @@ for arg in "$@"; do
 done
 
 calc_fingerprint() {
-    local head_sha diff_head untracked
+    local head_sha diff_head staged_head
     head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
     diff_head="$(git diff HEAD 2>/dev/null || echo "no-diff")"
-    untracked="$(git status --porcelain 2>/dev/null | grep '^\?\?' || true)"
-    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$untracked" | shasum -a 256 | awk '{print $1}'
+    staged_head="$(git diff --cached 2>/dev/null || echo "no-staged")"
+    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$staged_head" | shasum -a 256 | awk '{print $1}'
 }
 
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo "${REPO_ROOT}/.git")"

@@ -242,11 +242,17 @@ public struct ToolbarCustomizationView: View {
             ForEach(Array(settings.groups().enumerated()), id: \.offset) { _, group in
                 Section(group.label) {
                     ForEach(group.tools, id: \.identifier) { info in
+                        let isProTool = EditorToolType.allCases.first(where: { $0.parityIdentifier == info.identifier })?.isProRequired == true
                         Toggle(isOn: Binding(
                             get: { settings.isVisible(info.identifier) },
                             set: { settings.setVisible(info.tool, $0) }
                         )) {
-                            Text(L(ToolbarCustomizationView.uiLabelKey(info.identifier)))
+                            HStack(spacing: 6) {
+                                Text(L(ToolbarCustomizationView.uiLabelKey(info.identifier)))
+                                if isProTool && !EntitlementManager.shared.isProUnlocked {
+                                    ProMicroBadgeView(compact: false)
+                                }
+                            }
                         }
                         // 識別字掛在 Toggle 本身而不是裡面的 Text ——
                         // 掛在子元素上時，VoiceOver 與 UI 測試按到的是那行字，

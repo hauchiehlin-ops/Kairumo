@@ -14,11 +14,11 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 # 檢查四大守門機制快取：若稍早已驗證通過且當前狀態未變更，無需重複執行
 calc_fingerprint() {
-    local head_sha diff_head untracked
+    local head_sha diff_head staged_head
     head_sha="$(git rev-parse HEAD 2>/dev/null || echo "no-head")"
     diff_head="$(git diff HEAD 2>/dev/null || echo "no-diff")"
-    untracked="$(git status --porcelain 2>/dev/null | grep '^\?\?' || true)"
-    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$untracked" | shasum -a 256 | awk '{print $1}'
+    staged_head="$(git diff --cached 2>/dev/null || echo "no-staged")"
+    printf "%s\n%s\n%s" "$head_sha" "$diff_head" "$staged_head" | shasum -a 256 | awk '{print $1}'
 }
 
 CACHE_FILE="${REPO_ROOT}/.git/gatekeepers.passed"

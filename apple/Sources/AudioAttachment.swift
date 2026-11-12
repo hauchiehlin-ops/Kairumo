@@ -424,7 +424,11 @@ struct AudioAttachmentItemView: View {
                 Button(localizationManager.localized("transcribe_lang_th")) { performTranscribe(language: "th") }
                 Button(localizationManager.localized("transcribe_lang_zh_cn")) { performTranscribe(language: "zh-Hans") }
             } label: {
-                Label(localizationManager.localized("transcribe_audio"), systemImage: "waveform.badge.magnifyingglass")
+                ProMenuItemLabel(
+                    title: localizationManager.localized("transcribe_audio"),
+                    systemImage: "waveform.badge.magnifyingglass",
+                    isLocked: !EntitlementManager.shared.isProUnlocked
+                )
             }
             .disabled(isTranscribing || !fileExists)
 
@@ -509,7 +513,7 @@ struct AudioAttachmentItemView: View {
     }
 
     private func performTranscribe(language: String? = nil) {
-        EntitlementManager.shared.requirePro(.audioTranscription) {
+        EntitlementManager.shared.requirePro(.audioTranscription, itemName: localizationManager.localized("transcribe_audio")) {
             guard fileExists, !isTranscribing else { return }
             isTranscribing = true
             Task {

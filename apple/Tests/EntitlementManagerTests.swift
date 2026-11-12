@@ -93,4 +93,47 @@ final class EntitlementManagerTests: XCTestCase {
         XCTAssertTrue(manager.isVIPUnlocked)
         XCTAssertEqual(manager.vipRecipientName, "Prof. Lin")
     }
+
+    func testTwoStepNudgeOnlyOpensPaywallOnSecondConsecutiveTap() {
+        let manager = EntitlementManager.shared
+        manager.resetVIPForTesting()
+        manager.dismissNudge()
+        manager.activePaywallFeature = nil
+        defer {
+            manager.dismissNudge()
+            manager.activePaywallFeature = nil
+        }
+
+        // 第一次點擊未解鎖功能：僅顯示頂部輕提示膠囊，不直接彈出全螢幕購買視窗
+        manager.nudgeOrPresentPaywall(focus: .draftingAndSolid, itemName: "工程製圖筆")
+        XCTAssertNotNil(manager.activeNudge, "第一次點擊應顯示二段式輕提示")
+        XCTAssertEqual(manager.activeNudge?.feature, .draftingAndSolid)
+        XCTAssertEqual(manager.activeNudge?.itemName, "工程製圖筆")
+        XCTAssertNil(manager.activePaywallFeature, "第一次點擊不應直接彈出大視窗")
+
+        // 連續第二次點擊同一項功能：收起輕提示並開啟完整購買視窗
+        manager.nudgeOrPresentPaywall(focus: .draftingAndSolid, itemName: "工程製圖筆")
+        XCTAssertNil(manager.activeNudge, "第二次點擊後應收起輕提示")
+        XCTAssertEqual(manager.activePaywallFeature, .draftingAndSolid, "第二次點擊應開啟購買視窗")
+    }
+
+    func testProBrushesCollapseToggle() {
+        let manager = EntitlementManager.shared
+        let initial = manager.showLockedProBrushes
+        defer {
+            if manager.showLockedProBrushes != initial {
+                manager.toggleLockedProBrushes()
+            }
+        }
+
+        if manager.showLockedProBrushes {
+            manager.toggleLockedProBrushes()
+        }
+        XCTAssertFalse(manager.showLockedProBrushes)
+        XCTAssertTrue(manager.shouldDisplayToolInToolbar(.pen), "免費筆刷永遠顯示")
+
+        manager.toggleLockedProBrushes()
+        XCTAssertTrue(manager.showLockedProBrushes)
+        XCTAssertTrue(manager.shouldDisplayToolInToolbar(.drafting), "展開時 Pro 筆刷應顯示於工具列")
+    }
 }

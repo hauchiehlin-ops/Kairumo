@@ -23,8 +23,8 @@ GIT_DIR="$(git rev-parse --absolute-git-dir)"
 # 只清 GIT_DIR 的話，在 worktree 裡 commit 永遠清不到 `._pack-*.idx`。
 COMMON_DIR="$(cd "$REPO_ROOT" && cd "$(git rev-parse --git-common-dir)" && pwd)"
 
-PRUNE=(target .target-obsolete .build build apple/.build android/.gradle android/.kotlin android/build android/.build-obsolete android/app/build android/app/.build-obsolete node_modules)
-[[ "${1:-}" == "--all" ]] && PRUNE=()
+PRUNE=(target .target-obsolete .trash-target .cargo-target .build build .claude models third_party apple/.build apple/PadnoteCore.xcframework android/.gradle android/.kotlin android/.local android/prebuilt android/build android/.build-obsolete android/app/build android/app/.build-obsolete node_modules)
+[[ "${1:-}" == "--all" ]] && PRUNE=(.trash-target .cargo-target)
 
 # `--git-only`（hook 每次改 ref / commit / push 都會跑）只看 git 真的會去讀的那幾處：頂層（index、HEAD…）、
 # objects/pack 與 objects/info（non-monotonic index 就是 `._*.idx` 被當成 pack 索引）、
@@ -40,7 +40,7 @@ fi
 
 # 1. .git 內部（略過 objects/00..ff 數萬個 loose object 子目錄，只掃 pack/info/refs/logs/worktrees 與頂層，避免 exFAT 卡頓數十分鐘）
 n_git=$({
-    find "$COMMON_DIR" "$GIT_DIR" -maxdepth 2 -name '._*' -type f -print -delete
+    find "$COMMON_DIR" "$GIT_DIR" -maxdepth 1 -name '._*' -type f -print -delete
     find "$COMMON_DIR/objects/pack" "$COMMON_DIR/objects/info" "$COMMON_DIR/refs" "$COMMON_DIR/logs" "$COMMON_DIR/worktrees" \
         -maxdepth 4 -name '._*' -type f -print -delete
 } 2>/dev/null | wc -l | tr -d ' ')

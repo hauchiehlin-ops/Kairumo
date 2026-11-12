@@ -117,6 +117,14 @@ struct VIPGiftPayload: Codable, Equatable {
     let note: String?
 }
 
+// MARK: - Two-Step Nudge Notice (方案 B：二段式無打擾輕提示)
+struct ProNudgeNotice: Equatable {
+    let id: UUID
+    let feature: ProFeatureGate
+    let itemName: String
+    let timestamp: Date
+}
+
 // MARK: - Entitlement Manager
 @MainActor
 final class EntitlementManager: ObservableObject {
@@ -130,6 +138,7 @@ final class EntitlementManager: ObservableObject {
 
     private static let storeKitCacheKey = "kairumo.entitlement.storekitPro"
     private static let vipTokenStorageKey = "kairumo.entitlement.vipToken"
+    private static let showLockedProBrushesKey = "kairumo.entitlement.showLockedProBrushes"
 
     @Published private(set) var isStoreKitPurchased: Bool = false
     @Published private(set) var isVIPUnlocked: Bool = false
@@ -138,8 +147,13 @@ final class EntitlementManager: ObservableObject {
     @Published private(set) var isPurchasing: Bool = false
     @Published var activePaywallFeature: ProFeatureGate?
     @Published var feedbackBannerText: String?
+    /// 方案 B：第一次點到未解鎖工具時顯示的頂部輕量膠囊提示（不直接彈大視窗）
+    @Published var activeNudge: ProNudgeNotice?
+    /// 方案 C：基礎版是否展開工具列上的 11 款 Pro 進階筆刷（預設收合 false，保持工具列清爽）
+    @Published var showLockedProBrushes: Bool = false
 
     private var updatesTask: Task<Void, Never>?
+    private var nudgeDismissTask: Task<Void, Never>?
 
     var isProUnlocked: Bool {
         let env = ProcessInfo.processInfo.environment
@@ -155,6 +169,7 @@ final class EntitlementManager: ObservableObject {
     private init() {
         let defaults = ProfileDefaults.device
         self.isStoreKitPurchased = defaults.bool(forKey: Self.storeKitCacheKey)
+        self.showLockedProBrushes = defaults.bool(forKey: Self.showLockedProBrushesKey)
         if let savedToken = defaults.string(forKey: Self.vipTokenStorageKey),
            let payload = Self.verifyVIPToken(savedToken) {
             self.isVIPUnlocked = true
@@ -172,19 +187,79 @@ final class EntitlementManager: ObservableObject {
 
     deinit {
         updatesTask?.cancel()
+        nudgeDismissTask?.cancel()
     }
 
-    // MARK: - Gate Helper
-    func requirePro(_ feature: ProFeatureGate, perform action: () -> Void) {
+    // MARK: - 方案 C：Pro 筆刷收合與展開控制
+    func toggleLockedProBrushes() {
+        showLockedProBrushes.toggle()
+        ProfileDefaults.device.set(showLockedProBrushes, forKey: Self.showLockedProBrushesKey)
+    }
+
+    /// 判斷特定工具是否應在當前工具列顯示（基礎版預設收合 Pro 筆刷，展開後或升級後顯示）
+    func shouldDisplayToolInToolbar(_ tool: EditorToolType) -> Bool {
+        if !tool.isProRequired || isProUnlocked {
+            return true
+        }
+        return showLockedProBrushes
+    }
+
+    // MARK: - Gate Helper & 方案 B 二段式輕提示
+    func requirePro(_ feature: ProFeatureGate, itemName: String? = nil, perform action: () -> Void) {
         if isProUnlocked {
             action()
         } else {
-            activePaywallFeature = feature
+            nudgeOrPresentPaywall(focus: feature, itemName: itemName)
         }
     }
 
-    // orphan-ok: 供首頁與工具列開啟升級面板
+    /// 方案 B：第一次點擊未解鎖功能時僅彈出頂部輕量膠囊提示（3.2 秒自動消失）；
+    /// 若使用者在 3.5 秒內連續點擊第二次同一個 Pro 功能，或主動點擊提示上的「了解詳情 ▸」，才開啟完整購買視窗。
+    func nudgeOrPresentPaywall(focus feature: ProFeatureGate, itemName: String? = nil) {
+        let resolvedName: String
+        if let name = itemName, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            resolvedName = name
+        } else {
+            resolvedName = L10n.t(feature.titleKey)
+        }
+
+        let now = Date()
+        if let current = activeNudge,
+           current.feature == feature,
+           current.itemName == resolvedName,
+           now.timeIntervalSince(current.timestamp) < 3.5 {
+            dismissNudge()
+            activePaywallFeature = feature
+            return
+        }
+
+        let notice = ProNudgeNotice(id: UUID(), feature: feature, itemName: resolvedName, timestamp: now)
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+            activeNudge = notice
+        }
+        nudgeDismissTask?.cancel()
+        nudgeDismissTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 3_200_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self = self, self.activeNudge?.id == notice.id else { return }
+                withAnimation(.easeOut(duration: 0.2)) {
+                    self.activeNudge = nil
+                }
+            }
+        }
+    }
+
+    func dismissNudge() {
+        nudgeDismissTask?.cancel()
+        withAnimation(.easeOut(duration: 0.18)) {
+            activeNudge = nil
+        }
+    }
+
+    // orphan-ok: 供首頁與輕提示膠囊主動開啟完整升級面板
     func presentPaywall(focus feature: ProFeatureGate = .studios) {
+        dismissNudge()
         activePaywallFeature = feature
     }
 
@@ -600,12 +675,196 @@ struct PaywallSheet: View {
     }
 }
 
+// MARK: - 方案 A：Pro 微徽章角標、半透明降飽和修飾器與選單標籤
+struct ProMicroBadgeView: View {
+    var compact: Bool = false
+
+    var body: some View {
+        HStack(spacing: 1.5) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: compact ? 6.5 : 7, weight: .bold))
+            if !compact {
+                Text(L10n.t("pro_badge"))
+                    .font(.system(size: 7.5, weight: .heavy, design: .rounded))
+            }
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, compact ? 3.5 : 4.5)
+        .padding(.vertical, 1.5)
+        .background(
+            Capsule().fill(
+                LinearGradient(
+                    colors: [Color.orange, Color(red: 0.92, green: 0.45, blue: 0.08)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        )
+        .shadow(color: Color.black.opacity(0.18), radius: 1.5, x: 0, y: 1)
+        .allowsHitTesting(false)
+    }
+}
+
+struct ProLockedToolbarItemModifier: ViewModifier {
+    let isLocked: Bool
+    var compactBadge: Bool = true
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isLocked ? 0.48 : 1.0)
+            .saturation(isLocked ? 0.45 : 1.0)
+            .overlay(alignment: .topTrailing) {
+                if isLocked {
+                    ProMicroBadgeView(compact: compactBadge)
+                        .offset(x: 3, y: -2)
+                }
+            }
+    }
+}
+
+struct ProMenuItemLabel: View {
+    let title: String
+    let systemImage: String
+    let isLocked: Bool
+
+    var body: some View {
+        Label(
+            isLocked ? "\(title)  🔒 \(L10n.t("pro_badge"))" : title,
+            systemImage: systemImage
+        )
+    }
+}
+
+// MARK: - 方案 C：工具列「展開／收合 Pro 進階筆組」按鈕
+struct ProBrushesCollapseButton: View {
+    let showLabels: Bool
+    let proToolCount: Int
+    @ObservedObject private var entitlement = EntitlementManager.shared
+
+    var body: some View {
+        if !entitlement.isProUnlocked && proToolCount > 0 {
+            let expanded = entitlement.showLockedProBrushes
+            Button {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                    entitlement.toggleLockedProBrushes()
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    HStack(spacing: 3) {
+                        Image(systemName: expanded ? "chevron.left.circle.fill" : "sparkles")
+                            .font(.system(size: 11, weight: .bold))
+                        if !expanded {
+                            Text("\(L10n.t("pro_badge")) \(proToolCount)")
+                                .font(.system(size: 9.5, weight: .heavy, design: .rounded))
+                        }
+                        Image(systemName: expanded ? "chevron.left" : "chevron.right")
+                            .font(.system(size: 8, weight: .bold))
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.orange.opacity(expanded ? 0.18 : 0.11))
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.orange.opacity(0.38), lineWidth: 1)
+                            )
+                    )
+
+                    if showLabels {
+                        Text(L10n.t(expanded ? "pro_brushes_collapse_btn" : "pro_brushes_expand_btn"))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 2)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L10n.t("pro_brushes_toggle_hint"))
+            .accessibilityLabel(L10n.t(expanded ? "pro_brushes_collapse_btn" : "pro_brushes_expand_btn"))
+            .accessibilityIdentifier("editor.ink.pro_brushes_toggle")
+        }
+    }
+}
+
+// MARK: - 方案 B：頂部二段式無打擾輕提示膠囊（Pro Nudge Banner）
+struct ProNudgeBannerView: View {
+    let nudge: ProNudgeNotice
+    @ObservedObject private var entitlement = EntitlementManager.shared
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .bold))
+                Text(L10n.t("pro_badge"))
+                    .font(.system(size: 9.5, weight: .heavy, design: .rounded))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.orange))
+
+            Text(String(format: L10n.t("pro_nudge_toast_format"), nudge.itemName))
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+
+            Button {
+                entitlement.presentPaywall(focus: nudge.feature)
+            } label: {
+                Text(L10n.t("pro_nudge_learn_more"))
+                    .font(.system(size: 11.5, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.accentColor))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("paywall.nudge.learn_more")
+
+            Button {
+                entitlement.dismissNudge()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .padding(4)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 8)
+        .padding(.vertical, 7)
+        .background(
+            Capsule()
+                .fill(.regularMaterial)
+                .overlay(
+                    Capsule()
+                        .stroke(Color.orange.opacity(0.45), lineWidth: 1)
+                )
+        )
+        .shadow(color: Color.black.opacity(0.16), radius: 8, x: 0, y: 3)
+        .padding(.top, 52)
+        .padding(.horizontal, 16)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+}
+
 // MARK: - Paywall Subsystem Modifier
 struct PaywallSubsystemModifier: ViewModifier {
     @ObservedObject private var entitlement = EntitlementManager.shared
 
     func body(content: Content) -> some View {
         content
+            .overlay(alignment: .top) {
+                if let nudge = entitlement.activeNudge {
+                    ProNudgeBannerView(nudge: nudge)
+                        .zIndex(999)
+                }
+            }
             .sheet(item: $entitlement.activePaywallFeature) { feature in
                 PaywallSheet(highlightedFeature: feature)
             }
@@ -613,8 +872,13 @@ struct PaywallSubsystemModifier: ViewModifier {
 }
 
 extension View {
-    /// 掛載 Pro 升級面板（支援從編輯器或首頁隨需喚起）
+    /// 掛載 Pro 升級面板與二段式輕提示膠囊（支援從編輯器或首頁隨需喚起）
     func paywallSubsystem() -> some View {
         self.modifier(PaywallSubsystemModifier())
+    }
+
+    /// 方案 A：為工具列上的未解鎖 Pro 按鈕套用降飽和半透明與微型鎖頭角標
+    func proLockedToolbarItem(_ isLocked: Bool, compactBadge: Bool = true) -> some View {
+        self.modifier(ProLockedToolbarItemModifier(isLocked: isLocked, compactBadge: compactBadge))
     }
 }

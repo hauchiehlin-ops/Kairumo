@@ -1,5 +1,7 @@
 /target
 /.cargo-target/
+/.trash-target/
+**/.trash*/
 **/*.rs.bk
 .DS_Store
 
