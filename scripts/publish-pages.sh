@@ -67,6 +67,7 @@ find "$WORK" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 mkdir -p "$WORK/legal" "$WORK/manual"
 cp -R "${REPO_ROOT}/docs/legal/." "$WORK/legal/"
 cp -R "${REPO_ROOT}/docs/manual/." "$WORK/manual/"
+[[ -f "${REPO_ROOT}/docs/vip.html" ]] && cp "${REPO_ROOT}/docs/vip.html" "$WORK/vip.html"
 
 # .nojekyll：不加的話 GitHub 會跑 Jekyll，底線開頭的檔案會被靜默略過，
 # 而且建置失敗時網站只會回 404，不會告訴你原因。
