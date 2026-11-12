@@ -69,13 +69,17 @@ struct CloudShareSection: View {
     private var shareForm: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
-                EntitlementManager.shared.requirePro(.collabHost) {
+                EntitlementManager.shared.requirePro(.collabHost, itemName: localizationManager.localized("cloud_collab_share_link")) {
                     Task {
                         if let result = await manager.share(notebookId: notebookId, title: title) { link = result }
                     }
                 }
             } label: {
-                Label(localizationManager.localized("cloud_collab_share_link"), systemImage: "link")
+                ProMenuItemLabel(
+                    title: localizationManager.localized("cloud_collab_share_link"),
+                    systemImage: "link",
+                    isLocked: !EntitlementManager.shared.isProUnlocked
+                )
                     .font(.subheadline)
                     .fontWeight(.medium)
             }

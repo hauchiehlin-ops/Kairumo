@@ -223,6 +223,11 @@ struct BrushToolContent: View {
     let tool: EditorToolType
     let isSelected: Bool
     let ink: Color
+    @ObservedObject private var entitlement = EntitlementManager.shared
+
+    private var isLockedPro: Bool {
+        tool.isProRequired && !entitlement.isProUnlocked
+    }
 
     var body: some View {
         VStack(spacing: 2) {
@@ -234,12 +239,20 @@ struct BrushToolContent: View {
                     .frame(width: 44, height: 14)
             }
         }
+        .opacity(isLockedPro ? 0.46 : 1.0)
+        .saturation(isLockedPro ? 0.42 : 1.0)
         .frame(width: 52, height: tool.isBrush ? 64 : 50)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.accentColor.opacity(isSelected ? 0.14 : 0))
                 .shadow(color: Color.black.opacity(isSelected ? 0.18 : 0), radius: 3, x: 0, y: 2)
         )
+        .overlay(alignment: .topTrailing) {
+            if isLockedPro {
+                ProMicroBadgeView(compact: false)
+                    .offset(x: 2, y: 2)
+            }
+        }
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
         .contentShape(Rectangle())
     }

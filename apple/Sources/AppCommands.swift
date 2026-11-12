@@ -133,9 +133,12 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
         for (index, tool) in EditorToolType.shortcutOrder.enumerated()
         where index < toolSelectors.count {
             let key = index < 9 ? "\(index + 1)" : "0"
+            let rawTitle = string(tool.localizationKey)
+            let isLockedPro = tool.isProRequired && !EntitlementManager.shared.isProUnlocked
+            let menuTitle = isLockedPro ? "\(rawTitle)  🔒 \(string("pro_badge"))" : rawTitle
             editorChildren.append(
                 UIKeyCommand(
-                    title: string(tool.localizationKey),
+                    title: menuTitle,
                     action: toolSelectors[index],
                     input: key,
                     modifierFlags: .command))

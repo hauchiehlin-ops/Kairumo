@@ -18439,6 +18439,30 @@ extension LocalizationManager {
             .ko: "PRO",
             .th: "PRO"
         ],
+        "pro_brushes_collapse_btn": [
+            .zhHant: "收合 Pro",
+            .en: "Hide Pro",
+            .zhHans: "收合 Pro",
+            .ja: "Pro を隠す",
+            .ko: "Pro 접기",
+            .th: "ซ่อน Pro"
+        ],
+        "pro_brushes_expand_btn": [
+            .zhHant: "Pro 筆組",
+            .en: "Pro Brushes",
+            .zhHans: "Pro 笔组",
+            .ja: "Pro ブラシ",
+            .ko: "Pro 브러시",
+            .th: "แปรง Pro"
+        ],
+        "pro_brushes_toggle_hint": [
+            .zhHant: "展開或收合工具列上的 Pro 進階筆刷",
+            .en: "Show or hide Kairumo Pro brushes on the toolbar",
+            .zhHans: "展开或收合工具栏上的 Pro 进阶笔刷",
+            .ja: "ツールバーの Kairumo Pro ブラシを表示／非表示",
+            .ko: "도구 모음에서 Kairumo Pro 브러시 표시 또는 숨기기",
+            .th: "แสดงหรือซ่อนแปรง Kairumo Pro บนแถบเครื่องมือ"
+        ],
         "pro_color": [
             .zhHant: "進階調色",
             .en: "Advanced Color Studio",
@@ -18446,6 +18470,30 @@ extension LocalizationManager {
             .ja: "高度な調色",
             .ko: "고급 색상 조색",
             .th: "สตูดิโอสีขั้นสูง"
+        ],
+        "pro_menu_section_header": [
+            .zhHant: "✦ Pro 專業工作台與進階工具",
+            .en: "✦ Kairumo Pro Studios & Tools",
+            .zhHans: "✦ Pro 专业工作台与进阶工具",
+            .ja: "✦ Kairumo Pro 専門スタジオ・ツール",
+            .ko: "✦ Kairumo Pro 전문 스튜디오 및 도구",
+            .th: "✦ สตูดิโอและเครื่องมือ Kairumo Pro"
+        ],
+        "pro_nudge_learn_more": [
+            .zhHant: "了解詳情 ▸",
+            .en: "Learn More ▸",
+            .zhHans: "了解详情 ▸",
+            .ja: "詳細を見る ▸",
+            .ko: "자세히 보기 ▸",
+            .th: "ดูรายละเอียด ▸"
+        ],
+        "pro_nudge_toast_format": [
+            .zhHant: "「%@」為 Pro 專業版功能",
+            .en: "“%@” is a Kairumo Pro feature",
+            .zhHans: "「%@」为 Pro 专业版功能",
+            .ja: "「%@」は Kairumo Pro 専用機能です",
+            .ko: "‘%@’ 기능은 Kairumo Pro 전용입니다",
+            .th: "“%@” เป็นฟีเจอร์ของ Kairumo Pro"
         ],
         "pro_status_free": [
             .zhHant: "免費基礎版",

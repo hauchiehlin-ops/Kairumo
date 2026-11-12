@@ -28270,5 +28270,53 @@
     "th": "เป็นเจ้าของห้องไวท์บอร์ดร่วมกันและเชิญทุกคน — ผู้เข้าร่วมที่ใช้แผนฟรีสามารถสแกนคิวอาร์โค้ดเพื่อเข้าร่วมและเขียนด้วยกันได้ฟรี",
     "zhHans": "作为房主开启协同房间或跨网寄存；免费版伙伴扫描您的 QR Code 即可免费加入房间一起书写。",
     "zhHant": "作為房主開啟協同房間或跨網寄存；免費版夥伴掃描您的 QR Code 即可免費加入房間一起書寫。"
+  },
+  "pro_menu_section_header": {
+    "en": "✦ Kairumo Pro Studios & Tools",
+    "ja": "✦ Kairumo Pro 専門スタジオ・ツール",
+    "ko": "✦ Kairumo Pro 전문 스튜디오 및 도구",
+    "th": "✦ สตูดิโอและเครื่องมือ Kairumo Pro",
+    "zhHans": "✦ Pro 专业工作台与进阶工具",
+    "zhHant": "✦ Pro 專業工作台與進階工具"
+  },
+  "pro_nudge_toast_format": {
+    "en": "“%@” is a Kairumo Pro feature",
+    "ja": "「%@」は Kairumo Pro 専用機能です",
+    "ko": "‘%@’ 기능은 Kairumo Pro 전용입니다",
+    "th": "“%@” เป็นฟีเจอร์ของ Kairumo Pro",
+    "zhHans": "「%@」为 Pro 专业版功能",
+    "zhHant": "「%@」為 Pro 專業版功能"
+  },
+  "pro_nudge_learn_more": {
+    "en": "Learn More ▸",
+    "ja": "詳細を見る ▸",
+    "ko": "자세히 보기 ▸",
+    "th": "ดูรายละเอียด ▸",
+    "zhHans": "了解详情 ▸",
+    "zhHant": "了解詳情 ▸"
+  },
+  "pro_brushes_expand_btn": {
+    "en": "Pro Brushes",
+    "ja": "Pro ブラシ",
+    "ko": "Pro 브러시",
+    "th": "แปรง Pro",
+    "zhHans": "Pro 笔组",
+    "zhHant": "Pro 筆組"
+  },
+  "pro_brushes_collapse_btn": {
+    "en": "Hide Pro",
+    "ja": "Pro を隠す",
+    "ko": "Pro 접기",
+    "th": "ซ่อน Pro",
+    "zhHans": "收合 Pro",
+    "zhHant": "收合 Pro"
+  },
+  "pro_brushes_toggle_hint": {
+    "en": "Show or hide Kairumo Pro brushes on the toolbar",
+    "ja": "ツールバーの Kairumo Pro ブラシを表示／非表示",
+    "ko": "도구 모음에서 Kairumo Pro 브러시 표시 또는 숨기기",
+    "th": "แสดงหรือซ่อนแปรง Kairumo Pro บนแถบเครื่องมือ",
+    "zhHans": "展开或收合工具栏上的 Pro 进阶笔刷",
+    "zhHant": "展開或收合工具列上的 Pro 進階筆刷"
   }
 }

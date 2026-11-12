@@ -40,7 +40,7 @@ extension NotebookEditorView {
                 PageThumbnailRenderer.invalidateAll()
             },
             onInsertTable: {
-                EntitlementManager.shared.requirePro(.studios) {
+                EntitlementManager.shared.requirePro(.studios, itemName: localizationManager.localized("table_studio")) {
                     var table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
                     fitTableToPageRules(&table)
                     if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
@@ -243,13 +243,13 @@ extension NotebookEditorView {
                 if editorMode == .draw && (selectedTool == .drafting || isDraftingPaper) {
                     DraftingBar(
                         onOpenSolidStudio: {
-                            EntitlementManager.shared.requirePro(.draftingAndSolid) { showSolidStudio = true }
+                            EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("tool_drafting")) { showSolidStudio = true }
                         },
                         onOpenToolbox: {
-                            EntitlementManager.shared.requirePro(.draftingAndSolid) { showDraftingToolbox = true }
+                            EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("tool_drafting")) { showDraftingToolbox = true }
                         },
                         onMarkAngle: {
-                            EntitlementManager.shared.requirePro(.draftingAndSolid) { markProtractorReading() }
+                            EntitlementManager.shared.requirePro(.draftingAndSolid, itemName: localizationManager.localized("tool_drafting")) { markProtractorReading() }
                         }
                     )
                         .padding(.top, 8)
@@ -538,7 +538,7 @@ extension NotebookEditorView {
 
                     // 飛梭工具盤喚醒 (Radial Menu)
                     Button {
-                        EntitlementManager.shared.requirePro(.proInk) {
+                        EntitlementManager.shared.requirePro(.proInk, itemName: L10n.t("tool_radial_short")) {
                             radialMenuAnchor = nil
                             showRadialMenu = true
                         }
@@ -554,6 +554,7 @@ extension NotebookEditorView {
                         .frame(maxWidth: .infinity, minHeight: 56)
                         .background(Color.purple.opacity(0.12))
                         .cornerRadius(10)
+                        .proLockedToolbarItem(!entitlementManager.isProUnlocked, compactBadge: false)
                     }
                     .buttonStyle(.plain)
 

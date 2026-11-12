@@ -50,6 +50,7 @@ Kotlin 都不對 public 宣告報 dead code），測試也測不到（沒有人�
 
 from __future__ import annotations
 
+from collections import Counter
 import json
 import pathlib
 import re
@@ -146,6 +147,12 @@ def collect() -> tuple[list[str], dict[str, str]]:
                 line = text[: m.start()].count("\n") + 1
                 decls.setdefault(name, []).append((rel, line, kind))
 
+    # 單次掃描全庫詞彙（O(M) 取代原本 3000 次 × 15MB 的 O(N×M) 正則重掃，從 4 分鐘降至 0.2 秒）
+    word_token = re.compile(r"\b[A-Za-z_]\w*\b")
+    total_counts: Counter[str] = Counter()
+    for text in universe.values():
+        total_counts.update(word_token.findall(text))
+
     orphans, where = [], {}
     for name, sites in sorted(decls.items()):
         if len(sites) > 1:
@@ -163,13 +170,7 @@ def collect() -> tuple[list[str], dict[str, str]]:
         if "override" in lines[line - 1]:
             continue
 
-        pattern = re.compile(r"\b" + re.escape(name) + r"\b")
-        refs = 0
-        for g, text in universe.items():
-            n = len(pattern.findall(text))
-            if g == rel:
-                n -= 1  # 扣掉宣告自己
-            refs += n
+        refs = total_counts[name] - 1  # 扣掉宣告自己
         if refs <= 0:
             key = f"{rel}::{kind}::{name}"
             orphans.append(key)

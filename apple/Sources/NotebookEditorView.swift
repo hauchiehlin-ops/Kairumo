@@ -34,6 +34,7 @@ public struct NotebookEditorView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     /// 使用者自訂的工具列（S-261）。關掉的工具不畫出來。
     @ObservedObject var toolbarSettings = ToolbarSettings.shared
+    @ObservedObject var entitlementManager = EntitlementManager.shared
     func L(_ key: String) -> String { localizationManager.localized(key) }
 
     // 頁面狀態
