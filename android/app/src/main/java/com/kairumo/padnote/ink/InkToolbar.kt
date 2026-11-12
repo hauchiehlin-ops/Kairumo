@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.entitlement.isProRequired
 import com.kairumo.padnote.ui.KairumoIcons
 import uniffi.padnote_core.ToolKind
 
@@ -218,8 +219,15 @@ fun InkToolbar(
         // 使用者關掉的工具不畫出來（S-261）。設定存在核心，兩端同一份。
         val hidden = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
         val currentColor = runCatching { Color(android.graphics.Color.parseColor(colorHex)) }.getOrDefault(Color.Black)
+        val unhidden = InkTool.entries.filter { it.parityIdentifier !in hidden }
+        val lockedProCount = unhidden.count {
+            it.isProRequired && !com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked
+        }
+        // 方案 C：免費版預設收合未解鎖的 Pro 進階筆刷（點開或解鎖後才展開），保持工具列清爽。
+        val visible = unhidden.filter {
+            com.kairumo.padnote.entitlement.EntitlementManager.shouldDisplayToolInToolbar(it, tool)
+        }
         // 筆刷依三族分段，族與族之間一條分隔線；橡皮擦、套索、膠帶接在最後。
-        val visible = InkTool.entries.filter { it.parityIdentifier !in hidden }
         var previousFamily: BrushFamily? = null
         for (option in visible) {
             val family = option.family
@@ -238,6 +246,12 @@ fun InkToolbar(
                 onClick = { onToolChange(option) }
             )
             if (family == null) previousFamily = null
+        }
+        if (lockedProCount > 0) {
+            com.kairumo.padnote.entitlement.ProBrushesCollapseButton(
+                languageTag = languageTag,
+                proToolCount = lockedProCount
+            )
         }
 
         // 對齊 Apple 端的 plus.bubble 按鈕：在工具列直接插入文字方塊並切換編輯
@@ -353,30 +367,45 @@ fun InkToolbar(
                 }
             }
             if (onOpenColorWheel != null) {
+                val wheelLocked = !com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked
                 // 純圖示色票：長按／懸停顯示說明。調色盤隱藏時（橡皮擦、套索）不提示。
                 com.kairumo.padnote.ui.InstantTooltip(text = if (paletteHidden) null else LocalizationStrings.localized("ink_pro_wheel", languageTag)) {
                 Box(
                     modifier = Modifier
                         .size(26.dp)
-                        .clip(CircleShape)
-                        .background(INK_SWATCH_PAPER)
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable(enabled = !paletteHidden) { onOpenColorWheel() }
-                        .semantics {
-                            contentDescription =
-                                LocalizationStrings.localized("ink_pro_wheel", languageTag)
-                        },
+                        .then(if (wheelLocked) Modifier.alpha(0.46f) else Modifier),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = KairumoIcons.ColorWheel,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(INK_SWATCH_PAPER)
+                            .padding(2.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                            .clickable(enabled = !paletteHidden) { onOpenColorWheel() }
+                            .semantics {
+                                contentDescription =
+                                    LocalizationStrings.localized("ink_pro_wheel", languageTag)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = KairumoIcons.ColorWheel,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (wheelLocked) {
+                        com.kairumo.padnote.entitlement.ProMicroBadge(
+                            compact = true,
+                            languageTag = languageTag,
+                            modifier = Modifier.align(Alignment.TopEnd)
+                        )
+                    }
                 }
                 }
             }

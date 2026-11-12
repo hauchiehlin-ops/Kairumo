@@ -1,6 +1,9 @@
 package com.kairumo.padnote
 
 import android.Manifest
+import com.kairumo.padnote.entitlement.EntitlementManager
+import com.kairumo.padnote.entitlement.isProRequired
+import com.kairumo.padnote.entitlement.proFeatureGate
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -2525,6 +2528,10 @@ internal fun rememberEditorCanvasContext(
     // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
     // 但畫下去還是墨跡」。
     fun applyInkTool(picked: InkTool) = com.kairumo.padnote.perf.PerfProbe.shared.measure(com.kairumo.padnote.perf.PerfPoint.ToolSwitch) {
+        if (picked.isProRequired && !EntitlementManager.isProUnlocked) {
+            EntitlementManager.nudgeOrPresentPaywall(picked.proFeatureGate, l10n(picked.labelKey))
+            return@measure
+        }
         // 若引擎當前仍有在途未結束的筆畫，立即取消以乾淨狀態切換新工具，不卡死換筆；
         // 且不在此處強制 flushDebouncedInkRevision()，避免換筆瞬間觸發全畫面與側欄同步重組凍結。
         engine.cancelInFlight()

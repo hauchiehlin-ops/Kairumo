@@ -245,7 +245,14 @@ private fun AudioCardView(
                             .background(Color(0xFF2563EB))
                             .testTag("audio.card.transcribe")
                             .semantics { contentDescription = l("transcribe_audio") }
-                            .clickable { languageMenu = true },
+                            .clickable {
+                                com.kairumo.padnote.entitlement.EntitlementManager.requirePro(
+                                    com.kairumo.padnote.entitlement.ProFeatureGate.AUDIO_TRANSCRIPTION,
+                                    l("transcribe_audio")
+                                ) {
+                                    languageMenu = true
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) { Text("📝", fontSize = 11.sp) }
                     DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {

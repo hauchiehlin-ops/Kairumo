@@ -71,10 +71,31 @@ fun CloudShareSection(
     Text(l("cloud_collab_desc"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
     if (entry == null) {
+        val shareLabel = l("cloud_collab_share_link")
         Button(
-            onClick = { scope.launch { CloudCollab.share(context, collab, notebookId, title)?.let { link = it } } },
+            onClick = {
+                com.kairumo.padnote.entitlement.EntitlementManager.requirePro(
+                    com.kairumo.padnote.entitlement.ProFeatureGate.COLLAB_HOST,
+                    shareLabel
+                ) {
+                    scope.launch { CloudCollab.share(context, collab, notebookId, title)?.let { link = it } }
+                }
+            },
             enabled = busy == null
-        ) { Text(l("cloud_collab_share_link")) }
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(shareLabel)
+                if (!com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
+                    com.kairumo.padnote.entitlement.ProMicroBadge(
+                        compact = false,
+                        languageTag = languageTag
+                    )
+                }
+            }
+        }
         Text(l("cloud_collab_share_link_hint"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
         // 房主打開面板時確定房間開在雲端中繼上（QR Code 指向的就是那一間）。

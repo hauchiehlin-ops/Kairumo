@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.entitlement.isProRequired
 import com.kairumo.padnote.library.AccountSyncStore
 import uniffi.padnote_core.FfiRadialAction
 import uniffi.padnote_core.FfiRadialActionInfo
@@ -455,6 +456,10 @@ fun ToolbarCustomizationSheet(
                             )
                         }
                         items(group.tools, key = { it.identifier }) { info ->
+                            val isLockedProTool = !com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked &&
+                                com.kairumo.padnote.ink.InkTool.entries
+                                    .firstOrNull { it.parityIdentifier == info.identifier }
+                                    ?.isProRequired == true
                             androidx.compose.foundation.layout.Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -465,7 +470,18 @@ fun ToolbarCustomizationSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(l10n(ToolbarSettings.uiLabelKey(info.identifier)))
+                                androidx.compose.foundation.layout.Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(l10n(ToolbarSettings.uiLabelKey(info.identifier)))
+                                    if (isLockedProTool) {
+                                        com.kairumo.padnote.entitlement.ProMicroBadge(
+                                            compact = false,
+                                            languageTag = languageTag
+                                        )
+                                    }
+                                }
                                 Switch(
                                     checked = !hidden.contains(info.identifier),
                                     onCheckedChange = {

@@ -42,6 +42,10 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.entitlement.EntitlementManager
+import com.kairumo.padnote.entitlement.ProMicroBadge
+import com.kairumo.padnote.entitlement.isProRequired
+import com.kairumo.padnote.entitlement.proLockedVisual
 import uniffi.padnote_core.FfiGradientStop
 import uniffi.padnote_core.FfiIconShape
 import uniffi.padnote_core.FfiPaint
@@ -74,12 +78,14 @@ fun RealisticPenItem(
     val toolLabel = LocalizationStrings.localized(tool.labelKey, languageTag)
     val ffiTool = remember(tool) { tool.ffiTool }
     val shapes = remember(tool) { brushIcon(ffiTool) }
+    val isLocked = tool.isProRequired && !EntitlementManager.isProUnlocked
 
     InstantTooltip(text = toolLabel) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = modifier
                 .testTag(tool.parityIdentifier)
+                .proLockedVisual(isLocked)
                 .clip(RoundedCornerShape(8.dp))
                 .background(
                     if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -102,6 +108,13 @@ fun RealisticPenItem(
                     .size(44.dp)
             ) {
                 Canvas(modifier = Modifier.size(44.dp)) { drawIcon(shapes, inkColor) }
+                if (isLocked) {
+                    ProMicroBadge(
+                        compact = true,
+                        languageTag = languageTag,
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    )
+                }
             }
             if (tool.family != null) {
                 Canvas(modifier = Modifier.width(44.dp).height(12.dp)) {
