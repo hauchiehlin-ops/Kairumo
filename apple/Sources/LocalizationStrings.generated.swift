@@ -14199,6 +14199,38 @@ extension LocalizationManager {
             .ko: "범례",
             .th: "คำอธิบายสัญลักษณ์"
         ],
+        "license_tier_basic": [
+            .zhHant: "Basic",
+            .en: "Basic",
+            .zhHans: "Basic",
+            .ja: "Basic",
+            .ko: "Basic",
+            .th: "Basic"
+        ],
+        "license_tier_pro": [
+            .zhHant: "PRO",
+            .en: "PRO",
+            .zhHans: "PRO",
+            .ja: "PRO",
+            .ko: "PRO",
+            .th: "PRO"
+        ],
+        "license_tier_vip": [
+            .zhHant: "VIP",
+            .en: "VIP",
+            .zhHans: "VIP",
+            .ja: "VIP",
+            .ko: "VIP",
+            .th: "VIP"
+        ],
+        "license_tier_vip_limited": [
+            .zhHant: "VIP Limited",
+            .en: "VIP Limited",
+            .zhHans: "VIP Limited",
+            .ja: "VIP Limited",
+            .ko: "VIP Limited",
+            .th: "VIP Limited"
+        ],
         "line_endpoint_handle": [
             .zhHant: "拖曳端點",
             .en: "Drag endpoint",
@@ -18086,6 +18118,22 @@ extension LocalizationManager {
             .ja: "Kairumo Pro 買い切りアップグレード",
             .ko: "Kairumo Pro 평생 소장판 업그레이드",
             .th: "อัปเกรด Kairumo Pro แบบซื้อขาดตลอดชีพ"
+        ],
+        "paywall_vip_limited_desc": [
+            .zhHant: "您的 VIP 禮遇授權將於 %@ 到期。立即解鎖一次買斷版，即可享有終身永久專業特權。",
+            .en: "Your VIP gift pass is valid until %@. Upgrade to Lifetime Pro anytime to keep full access forever.",
+            .zhHans: "您的 VIP 礼遇授权将于 %@ 到期。立即解锁一次买断版，即可享有终身永久专业特权。",
+            .ja: "VIP ギフトパスは %@ まで有効です。買い切り版にアップグレードすると永久に利用できます。",
+            .ko: "VIP 기프트 패스는 %@까지 유효합니다. 평생 소장판으로 업그레이드하면 영구적으로 이용할 수 있습니다.",
+            .th: "บัตรของขวัญ VIP ของคุณใช้งานได้ถึง %@ อัปเกรดเป็นรุ่นตลอดชีพเพื่อใช้งานได้ตลอดไป"
+        ],
+        "paywall_vip_limited_notice": [
+            .zhHant: "限期 VIP 禮遇授權中（到期日：%@）",
+            .en: "VIP Limited Pass (Expires: %@)",
+            .zhHans: "限期 VIP 礼遇授权中（到期日：%@）",
+            .ja: "期間限定 VIP ギフトパス（有効期限：%@）",
+            .ko: "기간 한정 VIP 기프트 패스 (만료일: %@)",
+            .th: "บัตรของขวัญ VIP แบบจำกัดเวลา (หมดอายุ: %@)"
         ],
         "pdf_choose_page": [
             .zhHant: "要插入第幾頁？",

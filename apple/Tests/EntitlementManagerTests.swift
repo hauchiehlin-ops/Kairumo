@@ -136,4 +136,24 @@ final class EntitlementManagerTests: XCTestCase {
         XCTAssertTrue(manager.showLockedProBrushes)
         XCTAssertTrue(manager.shouldDisplayToolInToolbar(.drafting), "展開時 Pro 筆刷應顯示於工具列")
     }
+
+    func testLicenseTierTransitionsAndFormatting() throws {
+        let manager = EntitlementManager.shared
+        manager.resetVIPForTesting()
+        defer { manager.resetVIPForTesting() }
+
+        // 1. Basic 狀態
+        XCTAssertEqual(manager.licenseTier, .basic)
+
+        // 2. VIP 永久狀態（無 exp）
+        let url = try XCTUnwrap(URL(string: "kairumo://vip?gift=\(Self.validVIPToken)"))
+        manager.handleVIPUrl(url)
+        XCTAssertEqual(manager.licenseTier, .vip)
+        XCTAssertNil(manager.vipExpirationDate)
+
+        // 3. 測試日期格式化
+        let testDate = Date(timeIntervalSince1970: 1798732800) // 2026/12/31
+        let formatted = EntitlementManager.formatLicenseDate(testDate)
+        XCTAssertTrue(formatted.contains("2026/12/31") || formatted.contains("2027/01/01"))
+    }
 }

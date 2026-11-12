@@ -183,8 +183,27 @@ fun CollaborationSheet(
 
                             if (!manager.isHostingLocalRelay) {
                                 // 會議室已開在雲端共享時按這裡：同一間房也開放同一 Wi‑Fi（不另開一間，見 `startLocalRoom`）。
-                                Button(onClick = { manager.startLocalRoom() }) {
-                                    Text(l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local"))
+                                val startLabel = l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local")
+                                Button(onClick = {
+                                    com.kairumo.padnote.entitlement.EntitlementManager.requirePro(
+                                        com.kairumo.padnote.entitlement.ProFeatureGate.COLLAB_HOST,
+                                        startLabel
+                                    ) {
+                                        manager.startLocalRoom()
+                                    }
+                                }) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(startLabel)
+                                        if (!com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
+                                            com.kairumo.padnote.entitlement.ProMicroBadge(
+                                                compact = false,
+                                                languageTag = languageTag
+                                            )
+                                        }
+                                    }
                                 }
                             }
 
@@ -244,8 +263,27 @@ fun CollaborationSheet(
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 // 「同一 Wi‑Fi」：房間開在這台內建的本機中繼上。只有存了自架的 wss:// 中繼時
                                 // 才連到那台，按鈕也照舊叫「開始多人協同」。與 Apple 相同。
-                                Button(onClick = { manager.createRoom(manager.localRoomServer) }) {
-                                    Text(l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local"))
+                                val hostLabel = l(if (manager.savedCustomRemoteRelay) "start_collaboration" else "collab_start_local")
+                                Button(onClick = {
+                                    com.kairumo.padnote.entitlement.EntitlementManager.requirePro(
+                                        com.kairumo.padnote.entitlement.ProFeatureGate.COLLAB_HOST,
+                                        hostLabel
+                                    ) {
+                                        manager.createRoom(manager.localRoomServer)
+                                    }
+                                }) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(hostLabel)
+                                        if (!com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
+                                            com.kairumo.padnote.entitlement.ProMicroBadge(
+                                                compact = false,
+                                                languageTag = languageTag
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             if (invited != null) {

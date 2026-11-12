@@ -330,6 +330,8 @@ class MainActivity : FragmentActivity() {
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
         com.kairumo.padnote.platform.StartupLogger.logKey("log_language_applied", deviceLanguageTag())
+        com.kairumo.padnote.entitlement.EntitlementManager.init(applicationContext)
+        com.kairumo.padnote.entitlement.EntitlementManager.handleVIPUri(this, intent?.dataString, deviceLanguageTag())
         // profile-scope: profile 綁定目前設定檔快取目錄至筆刷印章點陣快取
         com.kairumo.padnote.ink.InkBrushRenderer.initDiskCache(ProfileContext.cacheDir(applicationContext))
         // 預先載入工具列配置，避免在首次組合期間觸發 MutableState 寫入與 SlotTable 重組競爭。
@@ -421,6 +423,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         com.kairumo.padnote.collab.CollabInvites.offer(intent.dataString)
+        com.kairumo.padnote.entitlement.EntitlementManager.handleVIPUri(this, intent.dataString, deviceLanguageTag())
     }
 }
 
@@ -583,37 +586,40 @@ private fun KairumoApp() {
 
     val id = openedId
     val scope = rememberCoroutineScope()
-    if (id == null) {
-        NotebookHome(
-            folderId = folderId,
-            onFolderChange = { folderId = it },
-            onOpen = {
-                if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    openNotebook(it)
-                }
-            }
-        )
-    } else {
-        InkScreen(
-            notebookId = id,
-            onBack = { leaveNotebook(id) { openedId = null } },
-            onOpenNotebook = { target ->
-                if (!target.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
-                    scope.launch {
-                        val exists = withContext(Dispatchers.IO) {
-                            com.kairumo.padnote.sync.LanLink.findPackage(activity, target) != null
-                        }
-                        if (!exists) {
-                            withContext(Dispatchers.IO) {
-                                com.kairumo.padnote.library.NotebookLibrary.create(
-                                    activity, com.kairumo.padnote.L10n.t("collaborate"), deviceId(activity), id = target)
-                            }
-                        }
-                        leaveNotebook(id) { openNotebook(target) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (id == null) {
+            NotebookHome(
+                folderId = folderId,
+                onFolderChange = { folderId = it },
+                onOpen = {
+                    if (!it.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                        openNotebook(it)
                     }
                 }
-            }
-        )
+            )
+        } else {
+            InkScreen(
+                notebookId = id,
+                onBack = { leaveNotebook(id) { openedId = null } },
+                onOpenNotebook = { target ->
+                    if (!target.equals(uniffi.padnote_core.recordingInboxNotebookId(), ignoreCase = true)) {
+                        scope.launch {
+                            val exists = withContext(Dispatchers.IO) {
+                                com.kairumo.padnote.sync.LanLink.findPackage(activity, target) != null
+                            }
+                            if (!exists) {
+                                withContext(Dispatchers.IO) {
+                                    com.kairumo.padnote.library.NotebookLibrary.create(
+                                        activity, com.kairumo.padnote.L10n.t("collaborate"), deviceId(activity), id = target)
+                                }
+                            }
+                            leaveNotebook(id) { openNotebook(target) }
+                        }
+                    }
+                }
+            )
+        }
+        com.kairumo.padnote.entitlement.PaywallSubsystemHost(deviceLanguageTag())
     }
 }
 
@@ -656,7 +662,7 @@ private fun InkScreen(
         onColorChange = { c -> ctx.inkColorHex = c },
         onWidthChange = { w -> ctx.inkWidth = w },
         onOpenProColors = { ctx.showProColors = true },
-        onOpenColorWheel = { ctx.showProColorWheel = true },
+        onOpenColorWheel = { ctx.openProColorWheel() },
         onAddTextBox = {
             val (freeX, freeY) = ctx.freeTextBoxOrigin()
             val box = ctx.textStore.createBoxed(freeX, freeY, ctx.textStore.pageRules(ctx.meta.paperId(ctx.pageIndex)), ctx.snapToGrid)
@@ -814,10 +820,7 @@ private fun InkScreen(
             },
             onOpenProColors = { showProColors = true },
             onOpenLanguagePicker = { showLanguagePicker = true },
-            onAiSummary = { showNoteIntelligence = true },
-            onThemeTools = { showThemeTools = true },
             onCustomizeToolbar = { showToolbarCustomization = true },
-            onPenSettings = { showPenSettings = true },
             onPalmSettings = { showPalmThresholds = true },
             onInsertStickers = { showStickerLibrary = true },
             onInsertImage = {
@@ -828,10 +831,7 @@ private fun InkScreen(
             onInsertDocument = { documentPicker.launch(com.kairumo.padnote.platform.FileImport.mimeTypes(uniffi.padnote_core.FfiImportSlot.DOCUMENT)) },
             onImportImageFile = { imagePicker.launch(com.kairumo.padnote.platform.FileImport.mimeTypes(uniffi.padnote_core.FfiImportSlot.IMAGE)) },
             onInsertAudio = { insertingAudio = true },
-            onInsertChart = { insertingChart = true },
-            onInsertTable = { insertingTable = true },
             onInsertShape = { insertingShape = true },
-            onInsertMath = { showCalculator = true },
             onShowDiagnostics = { showStatus = true },
             onOpenAppSettings = {
                 val intent = android.content.Intent(
@@ -851,19 +851,10 @@ private fun InkScreen(
                 textRevision++
                 stackRevision++
             },
-            onInsertLegend = {
-                val box = insertLegend()
-                editingText = box
-                selectText(box.id)
-                editorMode = EditorMode.TYPE
-                textRevision++
-                stackRevision++
-            },
             onInsertSymbol = { showSymbolPicker = true },
             // 沒有選中的文字方塊時格式鈕不會改到任何東西：說明要先點一個方塊，不要安靜地失效。
             onFormatAction = { action -> if (!applyFormatToSelectedText(action)) message = l10n("mode_type_hint") },
-            onInsertLink = { insertingLink = true },
-            onInsertModel3D = { insertingModel3D = true }
+            onInsertLink = { insertingLink = true }
         ))
 
         val formatTarget = selectedTextId?.let { textStore.find(it) }

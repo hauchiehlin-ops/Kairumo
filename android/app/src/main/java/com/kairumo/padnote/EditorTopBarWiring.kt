@@ -2,6 +2,8 @@ package com.kairumo.padnote
 
 import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.canvas.ObjectStacking
+import com.kairumo.padnote.entitlement.EntitlementManager
+import com.kairumo.padnote.entitlement.ProFeatureGate
 import com.kairumo.padnote.platform.AudioCapture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,7 +69,11 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
     // ── 筆跡與頁面 ───────────────────────────────────────
     onClearInk = { clearPageInk() },
     onDeletePage = { deletingPage = true },
-    onRefineSketch = { showRefineBar = true },
+    onRefineSketch = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("refine_sketch")) {
+            showRefineBar = true
+        }
+    },
     onRecognizeHandwriting = { startHandwritingRecognition() },
     onZoomFit = { mode -> fitCanvas(mode) },
 
@@ -77,14 +83,61 @@ internal fun EditorCanvasContext.withRestoredTopBarWiring(base: EditorTopBarActi
     onBringForward = { reorderSelected(forward = true) },
     onSendBackward = { reorderSelected(forward = false) },
 
-    // ── 插入 ─────────────────────────────────────────────
+    // ── 插入與 Pro 工作室 ────────────────────────────────
     onInsertAudioFile = { audioImportPicker.launch(audioMimeTypes) },
     onPasteScreenshot = { pasteClipboardImageOrScreenshot() },
     onOpenTextStudio = {
-        val box = selectedTextId?.let { textStore.find(it) } ?: textStore.create(x = 60f, y = 80f)
-        textRevision++
-        selectText(box.id)
-        editingText = box
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("text_studio")) {
+            val box = selectedTextId?.let { textStore.find(it) } ?: textStore.create(x = 60f, y = 80f)
+            textRevision++
+            selectText(box.id)
+            editingText = box
+        }
+    },
+    onInsertMath = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("math_calc")) {
+            showCalculator = true
+        }
+    },
+    onInsertChart = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("chart_studio")) {
+            insertingChart = true
+        }
+    },
+    onInsertTable = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("table_studio")) {
+            insertingTable = true
+        }
+    },
+    onInsertModel3D = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("insert_3d")) {
+            insertingModel3D = true
+        }
+    },
+    onInsertLegend = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("insert_legend")) {
+            val box = insertLegend()
+            editingText = box
+            selectText(box.id)
+            editorMode = EditorMode.TYPE
+            textRevision++
+            stackRevision++
+        }
+    },
+    onThemeTools = {
+        EntitlementManager.requirePro(ProFeatureGate.PRO_INK_AND_THEMES, l10n("theme_tools")) {
+            showThemeTools = true
+        }
+    },
+    onAiSummary = {
+        EntitlementManager.requirePro(ProFeatureGate.STUDIOS, l10n("ai_summary")) {
+            showNoteIntelligence = true
+        }
+    },
+    onPenSettings = {
+        EntitlementManager.requirePro(ProFeatureGate.PRO_INK_AND_THEMES, l10n("advanced_pen_settings")) {
+            showPenSettings = true
+        }
     },
     onToggleSnapToGrid = {
         snapToGrid = !snapToGrid
@@ -311,4 +364,12 @@ internal fun EditorCanvasContext.placeClipboardAt(target: androidx.compose.ui.ge
     isPlacingPasteObject = false
     lasso.inkPlacementArmed = false
 }
+
+/** 開啟 Pro 專業色輪（受 Pro 門禁與二段式輕提示保護）。 */
+internal fun EditorCanvasContext.openProColorWheel() {
+    EntitlementManager.requirePro(ProFeatureGate.PRO_INK_AND_THEMES, l10n("ink_pro_wheel")) {
+        showProColorWheel = true
+    }
+}
+
 

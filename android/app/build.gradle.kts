@@ -17,8 +17,8 @@ android {
         minSdk = 29
         targetSdk = 35
         // 版本號由 scripts/bump-version.sh 與 Apple 端一起更新，不要手改
-        versionCode = 189
-        versionName = "7.0.0"
+        versionCode = 190
+        versionName = "7.1.0"
         // 筆跡引擎的正確性只有在真的 Android runtime 上才驗得出來
         // （MotionEvent、密度換算、JNA 載入 .so 都不是純 JVM 模擬得了的）。
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -171,6 +171,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")

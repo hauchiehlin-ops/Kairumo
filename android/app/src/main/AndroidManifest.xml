@@ -113,6 +113,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="kairumo" android:host="collab" />
             </intent-filter>
+            <!-- Kairumo Pro VIP 尊榮禮遇通行證連結（kairumo://vip?gift=<payload>.<sig>） -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kairumo" android:host="vip" />
+            </intent-filter>
         </activity>
 
         <!--

@@ -950,7 +950,7 @@ internal fun EditorTopBar(
                 )
                 // 圖例：著色後說明「哪個顏色代表什麼」（與 Apple「插入」選單同一項）。
                 DropdownMenuItem(
-                    text = { Text(l10n("insert_legend")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("insert_legend"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.legend"),
                     onClick = { showMenu = false; actions.onInsertLegend() }
                 )
@@ -1003,18 +1003,21 @@ internal fun EditorTopBar(
                     modifier = Modifier.testTag("editor.insert.document"),
                     onClick = { showMenu = false; actions.onInsertDocument() }
                 )
+                if (!com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
+                    com.kairumo.padnote.entitlement.ProMenuSectionHeader(state.languageTag)
+                }
                 DropdownMenuItem(
-                    text = { Text(l10n("math_calc")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("math_calc"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.math"),
                     onClick = { showMenu = false; actions.onInsertMath() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("chart_studio")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("chart_studio"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.chart"),
                     onClick = { showMenu = false; actions.onInsertChart() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("table_studio")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("table_studio"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.table"),
                     onClick = { showMenu = false; actions.onInsertTable() }
                 )
@@ -1024,12 +1027,12 @@ internal fun EditorTopBar(
                     onClick = { showMenu = false; actions.onInsertShape() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("insert_3d")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("insert_3d"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.model3d"),
                     onClick = { showMenu = false; actions.onInsertModel3D() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("theme_tools")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("theme_tools"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.theme_tools"),
                     onClick = { showMenu = false; actions.onThemeTools() }
                 )
@@ -1038,12 +1041,12 @@ internal fun EditorTopBar(
 
                 // ── 2. 工具操作 ─────────────────────────────────────
                 DropdownMenuItem(
-                    text = { Text(l10n("refine_sketch")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("refine_sketch"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.refine_sketch"),
                     onClick = { showMenu = false; actions.onRefineSketch() }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("ai_summary")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("ai_summary"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.ai_summary"),
                     onClick = { showMenu = false; actions.onAiSummary() }
                 )
@@ -1082,7 +1085,7 @@ internal fun EditorTopBar(
 
                 // ── 3. 設定與檢視 ───────────────────────────────────
                 DropdownMenuItem(
-                    text = { Text(l10n("advanced_pen_settings")) },
+                    text = { com.kairumo.padnote.entitlement.ProMenuItemText(l10n("advanced_pen_settings"), languageTag = state.languageTag) },
                     modifier = Modifier.testTag("editor.insert.advanced_pen_settings"),
                     onClick = { showMenu = false; actions.onPenSettings() }
                 )
@@ -1310,12 +1313,23 @@ internal fun EditorTopBar(
                     TextButton(
                         onClick = actions.onOpenTextStudio
                     ) {
-                        Text(
-                            "🎨 " + l10n("text_studio"),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                "🎨 " + l10n("text_studio"),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (!com.kairumo.padnote.entitlement.EntitlementManager.isProUnlocked) {
+                                com.kairumo.padnote.entitlement.ProMicroBadge(
+                                    compact = true,
+                                    languageTag = state.languageTag
+                                )
+                            }
+                        }
                     }
                 }
 

@@ -117,6 +117,45 @@ struct VIPGiftPayload: Codable, Equatable {
     let note: String?
 }
 
+// MARK: - License Tier
+enum LicenseTier: Equatable {
+    case basic
+    case vipLimited(expiryDate: Date)
+    case vip
+    case pro
+}
+
+/// PRO 專屬鑽石星芒拱頂帝王冠（與 VIP 古典三尖平底金冠 crown.fill 形成鮮明外型差異）
+struct ProDiamondCrownView: View {
+    var size: CGFloat = 13
+
+    var body: some View {
+        ZStack {
+            Image(systemName: "crown")
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size * 0.78)
+                .fontWeight(.heavy)
+            Image(systemName: "sparkle")
+                .resizable()
+                .scaledToFit()
+                .frame(width: size * 0.5, height: size * 0.5)
+                .offset(y: -size * 0.44)
+        }
+        .frame(width: size, height: size)
+        .foregroundStyle(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.10, green: 0.75, blue: 0.98),
+                    Color(red: 0.78, green: 0.95, blue: 1.0)
+                ],
+                startPoint: .bottomLeading,
+                endPoint: .topTrailing
+            )
+        )
+    }
+}
+
 // MARK: - Two-Step Nudge Notice (方案 B：二段式無打擾輕提示)
 struct ProNudgeNotice: Equatable {
     let id: UUID
@@ -143,6 +182,7 @@ final class EntitlementManager: ObservableObject {
     @Published private(set) var isStoreKitPurchased: Bool = false
     @Published private(set) var isVIPUnlocked: Bool = false
     @Published private(set) var vipRecipientName: String?
+    @Published private(set) var vipExpirationDate: Date?
     @Published private(set) var proProduct: Product?
     @Published private(set) var isPurchasing: Bool = false
     @Published var activePaywallFeature: ProFeatureGate?
@@ -154,6 +194,28 @@ final class EntitlementManager: ObservableObject {
 
     private var updatesTask: Task<Void, Never>?
     private var nudgeDismissTask: Task<Void, Never>?
+
+    var licenseTier: LicenseTier {
+        if isStoreKitPurchased {
+            return .pro
+        }
+        if isVIPUnlocked {
+            if let exp = vipExpirationDate {
+                return .vipLimited(expiryDate: exp)
+            } else {
+                return .vip
+            }
+        }
+        return .basic
+    }
+
+    /// 授權日期格式化（如 2026/12/31）
+    static func formatLicenseDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy/MM/dd"
+        return formatter.string(from: date)
+    }
 
     var isProUnlocked: Bool {
         let env = ProcessInfo.processInfo.environment
@@ -174,6 +236,11 @@ final class EntitlementManager: ObservableObject {
            let payload = Self.verifyVIPToken(savedToken) {
             self.isVIPUnlocked = true
             self.vipRecipientName = payload.to
+            if let exp = payload.exp {
+                self.vipExpirationDate = Date(timeIntervalSince1970: TimeInterval(exp))
+            } else {
+                self.vipExpirationDate = nil
+            }
         }
 
         updatesTask = Task { [weak self] in
@@ -383,6 +450,11 @@ final class EntitlementManager: ObservableObject {
             ProfileDefaults.device.set(giftToken, forKey: Self.vipTokenStorageKey)
             isVIPUnlocked = true
             vipRecipientName = payload.to
+            if let exp = payload.exp {
+                vipExpirationDate = Date(timeIntervalSince1970: TimeInterval(exp))
+            } else {
+                vipExpirationDate = nil
+            }
             feedbackBannerText = L10n.t("pro_unlocked_vip_toast")
             activePaywallFeature = nil
         } else {
@@ -442,6 +514,7 @@ final class EntitlementManager: ObservableObject {
         ProfileDefaults.device.removeObject(forKey: Self.vipTokenStorageKey)
         isVIPUnlocked = false
         vipRecipientName = nil
+        vipExpirationDate = nil
     }
     #endif
 }
@@ -523,6 +596,35 @@ struct PaywallSheet: View {
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if case .vipLimited(let expiry) = entitlement.licenseTier {
+                let dateStr = EntitlementManager.formatLicenseDate(expiry)
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "hourglass.badge.gearshape")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(Color(red: 0.65, green: 0.38, blue: 0.15))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L10n.t("paywall_vip_limited_notice").replacingOccurrences(of: "%@", with: dateStr))
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(Color(red: 0.65, green: 0.38, blue: 0.15))
+                        Text(L10n.t("paywall_vip_limited_desc").replacingOccurrences(of: "%@", with: dateStr))
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(red: 0.65, green: 0.38, blue: 0.15).opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(red: 0.65, green: 0.38, blue: 0.15).opacity(0.35), lineWidth: 1)
+                        )
+                )
+            }
 
             if let feedback = entitlement.feedbackBannerText {
                 HStack(spacing: 8) {

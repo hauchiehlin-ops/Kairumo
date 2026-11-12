@@ -364,13 +364,23 @@ fun HomeScreen(
                         )
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(profileName, fontWeight = FontWeight.SemiBold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(profileName, fontWeight = FontWeight.SemiBold)
+                        }
                         Text(
                             l("identity_desc_short"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    com.kairumo.padnote.entitlement.LicenseStatusBadge(
+                        tier = com.kairumo.padnote.entitlement.EntitlementManager.licenseTier,
+                        onUpgradeClick = { com.kairumo.padnote.entitlement.EntitlementManager.presentPaywall() },
+                        l = l
+                    )
                     TextButton(
                         onClick = onSwitchUser,
                         modifier = Modifier.testTag("home.profile.switch")
