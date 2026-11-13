@@ -28,24 +28,24 @@ impl PenTuning {
     /// 壓感的最細比例（壓力 0 時的寬度 ÷ 滿壓寬度）。
     pub const PRESSURE_FLOOR: f32 = 0.35;
     /// 鋼筆：走得快時筆畫收細的力道（0 = 不受速度影響）。
-    pub const FOUNTAIN_SPEED_THIN: f32 = 0.07;
+    pub const FOUNTAIN_SPEED_THIN: f32 = 0.18;
     /// 鋼筆：寬度對上一個樣本的黏性（0–1，越大越平滑、反應越慢）。
-    pub const FOUNTAIN_SMOOTHING: f32 = 0.55;
+    pub const FOUNTAIN_SMOOTHING: f32 = 0.50;
     /// 鋼筆：收筆出鋒佔整筆長度的比例。
-    pub const FOUNTAIN_TAPER: f32 = 0.06;
+    pub const FOUNTAIN_TAPER: f32 = 0.12;
     /// 原子筆：壓感只影響寬度的幅度（原子筆幾乎等寬）。
     pub const BALLPOINT_PRESSURE_AMOUNT: f32 = 0.18;
     /// 鉛筆：輕壓時能碰到紙紋的門檻下限／上限。
     pub const PENCIL_TOOTH_MIN: f32 = 0.22;
     pub const PENCIL_TOOTH_MAX: f32 = 0.92;
     /// 麥克筆筆頭的扁率與角度。
-    pub const MARKER_FLATNESS: f32 = 0.55;
-    pub const MARKER_ANGLE: f32 = 0.6;
+    pub const MARKER_FLATNESS: f32 = 0.42;
+    pub const MARKER_ANGLE: f32 = 0.45;
     /// 螢光筆筆頭的高度倍率與角度。
     pub const HIGHLIGHTER_HEIGHT: f32 = 1.8;
     pub const HIGHLIGHTER_ANGLE: f32 = 0.35;
     /// 群組不透明度（見模組說明）。
-    pub const MARKER_GROUP_ALPHA: f32 = 0.9;
+    pub const MARKER_GROUP_ALPHA: f32 = 0.74;
     pub const HIGHLIGHTER_GROUP_ALPHA: f32 = 0.35;
 }
 
@@ -110,6 +110,7 @@ impl PenEmitter {
 
     pub(super) fn spacing(&self) -> f32 {
         let s = match self.tool {
+            Tool::BallPoint => self.base * 0.42,
             Tool::Pencil => self.base * 0.28,
             Tool::Watercolor => self.base * 0.16,
             Tool::Marker | Tool::Highlighter => self.base * 0.22,
@@ -122,14 +123,18 @@ impl PenEmitter {
         let base = self.base;
         match self.tool {
             Tool::FountainPen => {
-                let thin = 1.0 - PenTuning::FOUNTAIN_SPEED_THIN * (s.speed - 1.0).clamp(-1.0, 6.0);
+                let thin = 1.0 - PenTuning::FOUNTAIN_SPEED_THIN * (s.speed - 1.0).clamp(-1.0, 4.0);
                 let p = curve(s.pressure);
                 // 鋼筆金屬筆尖彈性割角：縱向運筆下壓厚實，橫向運筆收細（橫細豎粗）
-                let angle_mod = 0.74 + 0.48 * s.heading.sin().abs();
-                let mut r = base * p * thin.clamp(0.55, 1.1) * angle_mod;
+                let angle_mod = 0.65 + 0.62 * s.heading.sin().abs();
+                let mut r = base * p * thin.clamp(0.48, 1.15) * angle_mod;
+                if s.progress < 0.05 {
+                    let t = (s.progress / 0.05).clamp(0.0, 1.0);
+                    r *= 0.65 + 0.35 * smooth(t);
+                }
                 if s.progress > 1.0 - PenTuning::FOUNTAIN_TAPER {
                     let rem = ((1.0 - s.progress) / PenTuning::FOUNTAIN_TAPER).clamp(0.0, 1.0);
-                    r *= 0.35 + 0.65 * smooth(rem);
+                    r *= 0.25 + 0.75 * smooth(rem);
                 }
                 if let Some(prev) = self.last_r {
                     r = prev * PenTuning::FOUNTAIN_SMOOTHING
@@ -137,8 +142,8 @@ impl PenEmitter {
                 }
                 self.last_r = Some(r);
                 // 鋼筆墨韻蓄墨（Ink Shading）：慢速或筆劃末梢墨水微沉暈染
-                let shade = if s.speed < 0.6 || s.progress > 0.93 {
-                    -0.14
+                let shade = if s.speed < 0.6 || s.progress > 0.90 {
+                    -0.16
                 } else {
                     -0.04 * s.pressure
                 };
@@ -146,7 +151,7 @@ impl PenEmitter {
                     x: s.x,
                     y: s.y,
                     rx: r.max(0.25),
-                    ry: (r * 0.92).max(0.22),
+                    ry: (r * 0.85).max(0.22),
                     angle: s.heading,
                     alpha: 1.0,
                     softness: 0.0,
@@ -157,52 +162,63 @@ impl PenEmitter {
                 let p = s.pressure.clamp(0.0, 1.0);
                 let k = 1.0 - PenTuning::BALLPOINT_PRESSURE_AMOUNT
                     + PenTuning::BALLPOINT_PRESSURE_AMOUNT * p;
-                let r = (base * 0.75 * k).max(0.2);
-                // 鎢鋼滾珠油性墨膏：輕壓帶半透明油光灰潤（0.62），重壓飽和深邃（0.98）
-                let alpha = 0.62 + 0.36 * p.powf(0.85);
-                out.push(round(s.x, s.y, r, alpha, 0.0));
+                let r = (base * 0.72 * k).max(0.2);
+                // 鎢鋼滾珠油性墨膏：即使等速直線也保留微灰油光潤澤，重壓才趨近深飽和
+                let alpha = 0.38 + 0.44 * p.powf(0.9);
+                out.push(Dab {
+                    x: s.x,
+                    y: s.y,
+                    rx: r,
+                    ry: r,
+                    angle: 0.0,
+                    alpha,
+                    softness: 0.12,
+                    shade: 0.14 * (1.0 - p),
+                });
             }
             Tool::Pencil => {
                 let p = s.pressure.clamp(0.0, 1.0);
                 let tilt_factor = 1.0 + 1.5 * s.tilt.sin().clamp(0.0, 1.0);
-                // 1. 實心連續石墨筆脊（Solid Graphite Spine）：保證筆跡連貫實體、結構清晰
-                let core_r = (base * 0.40 * (0.68 + 0.32 * p) * tilt_factor).max(0.26);
-                let core_alpha =
-                    ((0.75 + 0.23 * p) / (0.85 + 0.15 * tilt_factor)).clamp(0.35, 0.98);
+                // 1. 紙紋調制石墨筆脊（Grain-Modulated Graphite Spine）：即使無傾角也呈現紙紋顆粒與鉛灰質地
+                let core_r = (base * 0.44 * (0.68 + 0.32 * p) * tilt_factor).max(0.28);
+                let spine_grain = paper_grain(s.x, s.y);
+                let core_alpha = ((0.36 + 0.42 * p) * (1.0 - 0.55 * spine_grain)
+                    / (0.85 + 0.15 * tilt_factor))
+                    .clamp(0.14, 0.85);
                 out.push(Dab {
                     x: s.x,
                     y: s.y,
                     rx: core_r,
-                    ry: core_r * if s.tilt > 0.35 { 0.75 } else { 1.0 },
+                    ry: core_r * if s.tilt > 0.35 { 0.72 } else { 0.92 },
                     angle: s.azimuth,
                     alpha: core_alpha,
-                    softness: if s.tilt > 0.35 { 0.22 } else { 0.04 },
-                    shade: 0.20, // 石墨特有的深鉛灰色微反光色階
+                    softness: if s.tilt > 0.35 { 0.28 } else { 0.16 },
+                    shade: 0.28, // 石墨特有的深鉛灰色微反光色階
                 });
                 // 2. 邊緣微觀石墨顆粒（Graphite Tooth）：在筆脊兩側紙紋凸起處留下自然摩擦碎屑
-                let reach = core_r * 1.45;
+                let reach = core_r * 1.85;
                 let tooth = PenTuning::PENCIL_TOOTH_MIN
                     + (PenTuning::PENCIL_TOOTH_MAX - PenTuning::PENCIL_TOOTH_MIN) * p;
-                let count = ((reach * 2.0).ceil() as usize).clamp(2, 6);
+                let count = ((reach * 2.5).ceil() as usize).clamp(3, 8);
                 for _ in 0..count {
                     let ang = self.rng.unit() * std::f32::consts::TAU;
-                    let rr = core_r * 0.75 + (reach - core_r * 0.75) * self.rng.unit().sqrt();
+                    let rr = core_r * 0.55 + (reach - core_r * 0.55) * self.rng.unit().sqrt();
                     let (px, py) = (s.x + ang.cos() * rr, s.y + ang.sin() * rr);
                     let g = paper_grain(px, py);
                     if g > tooth {
                         continue;
                     }
                     let depth = 1.0 - g / tooth;
-                    let size = (0.32 + 0.28 * self.rng.unit()) * (base / 2.0).clamp(0.4, 1.2);
+                    let size = (0.36 + 0.34 * self.rng.unit()) * (base / 2.0).clamp(0.45, 1.3);
                     out.push(Dab {
                         x: px,
                         y: py,
                         rx: size,
                         ry: size,
                         angle: 0.0,
-                        alpha: (0.28 + 0.52 * depth) * (0.35 + 0.65 * p),
-                        softness: 0.08,
-                        shade: 0.16,
+                        alpha: (0.24 + 0.50 * depth) * (0.35 + 0.65 * p),
+                        softness: 0.14,
+                        shade: 0.24,
                     });
                 }
             }
