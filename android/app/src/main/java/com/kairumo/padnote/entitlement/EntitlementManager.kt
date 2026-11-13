@@ -256,6 +256,10 @@ object EntitlementManager {
     var displayPrice by mutableStateOf("US$9.99")
         private set
 
+    /** 是否已成功從 Google Play 取得商品價格與詳情 */
+    var isProductLoaded by mutableStateOf(false)
+        private set
+
     /** 是否正在執行購買或恢復交易 */
     var isPurchasing by mutableStateOf(false)
         private set
@@ -487,15 +491,20 @@ object EntitlementManager {
                     cachedProductDetails = detail
                     productLoadState = ProductLoadState.LOADED
                     val formatted = detail.oneTimePurchaseOfferDetails?.formattedPrice
-                    if (!formatted.isNullOrBlank()) {
-                        mainScope.launch { displayPrice = formatted }
+                    mainScope.launch {
+                        isProductLoaded = true
+                        if (!formatted.isNullOrBlank()) {
+                            displayPrice = formatted
+                        }
                     }
                 } else {
                     productLoadState = ProductLoadState.PRODUCT_MISSING
+                    mainScope.launch { isProductLoaded = false }
                     Log.e("KairumoBilling", "Store returned no product for $PRO_LIFETIME_PRODUCT_ID")
                 }
             } else {
                 productLoadState = ProductLoadState.REQUEST_FAILED
+                mainScope.launch { isProductLoaded = false }
                 Log.e("KairumoBilling", "queryProductDetails failed: ${result.responseCode} ${result.debugMessage}")
             }
         }
@@ -561,8 +570,12 @@ object EntitlementManager {
         val appCtx = activity.applicationContext
         val client = billingClient
         if (client == null || !client.isReady) {
-            if (client != null) connectBillingClient(appCtx, client)
-            showFeedback(LocalizationStrings.localized("paywall_store_unavailable", languageTag))
+            if (client == null) {
+                setupBillingClient(appCtx)
+            } else {
+                connectBillingClient(appCtx, client)
+            }
+            showStoreUnavailable(languageTag)
             return
         }
         val details = cachedProductDetails
@@ -588,7 +601,7 @@ object EntitlementManager {
         val result = client.launchBillingFlow(activity, flowParams)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             isPurchasing = false
-            showFeedback(LocalizationStrings.localized("paywall_store_unavailable", languageTag))
+            showStoreUnavailable(languageTag)
         }
     }
 
@@ -597,12 +610,20 @@ object EntitlementManager {
         val appCtx = context.applicationContext
         val client = billingClient
         if (client == null || !client.isReady) {
-            if (client != null) connectBillingClient(appCtx, client)
-            showFeedback(LocalizationStrings.localized("paywall_store_unavailable", languageTag))
+            if (client == null) {
+                setupBillingClient(appCtx)
+            } else {
+                connectBillingClient(appCtx, client)
+            }
+            showStoreUnavailable(languageTag)
             return
         }
         isPurchasing = true
         queryOwnedPurchases(appCtx, client, showRestoreFeedback = true)
+    }
+
+    internal fun showStoreUnavailable(languageTag: String) {
+        showFeedback(LocalizationStrings.localized("paywall_store_unavailable", languageTag))
     }
 
     // ── VIP 禮遇通行證（Serverless Ed25519 離線驗章）───────────
@@ -1125,6 +1146,12 @@ fun PaywallSubsystemHost(languageTag: String) {
     }
 }
 
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 /**
  * Kairumo Pro 終身買斷解鎖視窗（與 Apple 端 `PaywallSheetView` 對齊）。
  */
@@ -1135,7 +1162,7 @@ fun PaywallDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as? ComponentActivity
+    val activity = remember(context) { context.findActivity() }
     val clipboardManager = LocalClipboardManager.current
     var showRedeemDialog by remember { mutableStateOf(false) }
 
@@ -1359,14 +1386,38 @@ fun PaywallDialog(
 
                 Spacer(Modifier.height(16.dp))
 
+                // 購買／連線／恢復狀態提示（必須畫在 Dialog 內部，避免被 Dialog 視窗遮住）
+                val dialogFeedback = EntitlementManager.feedbackBannerText
+                if (!dialogFeedback.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = ProGoldStart.copy(alpha = 0.14f),
+                        border = BorderStroke(1.dp, ProGoldEnd.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .testTag("paywall.feedback.banner")
+                    ) {
+                        Text(
+                            text = dialogFeedback,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+
                 // 主購買按鈕
                 Button(
                     onClick = {
                         if (activity != null) {
                             EntitlementManager.purchaseLifetimePro(activity, languageTag)
+                        } else {
+                            EntitlementManager.showStoreUnavailable(languageTag)
                         }
                     },
-                    enabled = !EntitlementManager.isPurchasing,
+                    enabled = !EntitlementManager.isPurchasing && !EntitlementManager.isPlayBillingPurchased,
                     colors = ButtonDefaults.buttonColors(containerColor = ProGoldEnd),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
@@ -1381,8 +1432,12 @@ fun PaywallDialog(
                             modifier = Modifier.size(20.dp)
                         )
                     } else {
-                        val buyLabel = LocalizationStrings.localized("paywall_buy_button", languageTag)
-                            .replace("%@", EntitlementManager.displayPrice)
+                        val rawBuyLabel = LocalizationStrings.localized("paywall_buy_button", languageTag)
+                        val buyLabel = when {
+                            rawBuyLabel.contains("%@") -> rawBuyLabel.replace("%@", EntitlementManager.displayPrice)
+                            EntitlementManager.isProductLoaded -> "$rawBuyLabel · ${EntitlementManager.displayPrice}"
+                            else -> rawBuyLabel
+                        }
                         Text(
                             text = buyLabel,
                             color = Color.White,
