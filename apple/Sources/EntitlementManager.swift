@@ -783,10 +783,10 @@ struct PaywallSheet: View {
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(entitlement.isProUnlocked ? Color.green : Color.accentColor)
+                        .fill(entitlement.isStoreKitPurchased ? Color.green : Color.accentColor)
                 )
             }
-            .disabled(entitlement.isPurchasing || entitlement.isProUnlocked)
+            .disabled(entitlement.isPurchasing || entitlement.isStoreKitPurchased)
 
             HStack(spacing: 18) {
                 Button {
