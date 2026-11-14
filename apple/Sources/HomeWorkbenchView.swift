@@ -4250,6 +4250,12 @@ public struct AppDiagnosticsSheet: View {
     @State private var showModelFileImporter = false
     @State private var modelImportMessage: String?
 
+    /// 開發者選項：連續點擊版本號 5 次解鎖隱藏版授權重置按鈕
+    @State private var versionTapCount = 0
+    @State private var showDeveloperReset = false
+    @State private var showResetConfirmDialog = false
+    @State private var resetToastMessage: String?
+
     public var body: some View {
         NavigationStack {
             List {
@@ -4264,6 +4270,15 @@ public struct AppDiagnosticsSheet: View {
                         Text(versionString)
                             .foregroundColor(.secondary)
                             .fontWeight(.medium)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        versionTapCount += 1
+                        if versionTapCount >= 5 {
+                            withAnimation {
+                                showDeveloperReset = true
+                            }
+                        }
                     }
 
                     HStack {
@@ -4285,6 +4300,26 @@ public struct AppDiagnosticsSheet: View {
                         Spacer()
                         Text("Mac Catalyst / iOS Universal") // i18n-ok: 平台名稱
                             .foregroundColor(.secondary)
+                    }
+                }
+
+                if showDeveloperReset {
+                    Section(localizationManager.localized("developer_options")) {
+                        Button(role: .destructive) {
+                            showResetConfirmDialog = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.counterclockwise.circle")
+                                Text(localizationManager.localized("reset_license_to_basic"))
+                            }
+                        }
+                        .accessibilityIdentifier("diagnostics.reset_license")
+
+                        if let resetToastMessage {
+                            Text(resetToastMessage)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
 
@@ -4357,6 +4392,18 @@ public struct AppDiagnosticsSheet: View {
             case let .failure(error):
                 modelImportMessage = "❌ " + L10n.f("whisper_pick_failed", L10n.errorText(error))
             }
+        }
+        .alert(
+            localizationManager.localized("reset_license_confirm_title"),
+            isPresented: $showResetConfirmDialog
+        ) {
+            Button(localizationManager.localized("reset_license_confirm_action"), role: .destructive) {
+                EntitlementManager.shared.resetEntitlementsToBasic()
+                resetToastMessage = localizationManager.localized("reset_license_success_toast")
+            }
+            Button(localizationManager.localized("cancel"), role: .cancel) {}
+        } message: {
+            Text(localizationManager.localized("reset_license_confirm_message"))
         }
     }
 }

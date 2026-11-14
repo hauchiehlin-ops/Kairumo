@@ -733,6 +733,23 @@ object EntitlementManager {
         }.getOrNull()
     }
 
+    /**
+     * 重置授權狀態為 Basic 基礎版（清除本機 VIP 通行證與 Play Billing 快取）。
+     */
+    fun resetEntitlementsToBasic(context: Context) {
+        val appCtx = context.applicationContext
+        ProfileContext.devicePrefs(appCtx, PREFS_NAME)
+            .edit()
+            .remove(KEY_VIP_TOKEN)
+            .remove(KEY_PLAY_PURCHASED)
+            .apply()
+        isVIPUnlocked = false
+        isPlayBillingPurchased = false
+        vipRecipientName = null
+        vipExpirationTimestamp = null
+        activePaywallFeature = null
+    }
+
     /** 僅供單元測試重置記憶體狀態 */
     internal fun resetStateForTesting(
         playPurchased: Boolean = false,

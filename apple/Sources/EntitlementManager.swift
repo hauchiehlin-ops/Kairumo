@@ -546,13 +546,21 @@ final class EntitlementManager: ObservableObject {
         return Data(base64Encoded: base64)
     }
 
+    /// 重置授權狀態為 Basic 基礎版（清除本機 VIP 通行證與內購快取）
+    func resetEntitlementsToBasic() {
+        ProfileDefaults.device.removeObject(forKey: Self.vipTokenStorageKey)
+        ProfileDefaults.device.removeObject(forKey: Self.storeKitCacheKey)
+        isVIPUnlocked = false
+        isStoreKitPurchased = false
+        vipRecipientName = nil
+        vipExpirationDate = nil
+        activePaywallFeature = nil
+    }
+
     #if DEBUG
     // orphan-ok: 供單元測試重置 VIP 狀態
     func resetVIPForTesting() {
-        ProfileDefaults.device.removeObject(forKey: Self.vipTokenStorageKey)
-        isVIPUnlocked = false
-        vipRecipientName = nil
-        vipExpirationDate = nil
+        resetEntitlementsToBasic()
     }
     #endif
 }
