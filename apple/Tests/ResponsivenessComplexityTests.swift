@@ -25,6 +25,7 @@ final class ResponsivenessComplexityTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        ThumbnailPipeline.shared.invalidateAll()
         try? FileManager.default.removeItem(at: dir)
     }
 

@@ -20,10 +20,19 @@ final class ThumbnailPipelineTests: XCTestCase {
         dir = FileManager.default.temporaryDirectory.appendingPathComponent("thumb-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         store = NotebookStore(testDocumentsRoot: dir)
+        ThumbnailPipeline.shared.invalidateAll()
     }
 
     override func tearDownWithError() throws {
+        ThumbnailPipeline.shared.invalidateAll()
         try? FileManager.default.removeItem(at: dir)
+    }
+
+    private func waitUntil(timeout: TimeInterval = 5.0, _ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            try await Task.sleep(nanoseconds: 25_000_000)
+        }
     }
 
     private func request(_ doc: NotebookDocument, page: Int = 0, revision: Int, loaded: @escaping () -> Void = {}) -> ThumbnailPipeline.Request {
@@ -46,7 +55,7 @@ final class ThumbnailPipelineTests: XCTestCase {
         let v0 = slot0.version, v1 = slot1.version
         var loads = 0
         _ = ThumbnailPipeline.shared.image(for: request(doc, page: 0, revision: 7) { loads += 1 })
-        try await Task.sleep(nanoseconds: 800_000_000)
+        try await waitUntil { loads == 1 && slot0.version > v0 }
         XCTAssertEqual(loads, 1)
         XCTAssertGreaterThan(slot0.version, v0)
         XCTAssertEqual(slot1.version, v1, "別頁的卡片不該被牽連")
@@ -57,25 +66,29 @@ final class ThumbnailPipelineTests: XCTestCase {
 
     func testNewRevisionRendersAgainAndKeepsStaleImageMeanwhile() async throws {
         let doc = NotebookDocument(title: "t", pageCount: 1)
+        let slot = ThumbnailPipeline.shared.slot(notebookId: doc.id, pageIndex: 0)
+        let v0 = slot.version
         _ = ThumbnailPipeline.shared.image(for: request(doc, revision: 1))
-        try await Task.sleep(nanoseconds: 800_000_000)
+        try await waitUntil { slot.version > v0 }
         let first = ThumbnailPipeline.shared.image(for: request(doc, revision: 1))
         var loads = 0
         let during = ThumbnailPipeline.shared.image(for: request(doc, revision: 2) { loads += 1 })
         XCTAssertTrue(during === first, "新版本還沒算好時先顯示舊圖，不閃白")
         XCTAssertEqual(loads, 0)
-        try await Task.sleep(nanoseconds: 800_000_000)
+        try await waitUntil { loads == 1 }
         XCTAssertEqual(loads, 1)
     }
 
     func testInvalidateAllForcesRedraw() async throws {
         let doc = NotebookDocument(title: "t", pageCount: 1)
+        let slot = ThumbnailPipeline.shared.slot(notebookId: doc.id, pageIndex: 0)
+        let v0 = slot.version
         _ = ThumbnailPipeline.shared.image(for: request(doc, revision: 3))
-        try await Task.sleep(nanoseconds: 800_000_000)
+        try await waitUntil { slot.version > v0 }
         PageThumbnailRenderer.invalidateAll()
         var loads = 0
         _ = ThumbnailPipeline.shared.image(for: request(doc, revision: 3) { loads += 1 })
-        try await Task.sleep(nanoseconds: 800_000_000)
+        try await waitUntil { loads == 1 }
         XCTAssertEqual(loads, 1, "全面失效後同版本也要重畫")
     }
 
