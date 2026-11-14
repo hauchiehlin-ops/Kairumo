@@ -156,4 +156,24 @@ final class EntitlementManagerTests: XCTestCase {
         let formatted = EntitlementManager.formatLicenseDate(testDate)
         XCTAssertTrue(formatted.contains("2026/12/31") || formatted.contains("2027/01/01"))
     }
+
+    func testPresentPaywallSetsActiveFeatureAndClearsNudge() {
+        let manager = EntitlementManager.shared
+        manager.dismissNudge()
+        manager.activePaywallFeature = nil
+        defer {
+            manager.dismissNudge()
+            manager.activePaywallFeature = nil
+        }
+
+        XCTAssertEqual(EntitlementManager.proLifetimeProductID, "com.kairumo.padnote.pro.lifetime")
+
+        manager.nudgeOrPresentPaywall(focus: .studios, itemName: "Table Studio")
+        XCTAssertNotNil(manager.activeNudge)
+        XCTAssertNil(manager.activePaywallFeature)
+
+        manager.presentPaywall(focus: .studios)
+        XCTAssertNil(manager.activeNudge)
+        XCTAssertEqual(manager.activePaywallFeature, .studios)
+    }
 }
