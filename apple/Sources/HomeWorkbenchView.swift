@@ -601,6 +601,7 @@ public struct HomeWorkbenchView: View {
                 checkAutoOpenNotebook()
             }
         }
+        .paywallSubsystem(isActive: selectedNotebookForEditing == nil)
     }
 
     private func checkAutoOpenNotebook() {

@@ -998,17 +998,25 @@ struct ProNudgeBannerView: View {
 
 // MARK: - Paywall Subsystem Modifier
 struct PaywallSubsystemModifier: ViewModifier {
+    var isActive: Bool = true
     @ObservedObject private var entitlement = EntitlementManager.shared
 
     func body(content: Content) -> some View {
         content
             .overlay(alignment: .top) {
-                if let nudge = entitlement.activeNudge {
+                if isActive, let nudge = entitlement.activeNudge {
                     ProNudgeBannerView(nudge: nudge)
                         .zIndex(999)
                 }
             }
-            .sheet(item: $entitlement.activePaywallFeature) { feature in
+            .sheet(item: Binding(
+                get: { isActive ? entitlement.activePaywallFeature : nil },
+                set: { newValue in
+                    if isActive || newValue == nil {
+                        entitlement.activePaywallFeature = newValue
+                    }
+                }
+            )) { feature in
                 PaywallSheet(highlightedFeature: feature)
             }
     }
@@ -1016,8 +1024,9 @@ struct PaywallSubsystemModifier: ViewModifier {
 
 extension View {
     /// 掛載 Pro 升級面板與二段式輕提示膠囊（支援從編輯器或首頁隨需喚起）
-    func paywallSubsystem() -> some View {
-        self.modifier(PaywallSubsystemModifier())
+    /// - Parameter isActive: 避免首頁在 `.fullScreenCover` 編輯器開啟時重複掛載同一份 `.sheet`
+    func paywallSubsystem(isActive: Bool = true) -> some View {
+        self.modifier(PaywallSubsystemModifier(isActive: isActive))
     }
 
     /// 方案 A：為工具列上的未解鎖 Pro 按鈕套用降飽和半透明與微型鎖頭角標
