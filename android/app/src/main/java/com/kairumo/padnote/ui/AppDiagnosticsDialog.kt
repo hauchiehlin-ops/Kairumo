@@ -2,6 +2,7 @@ package com.kairumo.padnote.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +78,10 @@ fun AppDiagnosticsDialog(
     var cleanedMessage by remember { mutableStateOf<String?>(null) }
     var optimizing by remember { mutableStateOf(false) }
     var optimizedMessage by remember { mutableStateOf<String?>(null) }
+    var versionTapCount by remember { mutableIntStateOf(0) }
+    var showDeveloperReset by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var resetToastMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedTab) {
         if (selectedTab == 3) usage = withContext(Dispatchers.IO) { StorageSweeper.usage(context) }
         if (selectedTab == 4) {
@@ -384,7 +389,16 @@ fun AppDiagnosticsDialog(
                                 modifier = Modifier.padding(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            versionTapCount++
+                                            if (versionTapCount >= 5) {
+                                                showDeveloperReset = true
+                                            }
+                                        }
+                                ) {
                                     Text(l("version_number"), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     Text(versionString, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
@@ -402,6 +416,47 @@ fun AppDiagnosticsDialog(
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     Text(l("arch_mode"), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                     Text(android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+
+                        if (showDeveloperReset) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("diagnostics.developer_options"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        l("developer_options"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    TextButton(
+                                        onClick = { showResetConfirmDialog = true },
+                                        modifier = Modifier.testTag("diagnostics.reset_license")
+                                    ) {
+                                        Text(
+                                            "🔄 " + l("reset_license_to_basic"),
+                                            color = MaterialTheme.colorScheme.error,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                    resetToastMessage?.let { msg ->
+                                        Text(
+                                            msg,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -553,4 +608,32 @@ fun AppDiagnosticsDialog(
             }
         }
     )
+
+    if (showResetConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirmDialog = false },
+            title = { Text(l("reset_license_confirm_title"), fontWeight = FontWeight.Bold) },
+            text = { Text(l("reset_license_confirm_message")) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        com.kairumo.padnote.entitlement.EntitlementManager.resetEntitlementsToBasic(context)
+                        resetToastMessage = l("reset_license_success_toast")
+                        showResetConfirmDialog = false
+                    }
+                ) {
+                    Text(
+                        l("reset_license_confirm_action"),
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirmDialog = false }) {
+                    Text(l("cancel"))
+                }
+            }
+        )
+    }
 }

@@ -7855,6 +7855,14 @@ extension LocalizationManager {
             .ko: "디자이너 팔레트",
             .th: "จานสีนักออกแบบ"
         ],
+        "developer_options": [
+            .zhHant: "開發者選項",
+            .en: "Developer Options",
+            .zhHans: "开发者选项",
+            .ja: "開発者向けオプション",
+            .ko: "개발자 옵션",
+            .th: "ตัวเลือกสำหรับนักพัฒนา"
+        ],
         "diag_azimuth": [
             .zhHant: "方位",
             .en: "Azimuth",
@@ -19702,6 +19710,46 @@ extension LocalizationManager {
             .ja: "リセット",
             .ko: "초기화",
             .th: "รีเซ็ต"
+        ],
+        "reset_license_confirm_action": [
+            .zhHant: "確認重置",
+            .en: "Reset to Basic",
+            .zhHans: "确认重置",
+            .ja: "Basicにリセット",
+            .ko: "Basic으로 초기화",
+            .th: "รีเซ็ตเป็น Basic"
+        ],
+        "reset_license_confirm_message": [
+            .zhHant: "確定要恢復為 Basic 基礎版嗎？此動作將清除本機的 VIP 禮遇通行證與授權快取。",
+            .en: "Are you sure you want to restore to Basic? This will clear the local VIP gift pass and license cache.",
+            .zhHans: "确定要恢复为 Basic 基础版吗？此操作将清除本机的 VIP 礼遇通行证与授权缓存。",
+            .ja: "Basic（無料版）に戻してもよろしいですか？端末内のVIPパスとキャッシュが消去されます。",
+            .ko: "Basic(무료 버전)으로 복원하시겠습니까? 기기의 VIP 패스와 라이선스 캐시가 삭제됩니다.",
+            .th: "คุณแน่ใจหรือไม่ว่าต้องการเปลี่ยนกลับเป็น Basic? การดำเนินการนี้จะล้างบัตรของขวัญ VIP และแคชสิทธิ์การใช้งานในเครื่อง"
+        ],
+        "reset_license_confirm_title": [
+            .zhHant: "重置授權狀態",
+            .en: "Reset License Status",
+            .zhHans: "重置授权状态",
+            .ja: "ライセンス状態のリセット",
+            .ko: "라이선스 상태 초기화",
+            .th: "รีเซ็ตสถานะใบอนุญาต"
+        ],
+        "reset_license_success_toast": [
+            .zhHant: "已恢復為 Basic 基礎版",
+            .en: "License reset to Basic",
+            .zhHans: "已恢复为 Basic 基础版",
+            .ja: "Basicにリセットしました",
+            .ko: "Basic으로 초기화되었습니다",
+            .th: "รีเซ็ตสถานะกลับเป็น Basic เรียบร้อยแล้ว"
+        ],
+        "reset_license_to_basic": [
+            .zhHant: "重置授權狀態（恢復為 Basic）",
+            .en: "Reset License to Basic",
+            .zhHans: "重置授权状态（恢复为 Basic）",
+            .ja: "ライセンスをリセット（Basicに戻す）",
+            .ko: "라이선스 초기화 (Basic으로 복원)",
+            .th: "รีเซ็ตใบอนุญาตกลับเป็น Basic"
         ],
         "resize": [
             .zhHant: "調整大小",

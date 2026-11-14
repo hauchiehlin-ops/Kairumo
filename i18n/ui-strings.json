@@ -28422,5 +28422,53 @@
     "th": "แสดงหรือซ่อนแปรง Kairumo Pro บนแถบเครื่องมือ",
     "zhHans": "展开或收合工具栏上的 Pro 进阶笔刷",
     "zhHant": "展開或收合工具列上的 Pro 進階筆刷"
+  },
+  "developer_options": {
+    "en": "Developer Options",
+    "ja": "開発者向けオプション",
+    "ko": "개발자 옵션",
+    "th": "ตัวเลือกสำหรับนักพัฒนา",
+    "zhHans": "开发者选项",
+    "zhHant": "開發者選項"
+  },
+  "reset_license_to_basic": {
+    "en": "Reset License to Basic",
+    "ja": "ライセンスをリセット（Basicに戻す）",
+    "ko": "라이선스 초기화 (Basic으로 복원)",
+    "th": "รีเซ็ตใบอนุญาตกลับเป็น Basic",
+    "zhHans": "重置授权状态（恢复为 Basic）",
+    "zhHant": "重置授權狀態（恢復為 Basic）"
+  },
+  "reset_license_confirm_title": {
+    "en": "Reset License Status",
+    "ja": "ライセンス状態のリセット",
+    "ko": "라이선스 상태 초기화",
+    "th": "รีเซ็ตสถานะใบอนุญาต",
+    "zhHans": "重置授权状态",
+    "zhHant": "重置授權狀態"
+  },
+  "reset_license_confirm_message": {
+    "en": "Are you sure you want to restore to Basic? This will clear the local VIP gift pass and license cache.",
+    "ja": "Basic（無料版）に戻してもよろしいですか？端末内のVIPパスとキャッシュが消去されます。",
+    "ko": "Basic(무료 버전)으로 복원하시겠습니까? 기기의 VIP 패스와 라이선스 캐시가 삭제됩니다.",
+    "th": "คุณแน่ใจหรือไม่ว่าต้องการเปลี่ยนกลับเป็น Basic? การดำเนินการนี้จะล้างบัตรของขวัญ VIP และแคชสิทธิ์การใช้งานในเครื่อง",
+    "zhHans": "确定要恢复为 Basic 基础版吗？此操作将清除本机的 VIP 礼遇通行证与授权缓存。",
+    "zhHant": "確定要恢復為 Basic 基礎版嗎？此動作將清除本機的 VIP 禮遇通行證與授權快取。"
+  },
+  "reset_license_confirm_action": {
+    "en": "Reset to Basic",
+    "ja": "Basicにリセット",
+    "ko": "Basic으로 초기화",
+    "th": "รีเซ็ตเป็น Basic",
+    "zhHans": "确认重置",
+    "zhHant": "確認重置"
+  },
+  "reset_license_success_toast": {
+    "en": "License reset to Basic",
+    "ja": "Basicにリセットしました",
+    "ko": "Basic으로 초기화되었습니다",
+    "th": "รีเซ็ตสถานะกลับเป็น Basic เรียบร้อยแล้ว",
+    "zhHans": "已恢复为 Basic 基础版",
+    "zhHant": "已恢復為 Basic 基礎版"
   }
 }

@@ -24,7 +24,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手冊",
       "tagline": "手寫、打字、錄音三合一的筆記本。零基礎也能一步一步跟著做。",
-      "version": "適用版本 v7.2.3（build 194）· 2026 年 9 月 26 日",
+      "version": "適用版本 v7.2.5（build 196）· 2026 年 9 月 26 日",
       "tocTitle": "目錄",
       "tocHint": "點任一項目直接跳到該段落",
       "stepsLabel": "操作步驟",
@@ -67,7 +67,7 @@ window.KAIRUMO_MANUAL = {
           "第一次打開不需要註冊帳號，也不需要網路連線。",
           "第一次打開會有兩本範例筆記（「歡迎使用 Kairumo」與「課堂與會議記錄」），裡面是可以直接改的圖、文、表範例。不需要就整本刪掉。",
           "你寫下的每一筆都存在這台裝置裡。要在多台裝置之間同步，就挑一個自己的雲端硬碟資料夾（見「資料備份與同步」）。",
-          "在設定頁面的「關於 Kairumo」可查看版本號（例如 v7.2.3），回報問題時請附上它。"
+          "在設定頁面的「關於 Kairumo」可查看版本號（例如 v7.2.5），回報問題時請附上它。"
         ],
         "tip": "沒有 Kairumo 帳號，就沒有「忘記密碼」這回事 —— 但也代表我們手上沒有你的副本：裝置遺失時，只能靠你自己的備份或雲端同步救回。",
         "fig": null
@@ -893,7 +893,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎麼回報問題？",
-            "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v7.2.3）與操作步驟。",
+            "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v7.2.5）與操作步驟。",
             "help"
           ],
           [
@@ -957,7 +957,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo User Manual",
       "tagline": "Handwriting, typing and audio in one notebook. Step by step, from zero.",
-      "version": "For version 7.2.3 (build 194) · 26 September 2026",
+      "version": "For version 7.2.5 (build 196) · 26 September 2026",
       "tocTitle": "Contents",
       "tocHint": "Tap any entry to jump straight to it",
       "stepsLabel": "Steps",
@@ -1000,7 +1000,7 @@ window.KAIRUMO_MANUAL = {
           "No account and no internet connection are needed to start.",
           "On first launch you get two sample notebooks (“Welcome to Kairumo” and “Lectures & Meetings”) with editable text, tables, charts and shapes. Delete them if you do not want them.",
           "Everything you write is stored on this device. To sync across devices, point them at a folder in your own cloud drive (see “Backup and sync”).",
-          "Find the version number in the app's About screen (for example Kairumo v7.2.3) and include it when you report a problem."
+          "Find the version number in the app's About screen (for example Kairumo v7.2.5) and include it when you report a problem."
         ],
         "tip": "No Kairumo account means there is no password to forget — but it also means we hold no copy of your notes: if you lose the device, only your own backup or cloud sync can bring them back.",
         "fig": null
@@ -1821,7 +1821,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "How do I report a problem?",
-            "Include the version number (found in the app's About screen, for example Kairumo v7.2.3) and the steps you took.",
+            "Include the version number (found in the app's About screen, for example Kairumo v7.2.5) and the steps you took.",
             "help"
           ],
           [
@@ -1885,7 +1885,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手册",
       "tagline": "手写、打字、录音三合一的笔记本。零基础也能一步一步跟着做。",
-      "version": "适用版本 v7.2.3（build 194）· 2026 年 9 月 26 日",
+      "version": "适用版本 v7.2.5（build 196）· 2026 年 9 月 26 日",
       "tocTitle": "目录",
       "tocHint": "点任一项目直接跳到该段落",
       "stepsLabel": "操作步骤",
@@ -1928,7 +1928,7 @@ window.KAIRUMO_MANUAL = {
           "第一次打开不需要注册账号，也不需要联网。",
           "第一次打开会有两本范例笔记（「欢迎使用 Kairumo」与「课堂与会议记录」），里面是可以直接改的图、文、表范例。不需要就整本删掉。",
           "你写下的每一笔都存在这台设备里。要在多台设备之间同步，就挑一个自己的云端硬盘文件夹（见「数据备份与同步」）。",
-          "在设置页面的「关于 Kairumo」可查看版本号（例如 v7.2.3），反馈问题时请附上它。"
+          "在设置页面的「关于 Kairumo」可查看版本号（例如 v7.2.5），反馈问题时请附上它。"
         ],
         "tip": "没有 Kairumo 账号，就没有“忘记密码”这回事 —— 但也意味着我们手上没有你的副本：设备丢失时，只能靠你自己的备份或云端同步找回。",
         "fig": null
@@ -2749,7 +2749,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎么反馈问题？",
-            "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v7.2.3）与操作步骤。",
+            "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v7.2.5）与操作步骤。",
             "help"
           ],
           [
@@ -2813,7 +2813,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作マニュアル",
       "tagline": "手書き・タイピング・録音をひとつにしたノート。はじめての方でも順番どおりに進められます。",
-      "version": "対象バージョン v7.2.3（build 194）· 2026年9月26日",
+      "version": "対象バージョン v7.2.5（build 196）· 2026年9月26日",
       "tocTitle": "目次",
       "tocHint": "項目をタップすると該当セクションへ移動します",
       "stepsLabel": "手順",
@@ -2856,7 +2856,7 @@ window.KAIRUMO_MANUAL = {
           "アカウント登録もインターネット接続も不要です。",
           "初回起動時にサンプルノートが2冊（「Kairumo へようこそ」と「授業と会議の記録」）入っています。そのまま編集できる文章・表・グラフ・図形の例です。不要なら削除してください。",
           "書いた内容はこの端末に保存されます。複数の端末で同期するには、ご自身のクラウドのフォルダを指定してください（「バックアップと同期」参照）。",
-          "アプリの「設定」→「Kairumo について」でバージョン番号（例：Kairumo v7.2.3）を確認できます。不具合報告の際は添えてください。"
+          "アプリの「設定」→「Kairumo について」でバージョン番号（例：Kairumo v7.2.5）を確認できます。不具合報告の際は添えてください。"
         ],
         "tip": "Kairumo アカウントがないのでパスワードを忘れる心配はありません。その代わり当方はノートの控えを持たないため、端末を失くしたときに頼れるのはご自身のバックアップかクラウド同期だけです。",
         "fig": null
@@ -3677,7 +3677,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "不具合はどう報告しますか？",
-            "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v7.2.3）と、操作手順を添えてください。",
+            "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v7.2.5）と、操作手順を添えてください。",
             "help"
           ],
           [
@@ -3741,7 +3741,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 사용 설명서",
       "tagline": "손글씨·타이핑·녹음을 하나로 묶은 노트. 처음이어도 순서대로 따라 하면 됩니다.",
-      "version": "대상 버전 v7.2.3 (build 194) · 2026년 9월 26일",
+      "version": "대상 버전 v7.2.5 (build 196) · 2026년 9월 26일",
       "tocTitle": "목차",
       "tocHint": "항목을 누르면 해당 섹션으로 이동합니다",
       "stepsLabel": "따라 하기",
@@ -3784,7 +3784,7 @@ window.KAIRUMO_MANUAL = {
           "계정 가입도, 인터넷 연결도 필요 없습니다.",
           "처음 실행하면 샘플 노트 두 권(“Kairumo에 오신 것을 환영합니다”, “수업·회의 기록”)이 들어 있습니다. 바로 고칠 수 있는 글·표·차트·도형 예시입니다. 필요 없으면 지우세요.",
           "작성한 내용은 이 기기에 저장됩니다. 여러 기기에서 동기화하려면 본인 클라우드의 폴더를 지정하세요(「백업 및 동기화」 참고).",
-          "앱 내 정보 화면에서 버전(예: Kairumo v7.2.3)을 확인할 수 있습니다. 문제를 알릴 때 함께 적어 주세요."
+          "앱 내 정보 화면에서 버전(예: Kairumo v7.2.5)을 확인할 수 있습니다. 문제를 알릴 때 함께 적어 주세요."
         ],
         "tip": "Kairumo 계정이 없으니 비밀번호를 잊을 일이 없습니다. 대신 저희가 노트 사본을 갖고 있지 않으므로, 기기를 잃어버리면 직접 만든 백업이나 클라우드 동기화로만 되찾을 수 있습니다.",
         "fig": null
@@ -4605,7 +4605,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "문제는 어떻게 알리나요?",
-            "앱 내 정보 화면에서 확인한 버전(예: Kairumo v7.2.3)과 진행한 단계를 함께 알려 주세요.",
+            "앱 내 정보 화면에서 확인한 버전(예: Kairumo v7.2.5)과 진행한 단계를 함께 알려 주세요.",
             "help"
           ],
           [
@@ -4669,7 +4669,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "คู่มือการใช้งาน Kairumo",
       "tagline": "สมุดจดที่รวมลายมือ การพิมพ์ และการอัดเสียงไว้ด้วยกัน ทำตามทีละขั้นได้แม้เพิ่งเริ่มใช้",
-      "version": "สำหรับเวอร์ชัน v7.2.3 (build 194) · 26 กันยายน 2026",
+      "version": "สำหรับเวอร์ชัน v7.2.5 (build 196) · 26 กันยายน 2026",
       "tocTitle": "สารบัญ",
       "tocHint": "แตะหัวข้อเพื่อไปยังส่วนนั้นทันที",
       "stepsLabel": "ขั้นตอน",
@@ -4712,7 +4712,7 @@ window.KAIRUMO_MANUAL = {
           "ไม่ต้องสมัครบัญชีและไม่ต้องต่ออินเทอร์เน็ต",
           "เมื่อเปิดครั้งแรกจะมีสมุดตัวอย่างสองเล่ม (“ยินดีต้อนรับสู่ Kairumo” และ “บันทึกการเรียนและการประชุม”) ซึ่งมีข้อความ ตาราง แผนภูมิ และรูปทรงที่แก้ไขได้ทันที ลบทิ้งได้ถ้าไม่ต้องการ",
           "ทุกอย่างที่คุณเขียนถูกเก็บไว้ในเครื่องนี้ หากต้องการซิงค์ระหว่างหลายเครื่อง ให้ชี้ไปที่โฟลเดอร์บนคลาวด์ของคุณเอง (ดู “สำรองข้อมูลและซิงค์”)",
-          "ดูหมายเลขเวอร์ชัน (เช่น Kairumo v7.2.3) ได้ในหน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
+          "ดูหมายเลขเวอร์ชัน (เช่น Kairumo v7.2.5) ได้ในหน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
         ],
         "tip": "เมื่อไม่มีบัญชี Kairumo ก็ไม่มีรหัสผ่านให้ลืม แต่ก็หมายความว่าเราไม่มีสำเนาโน้ตของคุณ หากเครื่องหาย จะกู้คืนได้จากข้อมูลสำรองหรือการซิงค์คลาวด์ของคุณเองเท่านั้น",
         "fig": null
@@ -5528,7 +5528,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "รายงานปัญหาอย่างไร",
-            "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v7.2.3) พร้อมขั้นตอนที่ทำ",
+            "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v7.2.5) พร้อมขั้นตอนที่ทำ",
             "help"
           ],
           [
